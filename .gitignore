@@ -1,0 +1,41 @@
+# Gradle / Kotlin
+.gradle/
+build/
+.kotlin/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Android
+local.properties
+captures/
+*.apk
+*.aab
+*.ap_
+*.dex
+output-metadata.json
+
+# Signing (never commit)
+*.jks
+*.keystore
+keystore.properties
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Python
+__pycache__/
+.claude/worktrees/
+
+# Personal financial data (never commit)
+*.myfinance
+*.partial
+*.db
+*.db-shm
+*.db-wal
+/exports/
