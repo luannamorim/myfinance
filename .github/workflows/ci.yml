@@ -26,9 +26,9 @@ jobs:
           java-version: "21"
 
       - uses: android-actions/setup-android@v3
-
-      - name: Install Android platform 37
-        run: sdkmanager "platforms;android-37" "build-tools;37.0.0"
+        with:
+          # The default list includes the retired "tools" package, which fails on current images.
+          packages: "platform-tools platforms;android-37 build-tools;37.0.0"
 
       - uses: gradle/actions/setup-gradle@v4
 
