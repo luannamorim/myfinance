@@ -22,6 +22,7 @@ import io.github.luannamorim.myfinance.domain.backup.BackupError
 import io.github.luannamorim.myfinance.domain.backup.BackupFileInfo
 import io.github.luannamorim.myfinance.testutil.BackupEnv
 import io.github.luannamorim.myfinance.testutil.TEST_ITERATIONS
+import io.github.luannamorim.myfinance.testutil.awaitUntil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -230,7 +231,8 @@ class BackupWorkerTest {
         WorkManagerTestInitHelper.initializeTestWorkManager(context)
         val scheduler = BackupScheduler(context, store, CoroutineScope(Dispatchers.Unconfined))
         scheduler.onDataChanged()
-        assertTrue(store.current().hasUnsavedChanges)
+        // The change mark is written asynchronously (DataStore): wait for it instead of reading right away.
+        assertTrue(store.state.awaitUntil { it.hasUnsavedChanges }.hasUnsavedChanges)
         val wm = WorkManager.getInstance(context)
         val info = wm.getWorkInfosForUniqueWork(BackupScheduler.DEBOUNCE).get().single()
         assertEquals(WorkInfo.State.ENQUEUED, info.state)
