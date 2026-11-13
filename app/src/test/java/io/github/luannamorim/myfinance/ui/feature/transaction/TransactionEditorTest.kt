@@ -26,7 +26,6 @@ import io.github.luannamorim.myfinance.testutil.testSettings
 import io.github.luannamorim.myfinance.ui.navigation.TransactionEditorRoute
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -50,7 +49,7 @@ class TransactionEditorTest {
     private val cash = CashRepository(db, time, BackupTrigger { })
     private val settings = testSettings()
 
-    @After fun close() = db.close()
+    // The in-memory database is not closed: ViewModel collectors may still be querying it when the test ends.
 
     private fun editor(route: TransactionEditorRoute = TransactionEditorRoute()) =
         TransactionEditorViewModel(SavedStateHandle(route = route), cash, categories, settings, time)

@@ -15,7 +15,6 @@ import io.github.luannamorim.myfinance.testutil.d
 import io.github.luannamorim.myfinance.testutil.inMemoryDb
 import io.github.luannamorim.myfinance.testutil.snapBothThemes
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -35,7 +34,7 @@ class BalanceViewModelTest {
     private val time = FakeTimeSource()
     private val cash = CashRepository(db, time, BackupTrigger { })
 
-    @After fun close() = db.close()
+    // The in-memory database is not closed: ViewModel collectors may still be querying it when the test ends.
 
     @Test
     fun opening_isSavedOnce_andReplaced() = runBlocking {

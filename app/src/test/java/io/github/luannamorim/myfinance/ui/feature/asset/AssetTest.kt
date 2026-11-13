@@ -43,7 +43,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Rule
@@ -79,7 +78,7 @@ class AssetTest {
         BackupTrigger { },
     )
 
-    @After fun close() = db.close()
+    // The in-memory database is not closed: ViewModel collectors may still be querying it when the test ends.
 
     private fun category(key: String) = runBlocking { db.categoryDao().getAllAssetCategories().first { it.seedKey == key }.id }
 

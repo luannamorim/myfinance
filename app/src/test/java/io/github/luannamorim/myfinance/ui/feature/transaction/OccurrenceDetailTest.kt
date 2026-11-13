@@ -30,7 +30,6 @@ import io.github.luannamorim.myfinance.testutil.snapBothThemes
 import io.github.luannamorim.myfinance.ui.navigation.OccurrenceDetailRoute
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
@@ -52,7 +51,7 @@ class OccurrenceDetailTest {
     private val categories = CategoryRepository(db, time, BackupTrigger { })
     private val cash = CashRepository(db, time, BackupTrigger { })
 
-    @After fun close() = db.close()
+    // The in-memory database is not closed: ViewModel collectors may still be querying it when the test ends.
 
     private fun category(seedKey: String) = runBlocking { db.categoryDao().getAll().first { it.seedKey == seedKey }.id }
 

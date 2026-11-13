@@ -12,6 +12,7 @@ import io.github.luannamorim.myfinance.ui.feature.cashflow.RecurringListScreen
 import io.github.luannamorim.myfinance.ui.feature.transaction.OccurrenceDetailScreen
 import io.github.luannamorim.myfinance.ui.feature.transaction.TransactionEditorScreen
 import io.github.luannamorim.myfinance.ui.feature.history.HistoryScreen
+import io.github.luannamorim.myfinance.ui.feature.overview.OverviewActions
 import io.github.luannamorim.myfinance.ui.feature.overview.OverviewScreen
 import io.github.luannamorim.myfinance.ui.feature.portfolio.PortfolioActions
 import io.github.luannamorim.myfinance.ui.feature.portfolio.PortfolioChartsScreen
@@ -25,7 +26,18 @@ import io.github.luannamorim.myfinance.ui.feature.settings.SettingsScreen
 
 /** The five tab roots. */
 internal fun NavGraphBuilder.tabDestinations(navController: NavHostController) {
-    composable<OverviewRoute> { OverviewScreen() }
+    composable<OverviewRoute> {
+        OverviewScreen(
+            OverviewActions(
+                onOpen = { navController.navigate(OccurrenceDetailRoute(it)) },
+                onSeeCashFlow = { navController.navigateToTopLevel(TopLevelDestination.CASH_FLOW) },
+                onSeeHistory = { navController.navigateToTopLevel(TopLevelDestination.HISTORY) },
+                onOpening = { navController.navigate(OpeningBalancesRoute) },
+                onAddTransaction = { navController.navigate(TransactionEditorRoute()) },
+                onAddAsset = { navController.navigate(AssetEditorRoute()) },
+            ),
+        )
+    }
     composable<CashFlowRoute> {
         CashFlowScreen(
             CashFlowActions(

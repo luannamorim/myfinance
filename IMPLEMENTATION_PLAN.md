@@ -356,9 +356,9 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 
 **Produces:** `data class NetWorth(cash: Total, investments: Total, personal: Total, total: Total)`; `object NetWorthCalculator { fun at(date: LocalDate, cash: CashLedger, portfolio: PortfolioData, to: Currency, converter: Converter): NetWorth; fun series(dates: List<LocalDate>, cash: CashLedger, portfolio: PortfolioData, to: Currency, converter: Converter): List<Pair<LocalDate, NetWorth>> }`.
 
-- [ ] `ScenarioTest`: one fixture combining BRL + USD cash, recurring bills, a BRL fixed income, a USD ETF and a car, with every expected figure computed by hand in comments (available, projected, month summary, portfolio totals, allocation, net worth in BRL and in USD).
-- [ ] Overview: net worth hero + composition bar and legend, R$/US$ toggle (updates `displayCurrency`), Available cash / Projected tiles, This month, Upcoming (next 5 pending/overdue with Confirm), Recent (last 5 confirmed), rate footer, onboarding empty states (opening balance, first transaction, first asset). Net worth line added to Portfolio charts.
-- [ ] Stage 5 verification + push. Commit `feat(overview): add net worth overview`.
+- [x] `ScenarioTest`: one fixture combining BRL + USD cash, recurring bills, a BRL fixed income, a USD ETF and a car, with every expected figure computed by hand in comments (available, projected, month summary, portfolio totals, allocation, net worth in BRL and in USD).
+- [x] Overview: net worth hero + composition bar and legend, R$/US$ toggle (updates `displayCurrency`), Available cash / Projected tiles, This month, Upcoming (next 5 pending/overdue with Confirm), Recent (last 5 confirmed), rate footer, onboarding empty states (opening balance, first transaction, first asset). Net worth line added to Portfolio charts.
+- [x] Stage 5 verification + push. Commit `feat(overview): add net worth overview`.
 
 ---
 

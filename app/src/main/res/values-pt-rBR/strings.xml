@@ -20,8 +20,6 @@
     <string name="nav_settings">Ajustes</string>
 
     <!-- Estados vazios -->
-    <string name="overview_empty_title">Suas finanças num relance</string>
-    <string name="overview_empty_message">Defina seu saldo inicial e adicione sua primeira transação para ver o mês.</string>
     <string name="cashflow_empty_title">Nenhuma transação neste mês</string>
     <string name="cashflow_empty_message">Adicione receitas e despesas, únicas ou recorrentes, para planejar o mês.</string>
     <string name="portfolio_empty_title">Nenhum ativo ainda</string>
@@ -432,4 +430,27 @@
     <string name="pcharts_period_gain_hint">Variação do valor menos aportes e resgates do período. Mostrado só em dinheiro.</string>
     <string name="pcharts_allocation">Alocação</string>
     <string name="pcharts_cumulative_gain">Ganho acumulado</string>
+
+    <!-- Overview -->
+    <string name="overview_net_worth">Patrimônio</string>
+    <string name="overview_cash">Caixa</string>
+    <string name="overview_investments">Investimentos</string>
+    <string name="overview_personal">Bens</string>
+    <string name="overview_available">Disponível</string>
+    <string name="overview_projected">Previsto · %1$s</string>
+    <string name="overview_this_month">Este mês</string>
+    <string name="overview_income_line">%1$s de %2$s</string>
+    <string name="overview_upcoming">Próximos</string>
+    <string name="overview_recent">Recentes</string>
+    <string name="overview_see_all">Ver tudo</string>
+    <string name="overview_confirm">Confirmar</string>
+    <string name="overview_start_title">Comece por aqui</string>
+    <string name="overview_start_opening">Defina seu saldo inicial</string>
+    <string name="overview_start_opening_hint">Quanto dinheiro você tem hoje</string>
+    <string name="overview_start_transaction">Adicione uma receita ou despesa</string>
+    <string name="overview_start_transaction_hint">Salário, aluguel, contas: únicas ou recorrentes</string>
+    <string name="overview_start_asset">Adicione um investimento ou bem</string>
+    <string name="overview_start_asset_hint">Renda fixa, ações, ETFs, imóveis, veículos</string>
+    <string name="overview_composition_note">Caixa e carteira ficam separados: aplicar dinheiro num investimento não muda o caixa até você ajustar o saldo.</string>
+    <string name="overview_display_currency">Mostrar em</string>
 </resources>

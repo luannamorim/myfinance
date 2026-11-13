@@ -23,8 +23,6 @@
     <string name="nav_settings">Settings</string>
 
     <!-- Empty states -->
-    <string name="overview_empty_title">Your finances at a glance</string>
-    <string name="overview_empty_message">Set your opening balance and add your first transaction to see your month.</string>
     <string name="cashflow_empty_title">No transactions this month</string>
     <string name="cashflow_empty_message">Add income and expenses, one-time or recurring, to plan your month.</string>
     <string name="portfolio_empty_title">No assets yet</string>
@@ -429,4 +427,27 @@
     <string name="pcharts_period_gain_hint">Change in value minus contributions and withdrawals in the period. Shown in money only.</string>
     <string name="pcharts_allocation">Allocation</string>
     <string name="pcharts_cumulative_gain">Cumulative gain</string>
+
+    <!-- Overview -->
+    <string name="overview_net_worth">Net worth</string>
+    <string name="overview_cash">Cash</string>
+    <string name="overview_investments">Investments</string>
+    <string name="overview_personal">Assets</string>
+    <string name="overview_available">Available cash</string>
+    <string name="overview_projected">Projected · %1$s</string>
+    <string name="overview_this_month">This month</string>
+    <string name="overview_income_line">%1$s of %2$s</string>
+    <string name="overview_upcoming">Upcoming</string>
+    <string name="overview_recent">Recent</string>
+    <string name="overview_see_all">See all</string>
+    <string name="overview_confirm">Confirm</string>
+    <string name="overview_start_title">Get started</string>
+    <string name="overview_start_opening">Set your opening balance</string>
+    <string name="overview_start_opening_hint">How much cash you have today</string>
+    <string name="overview_start_transaction">Add income or an expense</string>
+    <string name="overview_start_transaction_hint">Salary, rent, bills: one-time or recurring</string>
+    <string name="overview_start_asset">Add an investment or asset</string>
+    <string name="overview_start_asset_hint">Fixed income, stocks, ETFs, real estate, vehicles</string>
+    <string name="overview_composition_note">Cash and portfolio are kept apart: moving money into an investment doesn\'t change cash until you adjust the balance.</string>
+    <string name="overview_display_currency">Show in</string>
 </resources>
