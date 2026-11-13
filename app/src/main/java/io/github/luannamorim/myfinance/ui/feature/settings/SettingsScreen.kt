@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Category
+import androidx.compose.material.icons.rounded.CurrencyExchange
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Language
@@ -39,6 +40,7 @@ data class SettingsActions(
     val onOpenOpening: () -> Unit = {},
     val onOpenAdjust: () -> Unit = {},
     val onOpenRecurring: () -> Unit = {},
+    val onOpenCurrency: () -> Unit = {},
     val onOpenLanguage: (() -> Unit)? = null,
 )
 
@@ -69,6 +71,7 @@ fun SettingsContent(state: SettingsUiState, actions: SettingsActions, modifier: 
         NavRow(Icons.Rounded.Category, stringResource(R.string.categories_title), stringResource(R.string.categories_hint), actions.onOpenCategories)
 
         SectionHeader(stringResource(R.string.settings_display), Modifier.padding(top = Spacing.s))
+        NavRow(Icons.Rounded.CurrencyExchange, stringResource(R.string.currency_title), stringResource(R.string.currency_hint), actions.onOpenCurrency)
         FinanceCard(Modifier.fillMaxWidth()) {
             ChoiceRow(
                 stringResource(R.string.settings_theme),

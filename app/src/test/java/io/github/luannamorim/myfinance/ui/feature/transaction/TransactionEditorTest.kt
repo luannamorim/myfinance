@@ -62,7 +62,7 @@ class TransactionEditorTest {
         val vm = editor()
         vm.state.awaitUntil { !it.loading }
         assertFalse(vm.save())
-        val s = vm.state.value
+        val s = vm.state.awaitUntil { it.nameError }
         assertTrue(s.nameError && s.amountError && s.categoryError)
         assertTrue(cash.snapshot().occurrences.isEmpty())
     }
@@ -74,7 +74,7 @@ class TransactionEditorTest {
         vm.setName("Groceries")
         vm.setDigits("31240")
         vm.setCategory(categoryId("expense.groceries"))
-        assertTrue(vm.state.value.canSettle)
+        assertTrue(vm.state.awaitUntil { it.categoryId != null }.canSettle)
         assertTrue(vm.save())
         vm.state.awaitUntil { it.done }
         val row = cash.snapshot().occurrences.single()
@@ -90,7 +90,7 @@ class TransactionEditorTest {
         vm.setDigits("900000")
         vm.setCategory(categoryId("income.salary"))
         vm.setRepeat(RepeatChoice.Preset(RecurrenceRule.Preset.MONTHLY))
-        assertFalse(vm.state.value.canSettle)
+        assertFalse(vm.state.awaitUntil { it.repeat != RepeatChoice.Never }.canSettle)
         assertTrue(vm.save())
         vm.state.awaitUntil { it.done }
         val ledger = cash.snapshot()

@@ -308,4 +308,26 @@
     <string name="history_any_date">Any date</string>
     <string name="history_apply">Apply</string>
     <string name="history_no_results">No transactions match these filters.</string>
+
+    <!-- Currency settings -->
+    <string name="currency_title">Currency and exchange rate</string>
+    <string name="currency_hint">R$ and US$, PTAX from the Banco Central</string>
+    <string name="currency_default">Default for new entries</string>
+    <string name="currency_display">Show totals in</string>
+    <string name="currency_auto">Fetch exchange rates</string>
+    <string name="currency_auto_hint">Daily USD/BRL PTAX from the Banco Central (api.bcb.gov.br). Only dates are sent.</string>
+    <string name="currency_update">Update now</string>
+    <string name="currency_last_fetch">Last update: %1$s</string>
+    <string name="currency_never">Never updated</string>
+    <string name="currency_updated">Rates updated</string>
+    <string name="currency_up_to_date">Already up to date</string>
+    <string name="currency_error_network">Couldn\'t reach the Banco Central. Known rates stay in use.</string>
+    <string name="currency_error_format">The Banco Central answered something unexpected. Known rates stay in use.</string>
+    <string name="currency_rates">Recent rates (US$ 1 in R$)</string>
+    <string name="currency_manual">Add a rate manually</string>
+    <string name="currency_manual_rate">Rate (e.g. 5,6143)</string>
+    <string name="currency_manual_invalid">Enter a rate between 0,1 and 100</string>
+    <string name="currency_manual_hint">A manual rate wins over the PTAX of the same date.</string>
+    <string name="rate_source_bcb">PTAX</string>
+    <string name="rate_source_manual">Manual</string>
 </resources>

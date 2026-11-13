@@ -32,4 +32,16 @@ interface RateDao {
 
     @Query("SELECT * FROM exchange_rate ORDER BY id")
     suspend fun getAll(): List<ExchangeRateEntity>
+
+    /** The earliest date of any financial record (epoch day), to know how far back rates are needed. */
+    @Query(
+        "SELECT MIN(d) FROM (" +
+            "SELECT MIN(dueDate) AS d FROM transaction_occurrence " +
+            "UNION ALL SELECT MIN(actualDate) FROM transaction_occurrence " +
+            "UNION ALL SELECT MIN(date) FROM cash_adjustment " +
+            "UNION ALL SELECT MIN(acquisitionDate) FROM asset " +
+            "UNION ALL SELECT MIN(date) FROM asset_flow " +
+            "UNION ALL SELECT MIN(date) FROM asset_valuation)",
+    )
+    suspend fun earliestRecordDay(): Long?
 }

@@ -311,4 +311,26 @@
     <string name="history_any_date">Qualquer data</string>
     <string name="history_apply">Aplicar</string>
     <string name="history_no_results">Nenhuma transação corresponde a estes filtros.</string>
+
+    <!-- Currency settings -->
+    <string name="currency_title">Moeda e cotação</string>
+    <string name="currency_hint">R$ e US$, PTAX do Banco Central</string>
+    <string name="currency_default">Padrão para novos lançamentos</string>
+    <string name="currency_display">Mostrar totais em</string>
+    <string name="currency_auto">Buscar cotações</string>
+    <string name="currency_auto_hint">PTAX diária do dólar no Banco Central (api.bcb.gov.br). Só datas são enviadas.</string>
+    <string name="currency_update">Atualizar agora</string>
+    <string name="currency_last_fetch">Última atualização: %1$s</string>
+    <string name="currency_never">Nunca atualizado</string>
+    <string name="currency_updated">Cotações atualizadas</string>
+    <string name="currency_up_to_date">Já está atualizado</string>
+    <string name="currency_error_network">Não foi possível acessar o Banco Central. As cotações conhecidas continuam valendo.</string>
+    <string name="currency_error_format">O Banco Central respondeu algo inesperado. As cotações conhecidas continuam valendo.</string>
+    <string name="currency_rates">Cotações recentes (US$ 1 em R$)</string>
+    <string name="currency_manual">Adicionar cotação manual</string>
+    <string name="currency_manual_rate">Cotação (ex.: 5,6143)</string>
+    <string name="currency_manual_invalid">Informe uma cotação entre 0,1 e 100</string>
+    <string name="currency_manual_hint">Uma cotação manual vale mais que a PTAX da mesma data.</string>
+    <string name="rate_source_bcb">PTAX</string>
+    <string name="rate_source_manual">Manual</string>
 </resources>

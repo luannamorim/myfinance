@@ -23,6 +23,12 @@ object DataModule {
     fun provideSettingsDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
         PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("settings") }
 
+    @Provides
+    @Singleton
+    @Named("rate_state")
+    fun provideRateStateDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
+        PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("rate_state") }
+
     /** No-op until the backup scheduler exists (Stage 6). */
     @Provides
     fun provideBackupTrigger(): BackupTrigger = BackupTrigger { }

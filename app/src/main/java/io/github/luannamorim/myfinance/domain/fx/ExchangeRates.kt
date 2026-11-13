@@ -27,6 +27,9 @@ class ExchangeRates(rates: List<ExchangeRate>) {
 
     val isEmpty: Boolean get() = byDate.isEmpty()
 
+    /** The effective rate of each date (manual over BCB), most recent first. */
+    fun recent(limit: Int): List<ExchangeRate> = byDate.descendingMap().values.take(limit)
+
     companion object {
         val EMPTY = ExchangeRates(emptyList())
     }

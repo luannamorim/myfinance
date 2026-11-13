@@ -36,6 +36,24 @@ class SettingsScreenshotTest {
     }
 
     @Test
+    fun currency() = compose.snapBothThemes("currency_settings") {
+        CurrencySettingsContent(
+            CurrencyUiState(
+                loading = false,
+                rateState = io.github.luannamorim.myfinance.data.prefs.RateState(lastFetchMs = 1_794_500_000_000),
+                rates = listOf(
+                    io.github.luannamorim.myfinance.testutil.rate("2026-11-12", "5.6143"),
+                    io.github.luannamorim.myfinance.testutil.rate("2026-11-11", "5.7000", io.github.luannamorim.myfinance.domain.model.RateSource.MANUAL),
+                    io.github.luannamorim.myfinance.testutil.rate("2026-11-10", "5.5840"),
+                ),
+                manualDate = io.github.luannamorim.myfinance.testutil.d("2026-11-12"),
+                today = io.github.luannamorim.myfinance.testutil.d("2026-11-12"),
+            ),
+            CurrencyActions(),
+        )
+    }
+
+    @Test
     fun categories_expense_showsLocalizedSeedNames() {
         compose.snapBothThemes("categories_expense") {
             CategoriesContent(CategoriesUiState(loading = false, scope = CategoryScope.EXPENSE, active = expenses.take(3), archived = expenses.drop(3)), CategoriesActions())
