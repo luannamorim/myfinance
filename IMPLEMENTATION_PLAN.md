@@ -405,3 +405,33 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 - [x] `./gradlew lintDebug testDebugUnitTest assembleRelease`; `apksigner verify`; `aapt dump permissions` equals the list in Task 2.1; size < 15 MB.
 - [x] Hand the APK and `docs/TESTING.md` to the user: the manual checklist (including quick entry ≤ 4 taps + typing and cold start < 1.5 s) runs on their phone before the release is published.
 - [x] Tag `v1.0.0`, `gh release create v1.0.0 app/build/outputs/apk/release/myfinance-1.0.0.apk`. Push.
+
+## Stage 8 — 1.1.0: transfers, new symbol and polish
+
+User feedback after 1.0.0. Transfers link cash and the portfolio explicitly; everything else stays separate.
+
+### Task 8.1 — Polish
+- [x] Bottom bar label in Portuguese "Fluxo" (the screen title keeps "Fluxo de caixa"; English "Cash Flow" fits).
+- [x] Settings: remove the Language row (the app follows the device language; Android's per-app language setting still works through the generated locale config).
+- [x] Overview "Upcoming": overdue plus what is due this month only.
+- [x] New symbol: the allocation ring (docs/BRAND.md), launcher, monochrome, notification and splash vectors; brand screenshot.
+
+### Task 8.2 — Transfers: domain
+- [x] `EntryKind` gains `TRANSFER_OUT` (cash → asset) and `TRANSFER_IN` (asset → cash) with `cashInflow`/`isTransfer`; categories stay INCOME/EXPENSE.
+- [x] Templates and occurrences: `categoryId` nullable (transfers have none), `assetId` (the asset). `AssetFlow.occurrenceId` links the flow a confirmed transfer created.
+- [x] Cash balance and projections count transfers by `cashInflow`; month income/expense totals and category charts exclude them; the month summary adds transfer totals. Status "Transferred" when confirmed.
+
+### Task 8.3 — Transfers: data
+- [x] Room schema v2: nullable `categoryId`, `assetId` (FK asset, SET NULL) on templates and occurrences, `occurrenceId` (FK occurrence, SET NULL, unique) on asset flows. `Migrations.MIGRATION_1_2` and `MigrationTest` (v1 rows survive, schema validates).
+- [x] Confirming a transfer creates its linked flow (CONTRIBUTION / WITHDRAWAL, in the asset currency: same amount, or the amount the user typed when currencies differ); undoing or deleting it removes the flow; editing its actual values updates it. A confirmed transfer can't change asset or direction.
+- [x] Asset side: contribute / withdraw / close and the initial investment can come from or go to cash (a confirmed one-time transfer linked to the flow). Deleting a linked flow deletes a one-time transfer or undoes a recurring one; deleting the asset removes its pending transfers and deactivates recurring ones; closing it deactivates recurring ones.
+- [x] Backup: optional `assetId`/`occurrenceId`, nullable `categoryId`; restore inserts assets before transactions. CSV: `asset` column in transactions.csv, `transfer_id` in asset_flows.csv.
+
+### Task 8.4 — Transfers: UI
+- [x] Editor: Expense / Income / Transfer; direction, asset picker, optional name (defaults to the asset), credited amount when currencies differ and it's already done.
+- [x] Confirm sheet, rows, occurrence detail, recurring list, Cash Flow (transfers section and month totals), History (Transfer chip), Overview note.
+- [x] Asset detail sheets and asset editor: "From cash" / "To cash" switch with the cash currency and amount.
+
+### Task 8.5 — Release 1.1.0
+Added along the way at the user's request: cash shown for reference in Portfolio, Cash Flow chart spans (3/6/12 months) with the balance line starting at the first record, predefined categories (Credit Card, Loans, Loans Receivable), rates fetched only when the app comes to the foreground (no background job), uniform README screenshots.
+- [x] Docs (SPEC, ARCHITECTURE, BACKUP, TESTING, README), CHANGELOG, versionCode 2 / 1.1.0, screenshots, tests and lint green.
