@@ -403,5 +403,5 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 - [x] README final (features, screenshots, install, privacy, backup, build, stack, docs, license), CHANGELOG `1.0.0`, CONTRIBUTING.
 - [x] Keystore: at the user's request the release reuses the MyFit keystore (`MYFINANCE_*` in `~/.gradle/gradle.properties` copied from `MYFIT_*`, values never printed). A dedicated one can be created later with `keytool -genkeypair -v -keystore ~/my/.keystores/myfinance-release.jks -alias myfinance -keyalg RSA -keysize 4096 -validity 10000`, but only before the first public release: changing the key afterwards breaks updates.
 - [x] `./gradlew lintDebug testDebugUnitTest assembleRelease`; `apksigner verify`; `aapt dump permissions` equals the list in Task 2.1; size < 15 MB.
-- [ ] Hand the APK and `docs/TESTING.md` to the user: the manual checklist (including quick entry ≤ 4 taps + typing and cold start < 1.5 s) runs on their phone before the release is published.
-- [ ] Tag `v1.0.0`, `gh release create v1.0.0 app/build/outputs/apk/release/myfinance-1.0.0.apk`. Push.
+- [x] Hand the APK and `docs/TESTING.md` to the user: the manual checklist (including quick entry ≤ 4 taps + typing and cold start < 1.5 s) runs on their phone before the release is published.
+- [x] Tag `v1.0.0`, `gh release create v1.0.0 app/build/outputs/apk/release/myfinance-1.0.0.apk`. Push.
