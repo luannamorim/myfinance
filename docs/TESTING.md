@@ -15,8 +15,8 @@ GitHub Actions runs `testDebugUnitTest lintDebug assembleDebug` on every push an
 | Layer | Tool | What it proves |
 |---|---|---|
 | Pure domain | JUnit | recurrence (monthly, weekly, biweekly, quarterly, annual, leap years, month ends, end dates, horizons), statuses and day boundaries, cash balances and projections without double counting, expected vs. actual, opening balance, portfolio contributions, withdrawals, disposals, valuations, gains, returns, allocation and series, conversion and rate lookup, PTAX parsing, net worth, money formatting and input, backup crypto, archive and retention |
-| Data | Robolectric + in-memory Room | constraints (RESTRICT, CASCADE, unique), idempotent occurrence generation, template edits, confirmations, adjustments, repositories, snapshot round trip, backup create/restore/wrong password/corrupted archive, rate refresh with a fake client |
-| Platform | Robolectric + work-testing | backup worker (dirty/skip/failure mapping, debounce), rate refresh worker |
+| Data | Robolectric + in-memory Room | constraints (RESTRICT, CASCADE, unique), the v1 → v2 migration (`MigrationTest`), transfers and their asset flows (`TransferTest`), idempotent occurrence generation, template edits, confirmations, adjustments, repositories, snapshot round trip, backup create/restore/wrong password/corrupted archive, rate refresh with a fake client |
+| Platform | Robolectric + work-testing | backup worker (dirty/skip/failure mapping, debounce) |
 | UI flows | Compose test + Robolectric | create income, create expense, confirm payment, confirm receipt, create asset, update valuation, navigate between tabs, change settings, backup and restore |
 | Visual | Roborazzi | every screen in dark and light, 1.5× font and tablet; component and icon catalog |
 
@@ -49,7 +49,7 @@ Development is done without a device. The items below validate what only the dev
 - [ ] Edit the rent amount to R$ 2.600,00 with the next due date next month: past and paid occurrences keep their values.
 - [ ] Cancel an occurrence and restore it; mark a paid one as unpaid.
 - [ ] Add a USD subscription (US$ 20,00) and confirm it paid in BRL (R$ 115,00).
-- [ ] Charts show income vs. expenses, balance evolution and expenses by category.
+- [ ] Charts show income vs. expenses, balance evolution and expenses by category; 3M, 6M and 1Y change both; in the first month of use the balance line already shows (opening date → today).
 
 ### 3. History
 - [ ] Search "rent" finds it; filters by type, status, category, currency and date range work; months group correctly.
@@ -58,6 +58,7 @@ Development is done without a device. The items below validate what only the dev
 - [ ] With internet, *Update* fetches today's PTAX (or the last business day before ~13:00) and shows its date.
 - [ ] In airplane mode the app keeps working with the last rate; a manual rate can be entered and is used.
 - [ ] Turning off *Fetch exchange rates* stops automatic requests.
+- [ ] With the app closed for a day, opening it fetches the new rate (there is no background job).
 
 ### 5. Portfolio
 - [ ] Create "Tesouro Selic" (Fixed Income, BRL) with R$ 5.000,00 invested; then update its value to R$ 5.120,00: gain R$ 120,00, return 2,40%.
@@ -66,9 +67,19 @@ Development is done without a device. The items below validate what only the dev
 - [ ] Add a car (Vehicles, personal asset) with a photo; it appears under Personal assets.
 - [ ] The donut shows the total in the centre; tapping a category filters the list. Period chips change the charts; no line starts before the first record.
 
+### 5b. Transfers (1.1.0)
+- [ ] New transaction → Transfer → To investment → "Tesouro", R$ 1.000,00, already done: cash goes down R$ 1.000, the asset shows a contribution "From cash", and Cash Flow's income/expenses don't change.
+- [ ] A monthly transfer to an asset appears in Cash Flow → Transfers and in the Overview's upcoming list; confirming it records the contribution; "Mark as not done" removes it.
+- [ ] A transfer in R$ to a US$ asset asks for the amount the asset received (prefilled at the PTAX); the asset gets that amount in US$.
+- [ ] On the asset: Withdraw with "Put it in cash": cash goes up; delete that withdrawal: the transfer disappears too (after a confirmation).
+- [ ] New asset with "Take it from cash": cash goes down by the initial investment.
+- [ ] Close a position that has a monthly transfer: the transfer stops; a new transfer to it is refused with a message.
+- [ ] History → Transfer chip lists only transfers; the CSV export has them with the asset name.
+- [ ] Portfolio → All shows "Cash" (slice and card); tapping the card opens Cash Flow; Value/Invested/Gain don't include it.
+
 ### 6. Overview
 - [ ] Net worth = cash + investments + personal assets, with the composition shown; the R$/US$ toggle converts everything and shows the rate date.
-- [ ] Upcoming commitments can be confirmed from the Overview.
+- [ ] Upcoming commitments (overdue and this month only) can be confirmed from the Overview.
 
 ### 7. Backup
 - [ ] *Settings → Backup*: set the recovery password and store it in a password manager.

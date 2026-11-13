@@ -65,7 +65,7 @@ MyFinance is a single-user app where the user enters everything by hand, sees ca
 
 ### Cash flow
 
-5. MUST provide predefined categories — income: Salary, Freelance, Side Income, Dividends, Business Income, Other Income; expenses: Housing, Rent, Electricity, Water, Internet, Phone, Groceries, Transportation, Healthcare, Gym, Subscriptions, Entertainment, Education, Shopping, Other Expenses — each with an icon, and allow creating, renaming, changing the icon, archiving and (when unused) deleting categories.
+5. MUST provide predefined categories — income: Salary, Freelance, Side Income, Dividends, Business Income, Other Income; expenses: Housing, Rent, Electricity, Water, Internet, Phone, Groceries, Transportation, Healthcare, Gym, Subscriptions, Entertainment, Education, Shopping, Credit Card, Loans, Other Expenses — each with an icon, and allow creating, renaming, changing the icon, archiving and (when unused) deleting categories.
 6. MUST allow creating one-time and recurring transactions with: name, category, type (income/expense), currency (BRL/USD), expected amount, recurrence, start date, next due date, optional end date, description and active/inactive status.
 7. MUST support recurrence: one-time, daily, weekly, every two weeks, monthly, every two months, quarterly, semiannually, annually and custom (every N days/weeks/months/years).
 8. MUST compute recurrence dates from the anchor (never chained), clamp to the last day of shorter months (31 Jan → 28/29 Feb → 31 Mar) and handle 29 Feb in non-leap years (→ 28 Feb).
@@ -83,7 +83,7 @@ MyFinance is a single-user app where the user enters everything by hand, sees ca
 
 ### Portfolio
 
-17. MUST provide asset categories — investments: Fixed Income, Stocks, ETFs, REITs, Investment Funds, Cryptocurrencies, Other Investments; personal assets: Business Ownership, Startup Equity, Real Estate, Vehicles, Other Assets — and allow custom categories.
+17. MUST provide asset categories — investments: Fixed Income, Stocks, ETFs, REITs, Investment Funds, Cryptocurrencies, Other Investments; personal assets: Business Ownership, Startup Equity, Real Estate, Vehicles, Loans Receivable, Other Assets — and allow custom categories.
 18. Each asset MUST support: name, category, currency, description, institution or company, acquisition date, initial invested amount, current estimated value, optional quantity, notes and an optional image. Quantity and market price MUST NOT be required.
 19. MUST record contributions (initial and additional), withdrawals, partial disposals and full disposals as separate cash-flow records, never as performance.
 20. MUST record valuations as a history (date, value, note), never overwriting earlier dates (a second valuation on the same date replaces that day's, after a warning), and show for each valuation the invested amount, gain/loss and return at that date.
@@ -93,7 +93,7 @@ MyFinance is a single-user app where the user enters everything by hand, sees ca
 
 ### Currency and exchange rates
 
-24. MUST support BRL and USD for every monetary record (an asset's flows and valuations use the asset's currency) and convert using the USD→BRL PTAX (sell) rate from the Banco Central do Brasil public API, fetched automatically on start and daily (unless turned off) and on demand ("Update"), with manual entry as a fallback; MUST show the date of the rate used and MUST NOT invent a rate. Totals that include an unconvertible amount MUST be marked as incomplete.
+24. MUST support BRL and USD for every monetary record (an asset's flows and valuations use the asset's currency) and convert using the USD→BRL PTAX (sell) rate from the Banco Central do Brasil public API, fetched automatically when the app comes to the foreground (at most every 6 hours, unless turned off; no background job) and on demand ("Update"), with manual entry as a fallback; MUST show the date of the rate used and MUST NOT invent a rate. Totals that include an unconvertible amount MUST be marked as incomplete.
 25. Current values MUST use the latest rate; historical values MUST use the rate of their own date (last published rate on or before it).
 
 ### Settings
@@ -109,6 +109,13 @@ MyFinance is a single-user app where the user enters everything by hand, sees ca
 31. MUST restore from the folder or a standalone file, showing the backup date and asking for confirmation, validating password, authenticity, hashes, counts and format version before replacing data, atomically.
 32. MUST export transactions, assets, flows, valuations and exchange rates to CSV (zip), warning that the export is not encrypted.
 
+### Transfers and refinements (1.1.0)
+
+33. MUST let the user move money between cash and an asset as a **transfer** — cash → asset (a contribution) or asset → cash (a withdrawal or disposal) — one-time or recurring, from the transaction editor, from the asset's contribute / withdraw / close sheets, or for a new asset's initial investment. A transfer is neither income nor expense: confirming it changes cash and records the asset's flow together (net worth doesn't move, apart from currency differences); undoing or deleting it removes that flow. A transfer between currencies records the amount on each side (prefilled at the date's PTAX).
+34. The Portfolio tab MUST show the available cash in "All", for reference only (a donut slice and a card that opens Cash Flow), never in the portfolio figures (value, invested, gain, return).
+35. Cash Flow charts MUST offer 3, 6 and 12 months; the balance line MUST start at the first record, so it shows from the first month of use.
+36. The Overview's upcoming list MUST show only overdue commitments and those due this month.
+
 ## Non-functional requirements
 
 - **Offline-first:** every feature works without internet. The only network use is fetching public exchange rates from `api.bcb.gov.br` over HTTPS; automatic fetching can be turned off ("Update" still fetches on demand) and requests carry only a date range.
@@ -122,7 +129,7 @@ MyFinance is a single-user app where the user enters everything by hand, sees ca
 
 ## Visual identity
 
-- MyFinance brand: a geometric "F" whose top arm rises like a progress line and ends in a green data point; `myfinance` wordmark in lowercase Geist SemiBold. Adaptive and monochrome launcher icons, splash screen and notification icon. Documented in `docs/BRAND.md`.
+- MyFinance brand: the portfolio's allocation ring, almost closed and completed by a green data point; `myfinance` wordmark in lowercase Geist SemiBold. Adaptive and monochrome launcher icons, splash screen and notification icon. Documented in `docs/BRAND.md`.
 - Same palette, typography, shapes, spacing and motion as MyFit: graphite and black, white type, green as the only accent; red for overdue, negative and destructive; amber for warnings.
 
 ## Architecture overview

@@ -47,8 +47,9 @@ Dependency rule: `domain` knows nothing about Android (it uses only the JDK, kot
 category ─┬─ transaction_template ──< transaction_occurrence
           └───────────────────────────< (standalone occurrences have no template)
 cash_adjustment            (OPENING per currency, ADJUSTMENT)
-asset_category ── asset ─┬─< asset_flow
-                         └─< asset_valuation
+asset_category ── asset ─┬─< asset_flow ── (occurrenceId) ── transaction_occurrence   (transfers)
+                         ├─< asset_valuation
+                         └─< transaction_template / transaction_occurrence (assetId, transfers)
 exchange_rate              (USD→BRL per date and source)
 ```
 
@@ -56,13 +57,13 @@ Conventions (same as MyFit): `id Long` auto-generated; enums stored as TEXT name
 
 | Table | Columns | Keys and rules |
 |---|---|---|
-| `category` | `name?`, `kind` (INCOME/EXPENSE), `icon`, `seedKey?`, `archived`, `position`, `createdAtMs` | unique `seedKey`. Kind fixed after creation. Delete only if unused, otherwise archive (hidden from pickers, kept in history). |
-| `transaction_template` | `name`, `categoryId`, `kind`, `currency`, `expectedAmount`, `recurrenceUnit`, `recurrenceInterval`, `startDate`, `anchorDate`, `endDate?`, `description?`, `active`, `generatedThrough?`, `createdAtMs`, `updatedAtMs` | `categoryId` RESTRICT. Recurring only. |
-| `transaction_occurrence` | `templateId?`, `scheduledDate?`, `dueDate`, `name`, `categoryId`, `kind`, `currency`, `expectedAmount`, `description?`, `state` (PENDING/CONFIRMED/CANCELLED), `actualAmount?`, `actualCurrency?`, `actualDate?`, `note?`, `confirmedAtMs?`, `customized`, `createdAtMs`, `updatedAtMs` | `templateId` SET NULL; `categoryId` RESTRICT; unique (`templateId`, `scheduledDate`); indices on `dueDate`, `actualDate`, `state`, `categoryId`. |
+| `category` | `name?`, `kind` (INCOME/EXPENSE only), `icon`, `seedKey?`, `archived`, `position`, `createdAtMs` | unique `seedKey`. Kind fixed after creation. Delete only if unused, otherwise archive (hidden from pickers, kept in history). |
+| `transaction_template` | `name`, `categoryId?`, `kind` (INCOME/EXPENSE/TRANSFER_OUT/TRANSFER_IN), `currency`, `expectedAmount`, `recurrenceUnit`, `recurrenceInterval`, `startDate`, `anchorDate`, `endDate?`, `description?`, `active`, `generatedThrough?`, `createdAtMs`, `updatedAtMs`, `assetId?` | `categoryId` RESTRICT; `assetId` SET NULL. Recurring only. Income/expenses have a category, transfers an asset. |
+| `transaction_occurrence` | `templateId?`, `scheduledDate?`, `dueDate`, `name`, `categoryId?`, `kind`, `currency`, `expectedAmount`, `description?`, `state` (PENDING/CONFIRMED/CANCELLED), `actualAmount?`, `actualCurrency?`, `actualDate?`, `note?`, `confirmedAtMs?`, `customized`, `createdAtMs`, `updatedAtMs`, `assetId?` | `templateId` SET NULL; `categoryId` RESTRICT; `assetId` SET NULL; unique (`templateId`, `scheduledDate`); indices on `dueDate`, `actualDate`, `state`, `categoryId`, `assetId`. |
 | `cash_adjustment` | `kind` (OPENING/ADJUSTMENT), `currency`, `date`, `amount` (signed), `note?`, `createdAtMs` | At most one OPENING per currency (enforced by the repository, tested). |
 | `asset_category` | `name?`, `assetGroup` (INVESTMENT/PERSONAL), `icon`, `seedKey?`, `archived`, `position` | unique `seedKey`. Same delete/archive rule as `category`. |
 | `asset` | `name`, `categoryId`, `currency`, `description?`, `institution?`, `acquisitionDate`, `quantity?` (TEXT), `notes?`, `imagePath?`, `createdAtMs`, `updatedAtMs` | `categoryId` RESTRICT. Currency locked after creation. Deleting requires confirmation; closing the position is the normal path. |
-| `asset_flow` | `assetId`, `kind` (INITIAL/CONTRIBUTION/WITHDRAWAL/PARTIAL_DISPOSAL/FULL_DISPOSAL), `date`, `amount`, `quantityDelta?` (TEXT), `note?`, `createdAtMs` | `assetId` CASCADE; index (`assetId`, `date`). `amount > 0`, except INITIAL which may be 0 (inherited or granted assets). At most one INITIAL and one FULL_DISPOSAL per asset. |
+| `asset_flow` | `assetId`, `kind` (INITIAL/CONTRIBUTION/WITHDRAWAL/PARTIAL_DISPOSAL/FULL_DISPOSAL), `date`, `amount`, `quantityDelta?` (TEXT), `note?`, `createdAtMs`, `occurrenceId?` | `assetId` CASCADE; `occurrenceId` SET NULL, unique (the transfer it belongs to); index (`assetId`, `date`). `amount > 0`, except INITIAL which may be 0 (inherited or granted assets). At most one INITIAL and one FULL_DISPOSAL per asset. |
 | `asset_valuation` | `assetId`, `date`, `value` (≥ 0), `note?`, `createdAtMs` | `assetId` CASCADE; unique (`assetId`, `date`): a second valuation on the same day replaces it, after a warning. |
 | `exchange_rate` | `base` (USD), `quote` (BRL), `date`, `rateMicros` (rate × 10⁶), `source` (BCB/MANUAL), `fetchedAtMs` | unique (`base`, `quote`, `date`, `source`): a fetched and a manual rate can coexist on the same date; the manual one wins. |
 
@@ -71,7 +72,7 @@ Conventions (same as MyFit): `id Long` auto-generated; enums stored as TEXT name
 - Occurrences keep a snapshot of `name`, `kind`, `currency` and `description`, so editing or deleting a template never rewrites history. Category names are referenced, not copied: renaming a category is meant to apply to history.
 - Settings (theme, number and date formats, default and display currency, automatic rate fetching, automatic backup) live in DataStore and travel in the backup's `settings.json`. Rate fetch state (`lastFetchMs`, last error) and backup state live in their own DataStores.
 - Images (optional asset photo) live in `filesDir/images/assets/<uuid>.jpg`, EXIF stripped, downscaled to 1600 px (JPEG 85). The database stores only the relative path; paths that escape `images/` never resolve.
-- Schema exported to `app/schemas`. Every change after v1 needs a migration with a `MigrationTest` case.
+- Schema exported to `app/schemas`. Every change after v1 needs a migration with a `MigrationTest` case. **v2 (1.1.0, transfers):** nullable `categoryId` and `assetId` on templates and occurrences, `occurrenceId` on flows; `MIGRATION_1_2` rebuilds the three tables (SQLite can't change nullability) with foreign keys off, as Room's auto-migrations do, and adds the predefined categories introduced in 1.1.0 (Credit Card and Loans for expenses, Loans Receivable for personal assets). `MigrationTest` builds a v1 database from `1.json`, migrates it and lets Room validate v2.
 - Seeds (`CategorySeed`) insert the predefined categories on database creation, with stable `seedKey`s frozen in `app/src/test/resources/seed-keys.txt`. A predefined category that was never renamed has `name = NULL` and is shown with the localized string for its `seedKey` (English or Portuguese); renaming stores the user's text. Backups keep `NULL`; CSV export resolves it to the English seed name.
 
 ## Recurrence
@@ -118,7 +119,8 @@ Confirming stores `actualAmount`, `actualCurrency` (defaults to the occurrence c
 - **Projected balance through `t`** = available + Σ pending income (`dueDate ≤ t`, overdue included) − Σ pending expenses (same), per currency, then converted at the latest rate. Each occurrence counts once: confirmed by actual amount on its actual date (already inside the balance), pending by expected amount, cancelled never. "Projected end of month" uses `t = endOfMonth`.
 - **Month summary M:** an occurrence belongs to the month of its `actualDate` when confirmed, or of its `dueDate` when pending. Expected income = Σ confirmed income in M (actual, converted at its actual date) + Σ pending income due in M (expected, converted at the latest rate); received income = Σ confirmed income in M. Same for expenses. "Overdue from earlier months" = PENDING with `dueDate < min(M.start, today)`.
 - **Next month forecast** = projected balance through the end of next month; next month's expected income and expenses are shown alongside (not added again).
-- **Balance history** = `balance(c, monthEnd)` for each past month, converted at each month-end's rate.
+- **Balance history** = `balance(c, date)` converted at each date's rate, over the chart's span (3, 6 or 12 months): the first record's day when it falls in the span, then each month's end (today for the current month), so the line shows from the first month of use. Income vs. expenses covers the same span.
+- **Transfers** count in the balance and projections by `cashInflow` (out of cash or into it) but never in income or expenses; the month summary reports them apart (`transfersOut`, `transfersIn`). See "Transfers".
 
 ## Exchange rates
 
@@ -131,9 +133,20 @@ Confirming stores `actualAmount`, `actualCurrency` (defaults to the occurrence c
   - Range: on the first fetch, from `min(earliest record date − 7 days, today − 30 days)` to today, where "earliest record" is the earliest date in any table. Later, from the last stored BCB date + 1 to today, plus a backfill window `[earliest record − 7 days, first stored BCB date − 1]` when a record is older than the first stored rate.
   - Inserts BCB rows with IGNORE; manual rows are separate and never touched.
   - Every successful response (including an empty 404) updates `lastFetchMs` in `RateStateStore`.
-  - Automatic runs (app start when `lastFetchMs` is older than 6 h; `RateRefreshWorker` once a day with a network constraint) happen only when *Fetch exchange rates* is on. `force = true` (the "Update" button) is an explicit user action: it ignores the 6 h throttle and the switch.
+  - The automatic run (each time the app comes to the foreground, if `lastFetchMs` is older than 6 h) happens only when *Fetch exchange rates* is on. There is no background job: rates are fetched when the app opens or with *Update*. `force = true` (the "Update" button) is an explicit user action: it ignores the 6 h throttle and the switch.
   - Failures never block the UI: the last known rate stays in use and the error is shown.
 - `BcbRateClient` uses `HttpsURLConnection` (10 s timeouts, `GET`, `Accept: application/json`, generic `User-Agent: MyFinance`), refuses non-HTTPS, and reads at most 1 MiB. `network_security_config.xml` disables cleartext.
+
+## Transfers
+
+A transfer moves money between cash and an asset (1.1.0, user request). It is the only link between Cash and the Portfolio; everything else stays separate.
+
+- `EntryKind` has four values: INCOME, EXPENSE, TRANSFER_OUT (cash → asset, a contribution) and TRANSFER_IN (asset → cash, a withdrawal). `cashInflow` gives the sign for cash; `isTransfer` keeps transfers out of income, expenses and category charts (they have no category). Because the kind is stored, a transfer stays a transfer after its asset is deleted (`assetId` becomes NULL).
+- Transfers are ordinary occurrences: one-time or recurring, pending until confirmed, projected in the cash forecast, listed in History (a "Transfer" chip) and in Cash Flow (their own section and month totals). A blank name takes the asset's.
+- **Confirmation records the asset side** (`TransferFlows.sync`, inside the same transaction): TRANSFER_OUT creates a CONTRIBUTION, TRANSFER_IN a WITHDRAWAL, linked by `asset_flow.occurrenceId`, dated the actual date, in the asset's currency — the same amount when the currencies match, otherwise the amount the user typed (prefilled at the date's PTAX; the broker's figure is what counts). Undoing the confirmation or deleting the transfer removes the flow; a confirmed transfer can't change its asset or direction (undo it first).
+- **From the asset side**, contribute / withdraw / close and a new asset's initial investment have a "From cash" / "To cash" switch: it records a confirmed one-time transfer linked to the flow (a disposal keeps its own kind). Deleting such a flow deletes a one-time transfer, or puts a recurring one back to pending. A transfer that created the initial investment can't be undone (the asset needs it): deleting it unlinks the flow, which stays as the initial investment.
+- **Asset lifecycle:** closing a position deactivates its recurring transfers (future pending ones removed); new transfers to a closed position are refused. Deleting an asset deletes its recurring and pending transfers; done ones stay in the cash history.
+- Rules enforced: a transfer needs an asset and no category; it can't be dated before the asset's initial investment; refusals reach the UI as a dialog (`ActionError`), never a crash.
 
 ## Portfolio
 
@@ -147,6 +160,7 @@ Flows and valuations are in the asset's currency. Per asset, at date `d`:
 - **Dashboard totals** are over open assets: value, invested (= Σ netInvested), gain (= value − invested), simple return (= gain of the assets that received contributions ÷ their Σ contributed; a granted or inherited asset with nothing contributed adds to the gain but not to the return), last valuation date (= the most recent valuation among them). Closed assets are listed apart with their final (realized) gain, shown as "Realized from closed positions".
 - **Period gain** (1M/3M/6M/1Y/All) = (value(end) − value(start)) − net flows in (start, end], where value(start) = 0 if the asset had no record yet; null only when there is no record on or before `end`. Absolute only: no percentage is shown for periods (it would require a time-weighted method).
 - **Allocation** = value by category ÷ total value of open assets, for All, Investments or Personal assets; shares are computed at scale 4 and the rounding remainder goes to the largest slice so they sum to 1.
+- **Cash for reference** (1.1.0): in "All", once Cash Flow has an opening balance or a done entry, the screen shows available cash (from `CashCalculator.available`, converted at the latest rate) as a card that opens Cash Flow and, when positive, as a donut slice; asset slices are scaled by (1 − cash share) and the centre shows the total with cash. Value, invested, gain and return never include it.
 - **Series** sample dates between the first record and today: weekly plus today for 1M; month ends plus today for the other periods. No point is drawn before the first record, and values are never interpolated between valuations (carry-forward only). "Invested vs value" covers assets open at each date; "performance" is the cumulative gain of every asset with records up to that date (closed assets keep their realized gain).
 
 ## Net worth
@@ -183,8 +197,9 @@ Commands and the on-device checklist are in [`TESTING.md`](TESTING.md).
 
 ## Decisions and trade-offs
 
-- **Portfolio separate from cash** (user decision): simpler model, no hidden transfers; the cost is that the user must keep cash aligned (balance adjustments), and the Overview makes the composition explicit.
-- **One cash balance per currency** (user decision): no accounts or transfers; a USD account is the USD cash balance.
+- **Portfolio separate from cash** (user decision): simpler model, no hidden transfers; the cost is that the user must keep cash aligned, and the Overview makes the composition explicit. Since 1.1.0 an explicit **transfer** links the two when the user wants it (user request); balance adjustments remain for everything else. The Portfolio shows cash in "All" for reference only, never in its figures.
+- **One cash balance per currency** (user decision): no accounts; a USD account is the USD cash balance. Transfers only go between cash and assets.
+- **Transfers as occurrences** over a separate table: they get recurrence, confirmation, projections, history and backup for free; the price is two new kinds that every income/expense rule must handle (`cashInflow`, `isTransfer`).
 - **BCB PTAX over other rate APIs:** official, free, keyless, stable for years. AwesomeAPI (intraday, unofficial) and Frankfurter (ECB) were considered and rejected.
 - **`HttpsURLConnection` over Retrofit/OkHttp:** a single GET does not justify the dependencies.
 - **Materialized occurrences (12-month horizon) over virtual ones:** history, filters and confirmation work on real rows; the unique index makes duplicates impossible.

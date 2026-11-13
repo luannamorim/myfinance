@@ -25,6 +25,8 @@ Flat lists mirroring the tables: `categories`, `templates`, `occurrences`, `adju
 
 Field names are part of the file format: they are never renamed. New fields are added as optional with defaults, so older backups keep restoring.
 
+Added in app 1.1.0 (transfers), all optional: `assetId` on templates and occurrences (a transfer's asset), `occurrenceId` on asset flows (the transfer a flow belongs to); `categoryId` became optional on templates and occurrences (transfers have none). A 1.0.0 backup restores as is. Restore inserts asset categories and assets before transactions, and flows after them, because transfers point at both.
+
 ## When backups run
 
 - **Daily**, when battery and storage are not low.
@@ -70,6 +72,7 @@ If the app dies at any point, the database is either the old one or the new one,
 
 - UTF-8, comma separated, header row, RFC 4180 quoting.
 - Dates in ISO-8601 (`2026-11-12`), amounts as plain decimals with a dot (`2500.00`) and currency columns (`transactions.csv` has `currency` for the expected amount and `actual_currency` for the actual one).
+- Transfers appear in `transactions.csv` with type `TRANSFER_OUT` (cash → asset) or `TRANSFER_IN` (asset → cash), no category and the asset's name in the `asset` column; the flow they recorded is in `asset_flows.csv`, whose `transfer_id` is the transaction's `id`.
 - Text cells starting with `=`, `+`, `-`, `@`, a tab or a carriage return are prefixed with `'` to prevent formula injection in spreadsheets. Predefined categories that were never renamed are written with their English name.
 - **The export is not encrypted**; the app warns before writing it.
 
