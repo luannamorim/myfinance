@@ -17,20 +17,38 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.luannamorim.myfinance.core.format.Formats
+import io.github.luannamorim.myfinance.data.repository.ExchangeRateRepository
+import io.github.luannamorim.myfinance.di.ApplicationScope
 import io.github.luannamorim.myfinance.domain.model.AppSettings
 import io.github.luannamorim.myfinance.domain.model.ThemeMode
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
 import io.github.luannamorim.myfinance.ui.navigation.AppViewModel
 import io.github.luannamorim.myfinance.ui.navigation.FinanceNavHost
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    @Inject lateinit var rates: Lazy<ExchangeRateRepository>
+    @Inject @ApplicationScope lateinit var appScope: CoroutineScope
+
     /** Incremented whenever an intent asks to show the backup screen (backup failure notification). */
     private val openBackupRequest = mutableIntStateOf(0)
+
+    /**
+     * Each time the app comes to the foreground, fetch exchange rates: at most every 6 hours and only when
+     * automatic fetching is on (the repository decides). There is no background job.
+     */
+    override fun onStart() {
+        super.onStart()
+        appScope.launch { rates.get().refresh() }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()

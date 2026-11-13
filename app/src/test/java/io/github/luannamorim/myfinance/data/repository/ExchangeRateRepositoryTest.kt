@@ -1,13 +1,7 @@
 package io.github.luannamorim.myfinance.data.repository
 
-import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.work.ListenableWorker
-import androidx.work.WorkerFactory
-import androidx.work.WorkerParameters
-import androidx.work.testing.TestListenableWorkerBuilder
 import io.github.luannamorim.myfinance.core.time.FakeTimeSource
 import io.github.luannamorim.myfinance.data.prefs.RateError
 import io.github.luannamorim.myfinance.data.prefs.RateStateStore
@@ -15,7 +9,6 @@ import io.github.luannamorim.myfinance.data.rates.RateClient
 import io.github.luannamorim.myfinance.domain.cash.RecurrenceRule
 import io.github.luannamorim.myfinance.domain.model.EntryKind
 import io.github.luannamorim.myfinance.domain.model.RateSource
-import io.github.luannamorim.myfinance.platform.rates.RateRefreshWorker
 import io.github.luannamorim.myfinance.testutil.d
 import io.github.luannamorim.myfinance.testutil.inMemoryDb
 import io.github.luannamorim.myfinance.testutil.testSettings
@@ -153,21 +146,5 @@ class ExchangeRateRepositoryTest {
         assertEquals(3, parts.size)
         assertEquals(d("2013-12-31"), parts[0].second)
         assertEquals(d("2014-01-01"), parts[1].first)
-    }
-
-    @Test
-    fun worker_retriesOnNetworkFailure_andFailsOnBadFormat() = runBlocking {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val factory = object : WorkerFactory() {
-            override fun createWorker(appContext: Context, workerClassName: String, workerParameters: WorkerParameters): ListenableWorker =
-                RateRefreshWorker(appContext, workerParameters, repo)
-        }
-        client.response = { _, _ -> throw IOException("offline") }
-        val worker = TestListenableWorkerBuilder<RateRefreshWorker>(context).setWorkerFactory(factory).build()
-        assertEquals(ListenableWorker.Result.retry(), worker.doWork())
-
-        client.response = { _, _ -> "<html>" }
-        time.set("2026-11-13", "18:00")
-        assertEquals(ListenableWorker.Result.failure(), worker.doWork())
     }
 }
