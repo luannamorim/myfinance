@@ -14,6 +14,7 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -32,6 +33,8 @@ import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 fun FinanceNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
+    /** Incremented by MainActivity when the backup failure notification is tapped. */
+    openBackupRequest: Int = 0,
 ) {
     val entry by navController.currentBackStackEntryAsState()
     val destination = entry?.destination
@@ -94,6 +97,10 @@ fun FinanceNavHost(
             popExitTransition = { fadeOut(tween(TRANSITION_MS)) },
         ) {
             financeGraph(navController)
+        }
+        // After NavHost so the graph is set when a notification asks for the backup screen.
+        LaunchedEffect(openBackupRequest) {
+            if (openBackupRequest > 0) navController.navigate(BackupRoute) { launchSingleTop = true }
         }
     }
 }

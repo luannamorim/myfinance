@@ -11,6 +11,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 import io.github.luannamorim.myfinance.ui.theme.FinanceShapes
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 
@@ -30,6 +31,7 @@ fun FinanceTextField(
     imeAction: ImeAction = ImeAction.Default,
     textStyle: TextStyle = FinanceTheme.type.body,
     suffix: String? = null,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
 ) {
     val c = FinanceTheme.colors
     OutlinedTextField(
@@ -44,6 +46,7 @@ fun FinanceTextField(
         minLines = minLines,
         textStyle = textStyle,
         suffix = suffix?.let { { Text(it, color = c.textSecondary) } },
+        visualTransformation = visualTransformation,
         shape = FinanceShapes.small,
         keyboardOptions = KeyboardOptions(capitalization = capitalization, keyboardType = keyboardType, imeAction = imeAction),
         colors = OutlinedTextFieldDefaults.colors(

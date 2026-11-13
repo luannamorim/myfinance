@@ -5,6 +5,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import io.github.luannamorim.myfinance.ui.feature.asset.AssetDetailScreen
 import io.github.luannamorim.myfinance.ui.feature.asset.AssetEditorScreen
+import io.github.luannamorim.myfinance.ui.feature.backup.BackupScreen
 import io.github.luannamorim.myfinance.ui.feature.cashflow.CashFlowActions
 import io.github.luannamorim.myfinance.ui.feature.cashflow.CashFlowChartsScreen
 import io.github.luannamorim.myfinance.ui.feature.cashflow.CashFlowScreen
@@ -66,6 +67,7 @@ internal fun NavGraphBuilder.tabDestinations(navController: NavHostController) {
                 onOpenAdjust = { navController.navigate(AdjustBalanceRoute) },
                 onOpenRecurring = { navController.navigate(RecurringListRoute) },
                 onOpenCurrency = { navController.navigate(CurrencySettingsRoute) },
+                onOpenBackup = { navController.navigate(BackupRoute) },
             ),
         )
     }
@@ -77,6 +79,7 @@ internal fun NavGraphBuilder.settingsDestinations(navController: NavHostControll
     composable<CurrencySettingsRoute> { CurrencySettingsScreen(onBack = { navController.popBackStack() }) }
     composable<OpeningBalancesRoute> { OpeningBalancesScreen(onBack = { navController.popBackStack() }) }
     composable<AdjustBalanceRoute> { AdjustBalanceScreen(onBack = { navController.popBackStack() }) }
+    composable<BackupRoute> { BackupScreen(onBack = { navController.popBackStack() }) }
 }
 
 /** Transactions: editor, recurring list. */

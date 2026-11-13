@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Category
+import androidx.compose.material.icons.rounded.CloudUpload
 import androidx.compose.material.icons.rounded.CurrencyExchange
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Tune
@@ -41,6 +42,7 @@ data class SettingsActions(
     val onOpenAdjust: () -> Unit = {},
     val onOpenRecurring: () -> Unit = {},
     val onOpenCurrency: () -> Unit = {},
+    val onOpenBackup: () -> Unit = {},
     val onOpenLanguage: (() -> Unit)? = null,
 )
 
@@ -101,5 +103,8 @@ fun SettingsContent(state: SettingsUiState, actions: SettingsActions, modifier: 
         actions.onOpenLanguage?.let {
             NavRow(Icons.Rounded.Language, stringResource(R.string.settings_language), stringResource(R.string.settings_language_hint), it)
         }
+
+        SectionHeader(stringResource(R.string.settings_data), Modifier.padding(top = Spacing.s))
+        NavRow(Icons.Rounded.CloudUpload, stringResource(R.string.backup_title), stringResource(R.string.backup_settings_hint), actions.onOpenBackup)
     }
 }
