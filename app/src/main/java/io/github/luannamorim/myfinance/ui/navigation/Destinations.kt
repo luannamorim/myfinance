@@ -14,6 +14,7 @@ import io.github.luannamorim.myfinance.ui.feature.transaction.TransactionEditorS
 import io.github.luannamorim.myfinance.ui.feature.history.HistoryScreen
 import io.github.luannamorim.myfinance.ui.feature.overview.OverviewScreen
 import io.github.luannamorim.myfinance.ui.feature.portfolio.PortfolioActions
+import io.github.luannamorim.myfinance.ui.feature.portfolio.PortfolioChartsScreen
 import io.github.luannamorim.myfinance.ui.feature.portfolio.PortfolioScreen
 import io.github.luannamorim.myfinance.ui.feature.settings.AdjustBalanceScreen
 import io.github.luannamorim.myfinance.ui.feature.settings.CategoriesScreen
@@ -89,6 +90,7 @@ internal fun NavGraphBuilder.cashDestinations(navController: NavHostController) 
 /** Portfolio: asset editor and detail. */
 internal fun NavGraphBuilder.portfolioDestinations(navController: NavHostController) {
     composable<AssetEditorRoute> { AssetEditorScreen(onClose = { navController.popBackStack() }) }
+    composable<PortfolioChartsRoute> { PortfolioChartsScreen(onBack = { navController.popBackStack() }) }
     composable<AssetDetailRoute> {
         AssetDetailScreen(
             onBack = { navController.popBackStack() },

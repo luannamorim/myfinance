@@ -171,13 +171,13 @@ fun AssetDetailContent(state: AssetDetailUiState, actions: AssetDetailActions) {
         if (state.series.size >= 2) {
             SectionHeader(stringResource(R.string.asset_chart), Modifier.padding(top = Spacing.s))
             FinanceCard(Modifier.fillMaxWidth()) {
-                val dates = state.series.map { it.date.toEpochDay().toDouble() }
+                val dates = state.series.map { it.date }
                 FinanceLineChart(
                     series = listOf(
-                        LineSeries(state.series.mapIndexed { i, p -> dates[i] to p.invested.money.toBigDecimal().toDouble() }, c.chart[3]),
-                        LineSeries(state.series.mapIndexed { i, p -> dates[i] to p.value.money.toBigDecimal().toDouble() }, c.accent, area = true),
+                        LineSeries(state.series.mapIndexed { i, p -> i.toDouble() to p.invested.money.toBigDecimal().toDouble() }, c.chart[3]),
+                        LineSeries(state.series.mapIndexed { i, p -> i.toDouble() to p.value.money.toBigDecimal().toDouble() }, c.accent, area = true),
                     ),
-                    xLabel = { v -> formats.dates.dayMonth(LocalDate.ofEpochDay(v.toLong())) },
+                    xLabel = { v -> dates.getOrNull(v.toInt())?.let(formats.dates::dayMonth).orEmpty() },
                     yLabel = { v -> formats.money.formatShort((v * 100).toLong(), asset.currency) },
                     summary = stringResource(R.string.asset_chart_summary),
                 )

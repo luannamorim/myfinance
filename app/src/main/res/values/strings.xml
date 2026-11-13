@@ -413,4 +413,21 @@
     <string name="portfolio_charts_hint">Net worth, value vs invested, performance</string>
     <string name="portfolio_show_all">Show all categories</string>
     <string name="portfolio_asset_gain">%1$s · %2$s</string>
+
+    <!-- Portfolio charts -->
+    <string name="pcharts_title">Portfolio charts</string>
+    <string name="pcharts_period_1m">1M</string>
+    <string name="pcharts_period_3m">3M</string>
+    <string name="pcharts_period_6m">6M</string>
+    <string name="pcharts_period_1y">1Y</string>
+    <string name="pcharts_period_all">All</string>
+    <string name="pcharts_net_worth">Net worth</string>
+    <string name="pcharts_net_worth_summary">Net worth (cash, investments and personal assets) over time.</string>
+    <string name="pcharts_value_vs_invested">Value vs invested</string>
+    <string name="pcharts_performance">Performance</string>
+    <string name="pcharts_performance_summary">Cumulative gain or loss of the portfolio.</string>
+    <string name="pcharts_period_gain">Gain in the period</string>
+    <string name="pcharts_period_gain_hint">Change in value minus contributions and withdrawals in the period. Shown in money only.</string>
+    <string name="pcharts_allocation">Allocation</string>
+    <string name="pcharts_cumulative_gain">Cumulative gain</string>
 </resources>

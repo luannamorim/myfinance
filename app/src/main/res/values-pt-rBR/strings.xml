@@ -416,4 +416,21 @@
     <string name="portfolio_charts_hint">Patrimônio, valor x investido, desempenho</string>
     <string name="portfolio_show_all">Mostrar todas as categorias</string>
     <string name="portfolio_asset_gain">%1$s · %2$s</string>
+
+    <!-- Portfolio charts -->
+    <string name="pcharts_title">Gráficos da carteira</string>
+    <string name="pcharts_period_1m">1M</string>
+    <string name="pcharts_period_3m">3M</string>
+    <string name="pcharts_period_6m">6M</string>
+    <string name="pcharts_period_1y">1A</string>
+    <string name="pcharts_period_all">Tudo</string>
+    <string name="pcharts_net_worth">Patrimônio</string>
+    <string name="pcharts_net_worth_summary">Patrimônio (caixa, investimentos e bens) ao longo do tempo.</string>
+    <string name="pcharts_value_vs_invested">Valor x investido</string>
+    <string name="pcharts_performance">Desempenho</string>
+    <string name="pcharts_performance_summary">Ganho ou perda acumulado da carteira.</string>
+    <string name="pcharts_period_gain">Ganho no período</string>
+    <string name="pcharts_period_gain_hint">Variação do valor menos aportes e resgates do período. Mostrado só em dinheiro.</string>
+    <string name="pcharts_allocation">Alocação</string>
+    <string name="pcharts_cumulative_gain">Ganho acumulado</string>
 </resources>

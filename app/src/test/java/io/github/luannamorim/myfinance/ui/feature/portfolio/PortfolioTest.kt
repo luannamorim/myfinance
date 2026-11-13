@@ -113,4 +113,22 @@ class PortfolioTest {
     fun screenshot_selected() {
         compose.snapBothThemes("portfolio_selected") { PortfolioContent(portfolioState(data, rates, Currency.BRL, null, 2L, today), PortfolioActions()) }
     }
+
+    @Test
+    fun charts_periodGainAndSeries() {
+        val cash = io.github.luannamorim.myfinance.domain.cash.CashLedger(adjustments = listOf(io.github.luannamorim.myfinance.testutil.opening(brl("10000.00"), "2026-01-01")))
+        val charts = portfolioCharts(data, cash, rates, Currency.BRL, io.github.luannamorim.myfinance.domain.portfolio.Period.ALL, today)
+        assertEquals(today, charts.netWorth.last().first)
+        assertEquals(d("2026-01-31"), charts.netWorth.first().first)
+        // All time: gains of every asset: Tesouro 120 + VOO 1.175,73 + car 40.000 + Old CDB 80 = 41.375,73
+        assertEquals(brl("41375.73"), charts.periodGain!!.money)
+    }
+
+    @Test
+    fun screenshot_charts() {
+        val cash = io.github.luannamorim.myfinance.domain.cash.CashLedger(adjustments = listOf(io.github.luannamorim.myfinance.testutil.opening(brl("10000.00"), "2026-01-01")))
+        compose.snapBothThemes("portfolio_charts") {
+            PortfolioChartsContent(portfolioCharts(data, cash, rates, Currency.BRL, io.github.luannamorim.myfinance.domain.portfolio.Period.Y1, today), {}, {})
+        }
+    }
 }
