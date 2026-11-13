@@ -61,7 +61,8 @@ class BackupViewModelTest {
         vm.setPassword("senha123".toCharArray())
         vm.state.awaitUntil { it.keyState == KeyState.READY && !it.busy }
         assertEquals(KeyState.READY, keyStore.state())
-        assertTrue(store.current().hasUnsavedChanges)
+        // The scheduler marks the change on its own scope: wait for it.
+        assertTrue(store.state.awaitUntil { it.hasUnsavedChanges }.hasUnsavedChanges)
     }
 
     @Test
