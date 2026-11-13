@@ -22,7 +22,7 @@ android {
         minSdk = 26
         targetSdk = 37
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -65,6 +65,8 @@ android {
 
     androidResources {
         generateLocaleConfig = true
+        // Only the app's own languages: library strings in other locales would mix with English UI.
+        localeFilters += listOf("en", "pt-rBR")
     }
 
     testOptions {

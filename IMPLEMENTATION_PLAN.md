@@ -394,14 +394,14 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 
 ### Task 7.1: Quality pass
 
-- [ ] Accessibility: amounts have spoken descriptions, charts have text summaries, 1.5× font and tablet screenshots for every screen (`AccessibilityScreenshotTest`), 48 dp targets.
-- [ ] Loading, empty and error states on every screen; light theme review; pt-BR strings complete (lint `MissingTranslation` as error).
-- [ ] Icon and splash validation screenshots; `docs/screenshots/*.png` with synthetic data. Commit `feat(ui): polish accessibility, states and translations`.
+- [x] Accessibility: amounts have spoken descriptions, charts have text summaries, 1.5× font screenshots of the main screens (Overview, Cash Flow, Portfolio, Asset detail, History, Transaction editor, Settings; Overview and Portfolio also in pt-BR) and tablet (`AccessibilityScreenshotTest`), 48 dp targets. Rows reflow (`AdaptiveRow`, `TilePair`) and amounts shrink instead of clipping.
+- [x] Loading, empty and error states on every screen; light theme review; pt-BR strings complete (lint `MissingTranslation` as error).
+- [x] Icon and splash validation screenshots; `docs/screenshots/*.png` with synthetic data. Commit `feat(ui): polish accessibility, states and translations`.
 
 ### Task 7.2: Documentation and release v1.0.0
 
-- [ ] README final (features, screenshots, install, privacy, backup, build, stack, docs, license), CHANGELOG `1.0.0`, CONTRIBUTING.
-- [ ] Keystore: the user runs `keytool -genkeypair -v -keystore ~/my/.keystores/myfinance-release.jks -alias myfinance -keyalg RSA -keysize 4096 -validity 10000` and adds `MYFINANCE_*` to `~/.gradle/gradle.properties`.
-- [ ] `./gradlew lintDebug testDebugUnitTest assembleRelease`; `apksigner verify`; `aapt dump permissions` equals the list in Task 2.1; size < 15 MB.
+- [x] README final (features, screenshots, install, privacy, backup, build, stack, docs, license), CHANGELOG `1.0.0`, CONTRIBUTING.
+- [x] Keystore: at the user's request the release reuses the MyFit keystore (`MYFINANCE_*` in `~/.gradle/gradle.properties` copied from `MYFIT_*`, values never printed). A dedicated one can be created later with `keytool -genkeypair -v -keystore ~/my/.keystores/myfinance-release.jks -alias myfinance -keyalg RSA -keysize 4096 -validity 10000`, but only before the first public release: changing the key afterwards breaks updates.
+- [x] `./gradlew lintDebug testDebugUnitTest assembleRelease`; `apksigner verify`; `aapt dump permissions` equals the list in Task 2.1; size < 15 MB.
 - [ ] Hand the APK and `docs/TESTING.md` to the user: the manual checklist (including quick entry ≤ 4 taps + typing and cold start < 1.5 s) runs on their phone before the release is published.
 - [ ] Tag `v1.0.0`, `gh release create v1.0.0 app/build/outputs/apk/release/myfinance-1.0.0.apk`. Push.

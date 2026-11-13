@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -25,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.unit.dp
 import io.github.luannamorim.myfinance.R
 import io.github.luannamorim.myfinance.domain.fx.Total
 import io.github.luannamorim.myfinance.domain.model.AssetGroup
@@ -106,7 +108,7 @@ fun PortfolioContent(state: PortfolioUiState, actions: PortfolioActions, modifie
             state.slices.forEachIndexed { i, (slice, category) ->
                 val selected = state.selectedCategory == slice.categoryId
                 Row(
-                    Modifier.fillMaxWidth().clickable { actions.onSelect(if (selected) null else slice.categoryId) }.padding(vertical = Spacing.s),
+                    Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { actions.onSelect(if (selected) null else slice.categoryId) }.padding(vertical = Spacing.s),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     AdaptiveRow(
