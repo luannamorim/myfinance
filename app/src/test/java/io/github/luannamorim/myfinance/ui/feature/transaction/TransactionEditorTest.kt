@@ -6,14 +6,21 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.lifecycle.SavedStateHandle
 import androidx.navigation.testing.invoke
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.luannamorim.myfinance.core.time.FakeTimeSource
+import io.github.luannamorim.myfinance.data.images.ImageStore
+import io.github.luannamorim.myfinance.data.repository.AssetDraft
 import io.github.luannamorim.myfinance.data.repository.BackupTrigger
 import io.github.luannamorim.myfinance.data.repository.CashRepository
 import io.github.luannamorim.myfinance.data.repository.CategoryRepository
+import io.github.luannamorim.myfinance.data.repository.PortfolioRepository
 import io.github.luannamorim.myfinance.data.repository.TransactionDraft
 import io.github.luannamorim.myfinance.domain.cash.RecurrenceRule
+import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.EntryKind
+import io.github.luannamorim.myfinance.domain.model.FlowKind
+import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.domain.model.OccurrenceState
 import io.github.luannamorim.myfinance.testutil.MainDispatcherRule
 import io.github.luannamorim.myfinance.testutil.PHONE_TALL
@@ -22,9 +29,12 @@ import io.github.luannamorim.myfinance.testutil.brl
 import io.github.luannamorim.myfinance.testutil.d
 import io.github.luannamorim.myfinance.testutil.inMemoryDb
 import io.github.luannamorim.myfinance.testutil.snapBothThemes
+import io.github.luannamorim.myfinance.testutil.testRates
 import io.github.luannamorim.myfinance.testutil.testSettings
+import io.github.luannamorim.myfinance.ui.common.TransferTarget
 import io.github.luannamorim.myfinance.ui.navigation.TransactionEditorRoute
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -34,6 +44,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import java.math.BigDecimal
 
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -48,11 +59,13 @@ class TransactionEditorTest {
     private val categories = CategoryRepository(db, time, BackupTrigger { })
     private val cash = CashRepository(db, time, BackupTrigger { })
     private val settings = testSettings()
+    private val portfolio = PortfolioRepository(db, time, BackupTrigger { }, ImageStore(ApplicationProvider.getApplicationContext(), Dispatchers.Unconfined))
+    private val rates = testRates(db, settings, time)
 
     // The in-memory database is not closed: ViewModel collectors may still be querying it when the test ends.
 
     private fun editor(route: TransactionEditorRoute = TransactionEditorRoute()) =
-        TransactionEditorViewModel(SavedStateHandle(route = route), cash, categories, settings, time)
+        TransactionEditorViewModel(SavedStateHandle(route = route), cash, categories, portfolio, rates, settings, time)
 
     private fun categoryId(seedKey: String) = runBlocking { db.categoryDao().getAll().first { it.seedKey == seedKey }.id }
 
@@ -165,4 +178,76 @@ class TransactionEditorTest {
             TransactionEditorActions(),
         )
     }
+
+    private fun asset(name: String, currency: Currency, seedKey: String = "asset.fixed_income"): Long = runBlocking {
+        val category = db.categoryDao().getAllAssetCategories().first { it.seedKey == seedKey }.id
+        val initial = Money(100000, currency)
+        portfolio.createAsset(AssetDraft(name, category, currency, acquisitionDate = d("2026-01-10")), initial, null)
+    }
+
+    @Test
+    fun transfer_toAnAsset_isSavedDone_withItsContribution() = runBlocking {
+        val tesouro = asset("Tesouro Selic", Currency.BRL)
+        val vm = editor()
+        vm.state.awaitUntil { !it.loading }
+        vm.setKind(EntryKind.TRANSFER_OUT)
+        vm.state.awaitUntil { it.assets.isNotEmpty() }
+        vm.setAsset(tesouro)
+        vm.setDigits("100000")
+        // No name, no category: the asset names it.
+        assertTrue(vm.save())
+        vm.state.awaitUntil { it.done }
+        val row = cash.snapshot().occurrences.single()
+        assertEquals(EntryKind.TRANSFER_OUT, row.kind)
+        assertEquals(OccurrenceState.CONFIRMED, row.state)
+        assertEquals("Tesouro Selic", row.name)
+        assertEquals(row.id, db.portfolioDao().getFlows(tesouro).single { it.kind == FlowKind.CONTRIBUTION }.occurrenceId)
+    }
+
+    @Test
+    fun transfer_withoutAsset_flagsIt() = runBlocking {
+        asset("Tesouro Selic", Currency.BRL)
+        val vm = editor()
+        vm.state.awaitUntil { !it.loading }
+        vm.setKind(EntryKind.TRANSFER_OUT)
+        vm.setDigits("100000")
+        assertFalse(vm.save())
+        assertTrue(vm.state.awaitUntil { it.assetError }.assetError)
+        assertTrue(cash.snapshot().occurrences.isEmpty())
+    }
+
+    @Test
+    fun transfer_betweenCurrencies_suggestsWhatTheAssetReceived() = runBlocking {
+        val voo = asset("VOO", Currency.USD, "asset.etfs")
+        rates.setManual(d("2026-11-12"), BigDecimal("5.0000"))
+        val vm = editor()
+        vm.state.awaitUntil { !it.loading }
+        vm.setKind(EntryKind.TRANSFER_OUT)
+        vm.state.awaitUntil { it.assets.isNotEmpty() && it.rates.latest() != null }
+        vm.setCurrency(Currency.BRL)
+        vm.setAsset(voo)
+        vm.setDigits("50000")
+        // R$ 500,00 at 5,0000 = US$ 100,00, until typed over.
+        assertEquals("10000", vm.state.awaitUntil { it.needsAssetAmount }.assetAmountDigits)
+        assertTrue(vm.save())
+        vm.state.awaitUntil { it.done }
+        assertEquals(10000L, db.portfolioDao().getFlows(voo).single { it.kind == FlowKind.CONTRIBUTION }.amount)
+    }
+
+    @Test
+    fun screenshot_transfer() = compose.snapBothThemes("transfer_editor") {
+        TransactionEditorContent(
+            TransactionEditorUiState(
+                loading = false, kind = EntryKind.TRANSFER_OUT, digits = "100000", date = d("2026-11-12"), today = d("2026-11-12"),
+                repeat = RepeatChoice.Preset(RecurrenceRule.Preset.MONTHLY), assetId = 1,
+                assets = listOf(
+                    TransferTarget(1, "Tesouro Selic 2029", Currency.BRL, d("2026-01-10"), closed = false),
+                    TransferTarget(2, "VOO", Currency.USD, d("2026-02-02"), closed = false),
+                    TransferTarget(3, "Loan to Ana", Currency.BRL, d("2026-05-01"), closed = false),
+                ),
+            ),
+            TransactionEditorActions(),
+        )
+    }
 }
+

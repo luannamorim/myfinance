@@ -21,9 +21,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import io.github.luannamorim.myfinance.R
 import io.github.luannamorim.myfinance.core.format.AmountInput
+import io.github.luannamorim.myfinance.domain.fx.ExchangeRates
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.FlowKind
 import io.github.luannamorim.myfinance.domain.model.Money
+import io.github.luannamorim.myfinance.ui.common.CashLinkFields
+import io.github.luannamorim.myfinance.ui.common.cashLinkAmount
 import io.github.luannamorim.myfinance.ui.components.ChoiceRow
 import io.github.luannamorim.myfinance.ui.components.CurrencyInput
 import io.github.luannamorim.myfinance.ui.components.DateSelector
@@ -88,11 +91,15 @@ fun FlowSheet(
     today: LocalDate,
     minDate: LocalDate?,
     currentValue: Money?,
-    onSave: (FlowKind, LocalDate, Money, BigDecimal?, String?, Money?) -> Unit,
+    onSave: (FlowKind, LocalDate, Money, BigDecimal?, String?, Money?, Money?) -> Unit,
     onDismiss: () -> Unit,
+    rates: ExchangeRates = ExchangeRates.EMPTY,
 ) {
     val c = FinanceTheme.colors
     var kind by rememberSaveable { mutableStateOf(if (withdraw) FlowKind.WITHDRAWAL else FlowKind.CONTRIBUTION) }
+    var linked by rememberSaveable { mutableStateOf(false) }
+    var cashCurrency by rememberSaveable { mutableStateOf(currency) }
+    var cashDigits by rememberSaveable { mutableStateOf<String?>(null) }
     var digits by rememberSaveable { mutableStateOf("") }
     var valueDigits by rememberSaveable { mutableStateOf("") }
     var date by rememberSaveable { mutableStateOf(today) }
@@ -130,14 +137,27 @@ fun FlowSheet(
         if (kind != FlowKind.FULL_DISPOSAL) {
             CurrencyInput(valueDigits, currency, { valueDigits = it }, stringResource(R.string.flow_new_value), supportingText = stringResource(R.string.flow_new_value_hint))
         }
+        CashLinkFields(
+            linked = linked,
+            onLinked = { linked = it },
+            inflow = !withdraw,
+            assetAmount = Money(minor, currency).takeIf { minor > 0 },
+            date = date,
+            cashCurrency = cashCurrency,
+            onCashCurrency = { cashCurrency = it; cashDigits = null },
+            cashDigits = cashDigits,
+            onCashDigits = { cashDigits = it },
+            rates = rates,
+        )
         FinanceTextField(value = note, onValueChange = { note = it }, label = stringResource(R.string.confirm_note))
+        val cash = if (minor > 0) cashLinkAmount(linked, Money(minor, currency), date, cashCurrency, cashDigits, rates) else null
         PrimaryButton(
             stringResource(R.string.action_save),
             onClick = {
                 val newValue = if (kind != FlowKind.FULL_DISPOSAL && valueDigits.isNotEmpty()) AmountInput.minorOf(valueDigits)?.let { Money(it, currency) } else null
-                onSave(kind, date, Money(minor, currency), quantityResult.getOrNull(), note.ifBlank { null }, newValue)
+                onSave(kind, date, Money(minor, currency), quantityResult.getOrNull(), note.ifBlank { null }, newValue, cash)
             },
-            enabled = minor > 0 && quantityResult.isSuccess,
+            enabled = minor > 0 && quantityResult.isSuccess && (!linked || cash != null),
             modifier = Modifier.fillMaxWidth(),
         )
     }

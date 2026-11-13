@@ -19,7 +19,8 @@ data class Category(
 data class TransactionTemplate(
     val id: Long,
     val name: String,
-    val categoryId: Long,
+    /** Null for transfers, which have an [assetId] instead. */
+    val categoryId: Long?,
     val kind: EntryKind,
     val expected: Money,
     val rule: RecurrenceRule,
@@ -29,11 +30,14 @@ data class TransactionTemplate(
     val description: String?,
     val active: Boolean,
     val generatedThrough: LocalDate?,
+    /** The asset of a transfer; null otherwise, or after the asset was deleted. */
+    val assetId: Long? = null,
 )
 
 /**
- * One dated income or expense: generated from a template ([templateId] set) or standalone (one-time, or kept
- * after its template was deleted). Expected and actual values are kept apart.
+ * One dated income, expense or transfer: generated from a template ([templateId] set) or standalone (one-time,
+ * or kept after its template was deleted). Expected and actual values are kept apart. A confirmed transfer has
+ * a linked asset flow (contribution or withdrawal) in the asset's currency.
  */
 data class Occurrence(
     val id: Long,
@@ -41,7 +45,8 @@ data class Occurrence(
     val scheduledDate: LocalDate?,
     val dueDate: LocalDate,
     val name: String,
-    val categoryId: Long,
+    /** Null for transfers, which have an [assetId] instead. */
+    val categoryId: Long?,
     val kind: EntryKind,
     val expected: Money,
     val description: String?,
@@ -50,6 +55,8 @@ data class Occurrence(
     val actualDate: LocalDate?,
     val note: String?,
     val customized: Boolean,
+    /** The asset of a transfer; null otherwise, or after the asset was deleted. */
+    val assetId: Long? = null,
 ) {
     val standalone: Boolean get() = templateId == null
 }
@@ -95,6 +102,8 @@ data class AssetFlow(
     val amount: Money,
     val quantityDelta: BigDecimal?,
     val note: String?,
+    /** The cash transfer this flow came from or went to, if any. */
+    val occurrenceId: Long? = null,
 )
 
 data class Valuation(

@@ -40,7 +40,7 @@ abstract class MyFinanceDatabase : RoomDatabase() {
     abstract fun backupDao(): BackupDao
 
     companion object {
-        const val VERSION = 1
+        const val VERSION = 2
         const val NAME = "myfinance.db"
     }
 }

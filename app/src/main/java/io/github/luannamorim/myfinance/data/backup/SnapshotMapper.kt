@@ -73,24 +73,24 @@ object SnapshotMapper {
     suspend fun replaceAll(db: MyFinanceDatabase, rows: Rows) {
         val dao = db.backupDao()
         db.withTransaction {
-            // Children before parents.
+            // Children before parents: flows point at occurrences and assets, occurrences at templates and assets.
+            dao.clearAssetFlows()
+            dao.clearValuations()
             dao.clearOccurrences()
             dao.clearTemplates()
             dao.clearCategories()
             dao.clearAdjustments()
-            dao.clearValuations()
-            dao.clearAssetFlows()
             dao.clearAssets()
             dao.clearAssetCategories()
             dao.clearExchangeRates()
 
             // Parents before children.
             dao.insertCategories(rows.categories)
+            dao.insertAssetCategories(rows.assetCategories)
+            dao.insertAssets(rows.assets)
             dao.insertTemplates(rows.templates)
             dao.insertOccurrences(rows.occurrences)
             dao.insertAdjustments(rows.adjustments)
-            dao.insertAssetCategories(rows.assetCategories)
-            dao.insertAssets(rows.assets)
             dao.insertAssetFlows(rows.assetFlows)
             dao.insertValuations(rows.valuations)
             dao.insertExchangeRates(rows.exchangeRates)
@@ -102,20 +102,20 @@ object SnapshotMapper {
 
     private fun TransactionTemplateEntity.toDto() = TemplateDto(
         id, name, categoryId, kind.name, currency.name, expectedAmount, recurrenceUnit.name, recurrenceInterval,
-        startDate, anchorDate, endDate, description, active, generatedThrough, createdAtMs, updatedAtMs,
+        startDate, anchorDate, endDate, description, active, generatedThrough, createdAtMs, updatedAtMs, assetId,
     )
     private fun TemplateDto.toEntity() = TransactionTemplateEntity(
         id, name, categoryId, enumOf(kind), enumOf(currency), expectedAmount, enumOf(recurrenceUnit), recurrenceInterval,
-        startDate, anchorDate, endDate, description, active, generatedThrough, createdAtMs, updatedAtMs,
+        startDate, anchorDate, endDate, description, active, generatedThrough, createdAtMs, updatedAtMs, assetId,
     )
 
     private fun OccurrenceEntity.toDto() = OccurrenceDto(
         id, templateId, scheduledDate, dueDate, name, categoryId, kind.name, currency.name, expectedAmount, description,
-        state.name, actualAmount, actualCurrency?.name, actualDate, note, confirmedAtMs, customized, createdAtMs, updatedAtMs,
+        state.name, actualAmount, actualCurrency?.name, actualDate, note, confirmedAtMs, customized, createdAtMs, updatedAtMs, assetId,
     )
     private fun OccurrenceDto.toEntity() = OccurrenceEntity(
         id, templateId, scheduledDate, dueDate, name, categoryId, enumOf(kind), enumOf(currency), expectedAmount, description,
-        enumOf(state), actualAmount, actualCurrency?.let { enumOf(it) }, actualDate, note, confirmedAtMs, customized, createdAtMs, updatedAtMs,
+        enumOf(state), actualAmount, actualCurrency?.let { enumOf(it) }, actualDate, note, confirmedAtMs, customized, createdAtMs, updatedAtMs, assetId,
     )
 
     private fun CashAdjustmentEntity.toDto() = AdjustmentDto(id, kind.name, currency.name, date, amount, note, createdAtMs)
@@ -131,8 +131,8 @@ object SnapshotMapper {
         id, name, categoryId, enumOf(currency), description, institution, acquisitionDate, decimal(quantity), notes, imagePath, createdAtMs, updatedAtMs,
     )
 
-    private fun AssetFlowEntity.toDto() = AssetFlowDto(id, assetId, kind.name, date, amount, quantityDelta, note, createdAtMs)
-    private fun AssetFlowDto.toEntity() = AssetFlowEntity(id, assetId, enumOf(kind), date, amount, decimal(quantityDelta), note, createdAtMs)
+    private fun AssetFlowEntity.toDto() = AssetFlowDto(id, assetId, kind.name, date, amount, quantityDelta, note, createdAtMs, occurrenceId)
+    private fun AssetFlowDto.toEntity() = AssetFlowEntity(id, assetId, enumOf(kind), date, amount, decimal(quantityDelta), note, createdAtMs, occurrenceId)
 
     private fun AssetValuationEntity.toDto() = ValuationDto(id, assetId, date, value, note, createdAtMs)
     private fun ValuationDto.toEntity() = AssetValuationEntity(id, assetId, date, value, note, createdAtMs)

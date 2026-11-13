@@ -22,8 +22,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -75,7 +73,7 @@ fun HistoryScreen(onOpen: (Long) -> Unit, viewModel: HistoryViewModel = hiltView
     HistoryContent(state, onOpen, viewModel::update, viewModel::clear)
 }
 
-private val statusOptions = listOf(DisplayStatus.OVERDUE, DisplayStatus.PENDING, DisplayStatus.UPCOMING, DisplayStatus.PAID, DisplayStatus.RECEIVED, DisplayStatus.CANCELLED)
+private val statusOptions = listOf(DisplayStatus.OVERDUE, DisplayStatus.PENDING, DisplayStatus.UPCOMING, DisplayStatus.PAID, DisplayStatus.RECEIVED, DisplayStatus.TRANSFERRED, DisplayStatus.CANCELLED)
 
 @Composable
 fun HistoryContent(
@@ -108,6 +106,13 @@ fun HistoryContent(
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
                     FinanceChip(stringResource(R.string.kind_income), selected = EntryKind.INCOME in f.kinds, onClick = { onFilter { it.copy(kinds = it.kinds.toggle(EntryKind.INCOME)) } })
                     FinanceChip(stringResource(R.string.kind_expense), selected = EntryKind.EXPENSE in f.kinds, onClick = { onFilter { it.copy(kinds = it.kinds.toggle(EntryKind.EXPENSE)) } })
+                    // One chip for both directions of transfers.
+                    val transfers = setOf(EntryKind.TRANSFER_OUT, EntryKind.TRANSFER_IN)
+                    FinanceChip(
+                        stringResource(R.string.kind_transfer),
+                        selected = f.kinds.containsAll(transfers),
+                        onClick = { onFilter { it.copy(kinds = if (it.kinds.containsAll(transfers)) it.kinds - transfers else it.kinds + transfers) } },
+                    )
                     Currency.entries.forEach { cur ->
                         FinanceChip(cur.symbol, selected = cur in f.currencies, onClick = { onFilter { it.copy(currencies = it.currencies.toggle(cur)) } })
                     }

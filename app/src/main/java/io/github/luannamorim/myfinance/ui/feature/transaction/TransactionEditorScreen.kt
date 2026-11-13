@@ -2,6 +2,7 @@ package io.github.luannamorim.myfinance.ui.feature.transaction
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
@@ -23,11 +24,14 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.luannamorim.myfinance.R
+import io.github.luannamorim.myfinance.core.format.AmountInput
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.EntryKind
 import io.github.luannamorim.myfinance.domain.model.RecurrenceUnit
+import io.github.luannamorim.myfinance.ui.common.ActionErrorDialog
 import io.github.luannamorim.myfinance.ui.common.CategoryPicker
 import io.github.luannamorim.myfinance.ui.common.PresetOrder
+import io.github.luannamorim.myfinance.ui.common.directionLabel
 import io.github.luannamorim.myfinance.ui.common.label
 import io.github.luannamorim.myfinance.ui.components.ChoiceRow
 import io.github.luannamorim.myfinance.ui.components.ConfirmDialog
@@ -62,6 +66,9 @@ data class TransactionEditorActions(
     val onNextDueDate: (LocalDate) -> Unit = {},
     val onSave: () -> Unit = {},
     val onDelete: () -> Unit = {},
+    val onAsset: (Long) -> Unit = {},
+    val onAssetDigits: (String) -> Unit = {},
+    val onDismissError: () -> Unit = {},
 )
 
 @Composable
@@ -88,6 +95,9 @@ fun TransactionEditorScreen(onClose: () -> Unit, viewModel: TransactionEditorVie
             onNextDueDate = viewModel::setNextDueDate,
             onSave = { viewModel.save() },
             onDelete = viewModel::delete,
+            onAsset = viewModel::setAsset,
+            onAssetDigits = viewModel::setAssetDigits,
+            onDismissError = viewModel::dismissError,
         ),
     )
 }
@@ -117,11 +127,30 @@ fun TransactionEditorContent(state: TransactionEditorUiState, actions: Transacti
         bottomBar = { PrimaryButton(stringResource(R.string.action_save), onClick = actions.onSave, modifier = Modifier.fillMaxWidth()) },
     ) {
         if (state.loading) return@DetailScaffold
-        val editableKind = state.mode == EditorMode.NEW || state.mode == EditorMode.STANDALONE
+        val editableKind = (state.mode == EditorMode.NEW || state.mode == EditorMode.STANDALONE) && !state.kindLocked
         if (editableKind) {
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 FinanceChip(stringResource(R.string.kind_expense), selected = state.kind == EntryKind.EXPENSE, onClick = { actions.onKind(EntryKind.EXPENSE) })
                 FinanceChip(stringResource(R.string.kind_income), selected = state.kind == EntryKind.INCOME, onClick = { actions.onKind(EntryKind.INCOME) })
+                // A done income or expense can't turn into a transfer (it would need its asset side).
+                if (!state.settledAlready || state.isTransfer) {
+                    FinanceChip(stringResource(R.string.kind_transfer), selected = state.isTransfer, onClick = { if (!state.isTransfer) actions.onKind(EntryKind.TRANSFER_OUT) })
+                }
+            }
+        }
+        if (state.isTransfer && state.mode != EditorMode.OCCURRENCE) {
+            if (state.kindLocked) {
+                Text(stringResource(R.string.editor_transfer_locked, state.kind.directionLabel(), state.target?.name.orEmpty()), style = FinanceTheme.type.caption, color = c.textSecondary)
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    FinanceChip(EntryKind.TRANSFER_OUT.directionLabel(), selected = state.kind == EntryKind.TRANSFER_OUT, onClick = { actions.onKind(EntryKind.TRANSFER_OUT) })
+                    FinanceChip(EntryKind.TRANSFER_IN.directionLabel(), selected = state.kind == EntryKind.TRANSFER_IN, onClick = { actions.onKind(EntryKind.TRANSFER_IN) })
+                }
+                Text(
+                    stringResource(if (state.kind == EntryKind.TRANSFER_OUT) R.string.editor_transfer_out_hint else R.string.editor_transfer_in_hint),
+                    style = FinanceTheme.type.caption,
+                    color = c.textSecondary,
+                )
             }
         }
         CurrencyInput(
@@ -136,14 +165,32 @@ fun TransactionEditorContent(state: TransactionEditorUiState, actions: Transacti
         FinanceTextField(
             value = state.name,
             onValueChange = actions.onName,
-            label = stringResource(R.string.editor_name),
-            placeholder = stringResource(R.string.editor_name_hint),
+            label = stringResource(if (state.isTransfer && state.mode != EditorMode.OCCURRENCE) R.string.editor_name_optional else R.string.editor_name),
+            placeholder = if (state.isTransfer) state.target?.name ?: stringResource(R.string.editor_transfer_name_hint) else stringResource(R.string.editor_name_hint),
             isError = state.nameError,
             supportingText = if (state.nameError) stringResource(R.string.error_name_required) else null,
             capitalization = KeyboardCapitalization.Sentences,
             imeAction = ImeAction.Done,
         )
-        if (state.mode != EditorMode.OCCURRENCE) {
+        if (state.mode != EditorMode.OCCURRENCE && state.isTransfer) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                Text(stringResource(R.string.editor_asset), style = FinanceTheme.type.caption, color = if (state.assetError && state.assetId == null) c.danger else c.textSecondary)
+                if (state.assets.isEmpty()) {
+                    Text(stringResource(R.string.editor_no_assets), style = FinanceTheme.type.caption, color = c.textSecondary)
+                } else {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                        state.assets.forEach { target ->
+                            FinanceChip(
+                                target.name,
+                                selected = target.assetId == state.assetId,
+                                onClick = { if (!state.kindLocked) actions.onAsset(target.assetId) },
+                            )
+                        }
+                    }
+                }
+                if (state.assetError && state.assetId == null) Text(stringResource(R.string.error_asset_required), style = FinanceTheme.type.caption, color = c.danger)
+            }
+        } else if (state.mode != EditorMode.OCCURRENCE) {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 Text(stringResource(R.string.editor_category), style = FinanceTheme.type.caption, color = if (state.categoryError) c.danger else c.textSecondary)
                 CategoryPicker(state.categories, state.categoryId, actions.onCategory)
@@ -154,17 +201,41 @@ fun TransactionEditorContent(state: TransactionEditorUiState, actions: Transacti
             EditorMode.TEMPLATE -> state.nextDueDate?.let {
                 DateSelector(stringResource(R.string.editor_next_due), it, actions.onNextDueDate, minDate = state.today)
             }
-            EditorMode.NEW -> DateSelector(stringResource(if (state.isRecurring) R.string.editor_first_due else R.string.editor_date), state.date, actions.onDate)
+            EditorMode.NEW -> DateSelector(
+                stringResource(if (state.isRecurring) R.string.editor_first_due else R.string.editor_date),
+                state.date,
+                actions.onDate,
+                // A transfer already done can't predate the asset's first investment.
+                minDate = state.target?.acquired?.takeIf { state.isTransfer && state.canSettle && state.alreadySettled },
+            )
             EditorMode.STANDALONE -> DateSelector(stringResource(R.string.editor_date), state.date, actions.onDate)
             EditorMode.OCCURRENCE -> DateSelector(stringResource(R.string.editor_due_date), state.date, actions.onDate)
         }
         if (state.mode == EditorMode.NEW || state.mode == EditorMode.TEMPLATE) RepeatSection(state, actions)
         if (state.canSettle) {
             SwitchRow(
-                stringResource(if (state.kind == EntryKind.INCOME) R.string.editor_already_received else R.string.editor_already_paid),
+                stringResource(
+                    when (state.kind) {
+                        EntryKind.INCOME -> R.string.editor_already_received
+                        EntryKind.EXPENSE -> R.string.editor_already_paid
+                        EntryKind.TRANSFER_OUT, EntryKind.TRANSFER_IN -> R.string.editor_already_transferred
+                    },
+                ),
                 stringResource(R.string.editor_already_hint),
                 state.alreadySettled,
                 actions.onAlreadySettled,
+            )
+        }
+        val target = state.target
+        if (state.needsAssetAmount && target != null) {
+            val assetMinor = AmountInput.minorOf(state.assetAmountDigits) ?: 0
+            CurrencyInput(
+                digits = state.assetAmountDigits,
+                currency = target.currency,
+                onDigits = actions.onAssetDigits,
+                label = stringResource(if (state.kind == EntryKind.TRANSFER_OUT) R.string.transfer_asset_received else R.string.transfer_asset_gave, target.currency.symbol),
+                isError = state.assetError && assetMinor <= 0,
+                supportingText = stringResource(R.string.transfer_asset_amount_hint),
             )
         }
         if (state.mode != EditorMode.OCCURRENCE) {
@@ -190,6 +261,7 @@ fun TransactionEditorContent(state: TransactionEditorUiState, actions: Transacti
             }
         }
     }
+    ActionErrorDialog(state.error, actions.onDismissError)
     if (confirmDelete) {
         val recurring = state.mode == EditorMode.TEMPLATE
         ConfirmDialog(

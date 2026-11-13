@@ -66,7 +66,7 @@ fun CashFlowContent(state: CashFlowUiState, actions: CashFlowActions, modifier: 
     val c = FinanceTheme.colors
     val formats = LocalFormats.current
     TabScreen(
-        title = stringResource(R.string.nav_cash_flow),
+        title = stringResource(R.string.cashflow_title),
         modifier = modifier,
         actions = { IconButton(onClick = actions.onAdd) { Icon(Icons.Rounded.Add, stringResource(R.string.cashflow_add), tint = c.textPrimary) } },
     ) {
@@ -89,6 +89,14 @@ fun CashFlowContent(state: CashFlowUiState, actions: CashFlowActions, modifier: 
         state.summary?.let { s ->
             ProgressCard(stringResource(R.string.cashflow_income), s.receivedIncome, s.expectedIncome, stringResource(R.string.cashflow_received_of, formats.money.format(s.expectedIncome.money)), c.positive)
             ProgressCard(stringResource(R.string.cashflow_expenses), s.paidExpenses, s.expectedExpenses, stringResource(R.string.cashflow_paid_of, formats.money.format(s.expectedExpenses.money)), c.negative)
+            if (!s.transfersOut.money.isZero || !s.transfersIn.money.isZero) {
+                // Neither income nor expense: money moved between cash and the portfolio.
+                FinanceCard(Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.cashflow_transfers), style = FinanceTheme.type.bodyStrong, color = c.textPrimary)
+                    if (!s.transfersOut.money.isZero) SummaryLine(stringResource(R.string.transfer_to_asset), Total(-s.transfersOut.money, s.transfersOut.incomplete), AmountTone.NEUTRAL)
+                    if (!s.transfersIn.money.isZero) SummaryLine(stringResource(R.string.transfer_from_asset), s.transfersIn, AmountTone.NEUTRAL)
+                }
+            }
             if (s.overdueEarlierCount > 0 && state.month != YearMonth.from(state.today)) {
                 Text(
                     pluralStringResource(R.plurals.cashflow_overdue_earlier, s.overdueEarlierCount, s.overdueEarlierCount, formats.money.format(s.overdueEarlier.money)),
@@ -100,7 +108,8 @@ fun CashFlowContent(state: CashFlowUiState, actions: CashFlowActions, modifier: 
         Section(stringResource(R.string.cashflow_overdue), state.overdue, actions.onOpen)
         Section(stringResource(R.string.cashflow_pending_bills), state.pendingBills, actions.onOpen)
         Section(stringResource(R.string.cashflow_upcoming_income), state.upcomingIncome, actions.onOpen)
-        if (state.overdue.isEmpty() && state.pendingBills.isEmpty() && state.upcomingIncome.isEmpty()) {
+        Section(stringResource(R.string.cashflow_pending_transfers), state.pendingTransfers, actions.onOpen)
+        if (state.overdue.isEmpty() && state.pendingBills.isEmpty() && state.upcomingIncome.isEmpty() && state.pendingTransfers.isEmpty()) {
             Text(stringResource(R.string.cashflow_nothing_pending), style = FinanceTheme.type.body, color = c.textSecondary)
         }
         state.nextMonth?.let { next ->
@@ -108,6 +117,8 @@ fun CashFlowContent(state: CashFlowUiState, actions: CashFlowActions, modifier: 
             FinanceCard(Modifier.fillMaxWidth()) {
                 SummaryLine(stringResource(R.string.cashflow_income), next.expectedIncome, AmountTone.NEUTRAL)
                 SummaryLine(stringResource(R.string.cashflow_expenses), Total(-next.expectedExpenses.money, next.expectedExpenses.incomplete), AmountTone.NEUTRAL)
+                if (!next.transfersOut.money.isZero) SummaryLine(stringResource(R.string.transfer_to_asset), Total(-next.transfersOut.money, next.transfersOut.incomplete), AmountTone.NEUTRAL)
+                if (!next.transfersIn.money.isZero) SummaryLine(stringResource(R.string.transfer_from_asset), next.transfersIn, AmountTone.NEUTRAL)
                 Spacer(Modifier.height(Spacing.s))
                 state.nextMonthProjected?.let {
                     SummaryLine(stringResource(R.string.cashflow_next_projected, formats.dates.monthYear(state.month.plusMonths(1))), it, AmountTone.AUTO)

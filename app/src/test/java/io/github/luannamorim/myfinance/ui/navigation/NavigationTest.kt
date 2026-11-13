@@ -40,9 +40,9 @@ class NavigationTest {
     fun eachTab_showsItsScreen_andBackReturnsToOverview() {
         heading("Overview").assertIsDisplayed()
 
-        listOf("Cash Flow", "Portfolio", "History", "Settings").forEach { tab ->
+        listOf("Cash Flow" to "Cash Flow", "Portfolio" to "Portfolio", "History" to "History", "Settings" to "Settings").forEach { (tab, title) ->
             compose.onAllNodesWithText(tab).onFirst().performClick()
-            heading(tab).assertIsDisplayed()
+            heading(title).assertIsDisplayed()
         }
 
         compose.onAllNodesWithText("Portfolio").onFirst().performClick()

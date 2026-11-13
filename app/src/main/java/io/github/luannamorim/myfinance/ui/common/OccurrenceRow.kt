@@ -54,14 +54,17 @@ data class OccurrenceRow(
     }
 }
 
-/** Neutral amount with a sign; the status chip carries the colour (docs/BRAND.md, money colour rule). */
+/**
+ * Neutral amount with a sign (what it does to cash: − out, + in); the status chip carries the colour
+ * (docs/BRAND.md, money colour rule). Transfers show the transfer icon instead of a category.
+ */
 @Composable
 fun OccurrenceRowItem(row: OccurrenceRow, onClick: () -> Unit, modifier: Modifier = Modifier, trailing: (@Composable () -> Unit)? = null) {
     val c = FinanceTheme.colors
     val formats = LocalFormats.current
     FinanceCard(onClick = onClick, modifier = modifier.fillMaxWidth(), contentPadding = Spacing.m) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            CategoryBadge(CategoryIcons.of(row.category?.icon ?: "category"), dimmed = row.status == DisplayStatus.CANCELLED)
+            CategoryBadge(if (row.kind.isTransfer) TransferIcon else CategoryIcons.of(row.category?.icon ?: "category"), dimmed = row.status == DisplayStatus.CANCELLED)
             Spacer(Modifier.width(Spacing.m))
             AdaptiveRow(
                 main = {
@@ -75,7 +78,7 @@ fun OccurrenceRowItem(row: OccurrenceRow, onClick: () -> Unit, modifier: Modifie
                 },
                 trailing = {
                     Column(horizontalAlignment = Alignment.End) {
-                        AmountDisplay(if (row.kind == EntryKind.EXPENSE) -row.amount else row.amount, signed = row.kind == EntryKind.INCOME)
+                        AmountDisplay(if (row.kind.cashInflow) row.amount else -row.amount, signed = row.kind.cashInflow)
                         trailing?.invoke()
                     }
                 },

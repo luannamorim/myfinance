@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ShowChart
+import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,9 +25,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.unit.dp
 import io.github.luannamorim.myfinance.R
 import io.github.luannamorim.myfinance.domain.fx.Total
 import io.github.luannamorim.myfinance.domain.model.AssetGroup
@@ -52,6 +53,7 @@ import io.github.luannamorim.myfinance.ui.components.TextAction
 import io.github.luannamorim.myfinance.ui.feature.settings.CategoryBadge
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import io.github.luannamorim.myfinance.ui.theme.Spacing
+import java.math.BigDecimal
 
 data class PortfolioActions(
     val onGroup: (AssetGroup?) -> Unit = {},
@@ -59,6 +61,7 @@ data class PortfolioActions(
     val onAdd: () -> Unit = {},
     val onOpen: (Long) -> Unit = {},
     val onCharts: () -> Unit = {},
+    val onOpenCash: () -> Unit = {},
 )
 
 @Composable
@@ -91,20 +94,40 @@ fun PortfolioContent(state: PortfolioUiState, actions: PortfolioActions, modifie
             FinanceChip(stringResource(R.string.group_personal), selected = state.group == AssetGroup.PERSONAL, onClick = { actions.onGroup(AssetGroup.PERSONAL) })
         }
         val totals = state.totals
-        val donut = state.slices.mapIndexed { i, (slice, category) ->
-            DonutSlice(slice.categoryId, slice.share.toFloat(), c.chart[i % c.chart.size], category?.displayName().orEmpty())
-        }
+        // With cash in "All", the asset slices share what cash leaves.
+        val cashShare = state.cashShare
+        val scale = cashShare?.let { BigDecimal.ONE - it } ?: BigDecimal.ONE
+        val cashLabel = stringResource(R.string.portfolio_cash)
+        val donut = listOfNotNull(cashShare?.let { DonutSlice(CASH_SLICE, it.toFloat(), c.textTertiary, cashLabel) }) +
+            state.slices.mapIndexed { i, (slice, category) ->
+                DonutSlice(slice.categoryId, (slice.share * scale).toFloat(), c.chart[i % c.chart.size], category?.displayName().orEmpty())
+            }
+        val centerTotal = totals?.value?.let { value -> if (cashShare != null && state.cash != null) value + state.cash else value }
         FinanceCard(Modifier.fillMaxWidth()) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 DonutChart(
                     slices = donut,
                     selected = state.selectedCategory,
-                    onSelect = actions.onSelect,
-                    centerTitle = stringResource(R.string.portfolio_total),
-                    centerValue = totals?.let { (if (it.value.incomplete) "≈ " else "") + formats.money.format(it.value.money) }.orEmpty(),
+                    // Cash isn't a category: its slice can't be selected.
+                    onSelect = { key -> if (key != CASH_SLICE) actions.onSelect(key) },
+                    centerTitle = stringResource(if (cashShare != null) R.string.portfolio_total_with_cash else R.string.portfolio_total),
+                    centerValue = centerTotal?.let { (if (it.incomplete) "≈ " else "") + formats.money.format(it.money) }.orEmpty(),
                 )
             }
             Spacer(Modifier.height(Spacing.l))
+            if (cashShare != null && state.cash != null) {
+                AdaptiveRow(
+                    main = { LegendDot(c.textTertiary, cashLabel) },
+                    trailing = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(formats.money.formatPercent(cashShare), style = FinanceTheme.type.numeric, color = c.textSecondary, maxLines = 1)
+                            Spacer(Modifier.width(Spacing.m))
+                            AmountDisplay(state.cash.money, approximate = state.cash.incomplete)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(vertical = Spacing.s),
+                )
+            }
             state.slices.forEachIndexed { i, (slice, category) ->
                 val selected = state.selectedCategory == slice.categoryId
                 Row(
@@ -115,7 +138,7 @@ fun PortfolioContent(state: PortfolioUiState, actions: PortfolioActions, modifie
                         main = { LegendDot(if (selected) c.accent else c.chart[i % c.chart.size], category?.displayName().orEmpty()) },
                         trailing = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(formats.money.formatPercent(slice.share), style = FinanceTheme.type.numeric, color = c.textSecondary, maxLines = 1)
+                                Text(formats.money.formatPercent(slice.share * scale), style = FinanceTheme.type.numeric, color = c.textSecondary, maxLines = 1)
                                 Spacer(Modifier.width(Spacing.m))
                                 AmountDisplay(slice.value, approximate = slice.incomplete)
                             }
@@ -144,6 +167,10 @@ fun PortfolioContent(state: PortfolioUiState, actions: PortfolioActions, modifie
                 }
                 if (t.value.incomplete || t.gain.incomplete) IncompleteNote(Modifier.padding(top = Spacing.s))
             }
+        }
+        state.cash?.takeIf { state.selectedCategory == null }?.let { cash ->
+            SectionHeader(cashLabel, Modifier.padding(top = Spacing.s))
+            CashCard(cash, actions.onOpenCash)
         }
         state.assets.groupBy { it.category }.forEach { (category, rows) ->
             SectionHeader(category?.displayName().orEmpty(), Modifier.padding(top = Spacing.s))
@@ -192,6 +219,31 @@ private fun AssetCard(row: AssetRow, onOpen: (Long) -> Unit) {
                         row.displayValue?.let { AmountDisplay(it.money, style = FinanceTheme.type.caption.copy(fontFeatureSettings = "tnum"), approximate = true) }
                     }
                 },
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+/** Key of the cash slice in the donut (categories have positive ids). */
+private const val CASH_SLICE = -1L
+
+/** Cash from Cash Flow, for reference: tapping opens Cash Flow, where it is managed. */
+@Composable
+private fun CashCard(cash: Total, onOpen: () -> Unit) {
+    val c = FinanceTheme.colors
+    FinanceCard(onClick = onOpen, modifier = Modifier.fillMaxWidth(), contentPadding = Spacing.m) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            CategoryBadge(Icons.Rounded.AccountBalanceWallet)
+            Spacer(Modifier.width(Spacing.m))
+            AdaptiveRow(
+                main = {
+                    Column {
+                        Text(stringResource(R.string.portfolio_cash_available), style = FinanceTheme.type.bodyStrong, color = c.textPrimary)
+                        Text(stringResource(R.string.portfolio_cash_hint), style = FinanceTheme.type.caption, color = c.textSecondary)
+                    }
+                },
+                trailing = { AmountDisplay(cash.money, tone = if (cash.money.isNegative) AmountTone.NEGATIVE else AmountTone.NEUTRAL, approximate = cash.incomplete) },
                 modifier = Modifier.weight(1f),
             )
         }

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.rounded.DirectionsBus
 import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Flight
+import androidx.compose.material.icons.rounded.Handshake
 import androidx.compose.material.icons.rounded.Handyman
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.HomeWork
@@ -58,6 +59,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 /** Category icons by key (stored in the database). One consistent family: Material Symbols Rounded. */
 object CategoryIcons {
     val all: Map<String, ImageVector> = linkedMapOf(
+        "handshake" to Icons.Rounded.Handshake,
         "work" to Icons.Rounded.Work,
         "laptop" to Icons.Rounded.Laptop,
         "handyman" to Icons.Rounded.Handyman,

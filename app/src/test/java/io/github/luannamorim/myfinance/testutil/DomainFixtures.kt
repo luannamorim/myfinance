@@ -22,14 +22,20 @@ fun usd(major: String) = Money.of(BigDecimal(major), Currency.USD)
 
 private var nextId = 1L
 
-fun pending(kind: EntryKind, expected: Money, due: String, category: Long = 1, name: String = "Item") = Occurrence(
+fun pending(kind: EntryKind, expected: Money, due: String, category: Long? = 1, name: String = "Item", asset: Long? = null) = Occurrence(
     id = nextId++, templateId = null, scheduledDate = null, dueDate = d(due), name = name, categoryId = category,
     kind = kind, expected = expected, description = null, state = OccurrenceState.PENDING,
-    actual = null, actualDate = null, note = null, customized = false,
+    actual = null, actualDate = null, note = null, customized = false, assetId = asset,
 )
 
-fun confirmed(kind: EntryKind, expected: Money, due: String, actual: Money = expected, on: String = due, category: Long = 1, name: String = "Item") =
+fun confirmed(kind: EntryKind, expected: Money, due: String, actual: Money = expected, on: String = due, category: Long? = 1, name: String = "Item") =
     pending(kind, expected, due, category, name).copy(state = OccurrenceState.CONFIRMED, actual = actual, actualDate = d(on))
+
+/** A transfer between cash and asset [asset] (no category); confirmed when [on] is given. */
+fun transfer(kind: EntryKind, amount: Money, due: String, asset: Long = 1, on: String? = null, name: String = "Transfer"): Occurrence {
+    val planned = pending(kind, amount, due, category = null, name = name, asset = asset)
+    return if (on == null) planned else planned.copy(state = OccurrenceState.CONFIRMED, actual = amount, actualDate = d(on))
+}
 
 fun opening(amount: Money, on: String) = CashAdjustment(nextId++, AdjustmentKind.OPENING, d(on), amount, null)
 

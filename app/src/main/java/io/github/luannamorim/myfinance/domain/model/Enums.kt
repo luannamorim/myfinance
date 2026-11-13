@@ -2,9 +2,18 @@ package io.github.luannamorim.myfinance.domain.model
 
 import androidx.annotation.Keep
 
-/** Income or expense. Fixed for a category once created. Kept by R8: navigation routes serialize it by name. */
+/**
+ * What a transaction does to cash. Categories are INCOME or EXPENSE only (fixed once created). Transfers move
+ * money between cash and an asset and are neither income nor expense: TRANSFER_OUT takes cash into an asset (a
+ * contribution), TRANSFER_IN brings it back from one (a withdrawal). Kept by R8: routes serialize it by name.
+ */
 @Keep
-enum class EntryKind { INCOME, EXPENSE }
+enum class EntryKind(val cashInflow: Boolean, val isTransfer: Boolean) {
+    INCOME(cashInflow = true, isTransfer = false),
+    EXPENSE(cashInflow = false, isTransfer = false),
+    TRANSFER_OUT(cashInflow = false, isTransfer = true),
+    TRANSFER_IN(cashInflow = true, isTransfer = true),
+}
 
 /** Unit of a recurrence rule. */
 enum class RecurrenceUnit { DAY, WEEK, MONTH, YEAR }

@@ -32,7 +32,7 @@ class SettingsScreenshotTest {
 
     @Test
     fun settings() = compose.snapBothThemes("settings") {
-        SettingsContent(SettingsUiState(loading = false), SettingsActions(onOpenLanguage = {}))
+        SettingsContent(SettingsUiState(loading = false), SettingsActions())
     }
 
     @Test

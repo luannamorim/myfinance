@@ -8,7 +8,6 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
@@ -83,7 +82,7 @@ class AssetTest {
     private fun category(key: String) = runBlocking { db.categoryDao().getAllAssetCategories().first { it.seedKey == key }.id }
 
     private fun editor(route: AssetEditorRoute = AssetEditorRoute()) =
-        AssetEditorViewModel(SavedStateHandle(route = route), portfolio, categories, settings, images, time)
+        AssetEditorViewModel(SavedStateHandle(route = route), portfolio, categories, settings, images, rates, time)
 
     private fun detail(id: Long) = AssetDetailViewModel(SavedStateHandle(route = AssetDetailRoute(id)), portfolio, rates, settings, images, time)
 
@@ -143,7 +142,7 @@ class AssetTest {
         portfolio.addValuation(id, d("2026-03-31"), brl("5120.00"))
         val vm = detail(id)
         vm.state.awaitUntil { it.snapshot != null }
-        vm.addFlow(FlowKind.CONTRIBUTION, d("2026-04-15"), brl("1000.00"), null, null, null)
+        vm.addFlow(FlowKind.CONTRIBUTION, d("2026-04-15"), brl("1000.00"), null, null, null, null)
         val s = vm.state.awaitUntil { it.flows.size == 2 }.snapshot!!
         assertEquals(brl("6120.00"), s.value)
         assertEquals(brl("120.00"), s.gain)

@@ -40,6 +40,9 @@ object CategorySeed {
         SeedCategory("expense.entertainment", "Entertainment", "movie"),
         SeedCategory("expense.education", "Education", "school"),
         SeedCategory("expense.shopping", "Shopping", "shopping_bag"),
+        // Added in 1.1.0 (Migrations.MIGRATION_1_2 adds them to existing databases).
+        SeedCategory("expense.credit_card", "Credit Card", "credit_card"),
+        SeedCategory("expense.loans", "Loans", "account_balance"),
         SeedCategory("expense.other_expenses", "Other Expenses", "more_horiz"),
     )
 
@@ -58,6 +61,8 @@ object CategorySeed {
         SeedCategory("asset.startup_equity", "Startup Equity", "rocket_launch"),
         SeedCategory("asset.real_estate", "Real Estate", "home_work"),
         SeedCategory("asset.vehicles", "Vehicles", "directions_car"),
+        // Added in 1.1.0 (Migrations.MIGRATION_1_2 adds it to existing databases).
+        SeedCategory("asset.loans_receivable", "Loans Receivable", "handshake"),
         SeedCategory("asset.other_assets", "Other Assets", "category"),
     )
 

@@ -35,6 +35,7 @@ import io.github.luannamorim.myfinance.ui.components.BarItem
 import io.github.luannamorim.myfinance.ui.components.CategoryBars
 import io.github.luannamorim.myfinance.ui.components.DetailScaffold
 import io.github.luannamorim.myfinance.ui.components.FinanceCard
+import io.github.luannamorim.myfinance.ui.components.FinanceChip
 import io.github.luannamorim.myfinance.ui.components.FinanceColumnChart
 import io.github.luannamorim.myfinance.ui.components.FinanceLineChart
 import io.github.luannamorim.myfinance.ui.components.LegendDot
@@ -48,19 +49,27 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import java.time.LocalDate
 import java.time.YearMonth
 import javax.inject.Inject
 
 data class CategoryTotal(val category: Category?, val total: Total)
 
+/** How far back the income-vs-expenses and balance charts go. */
+enum class ChartSpan(val months: Int) { M3(3), M6(6), Y1(12) }
+
 data class CashFlowChartsUiState(
     val loading: Boolean = true,
     val month: YearMonth = YearMonth.now(),
     val display: Currency = Currency.BRL,
-    /** Last six months ending at [month]: (month, income, expenses). */
+    val span: ChartSpan = ChartSpan.M6,
+    /** The [span]'s months ending at [month]: (month, income, expenses). */
     val incomeVsExpenses: List<Triple<YearMonth, Money, Money>> = emptyList(),
-    /** Month-end balances from the first month with data (at most 12). */
-    val balance: List<Pair<YearMonth, Money>> = emptyList(),
+    /**
+     * Cash over the [span]: the first record's day (when it falls in the span), then each month's end (today
+     * for the current month), so the line shows from the first month of use.
+     */
+    val balance: List<Pair<LocalDate, Money>> = emptyList(),
     val expensesByCategory: List<CategoryTotal> = emptyList(),
     val incomeByCategory: List<CategoryTotal> = emptyList(),
 )
@@ -68,11 +77,19 @@ data class CashFlowChartsUiState(
 private const val TOP_CATEGORIES = 6
 
 /** Chart data from the ledger; every number comes from CashCalculator. */
-fun cashFlowCharts(ledger: CashLedger, categories: List<Category>, rates: ExchangeRates, display: Currency, month: YearMonth, today: java.time.LocalDate): CashFlowChartsUiState {
+fun cashFlowCharts(
+    ledger: CashLedger,
+    categories: List<Category>,
+    rates: ExchangeRates,
+    display: Currency,
+    month: YearMonth,
+    today: LocalDate,
+    span: ChartSpan = ChartSpan.M6,
+): CashFlowChartsUiState {
     val converter = Converter(rates)
     val byId = categories.associateBy { it.id }
-    val sixMonths = (5 downTo 0).map { month.minusMonths(it.toLong()) }
-    val bars = sixMonths.map { m ->
+    val spanMonths = (span.months - 1 downTo 0).map { month.minusMonths(it.toLong()) }
+    val bars = spanMonths.map { m ->
         val s = CashCalculator.monthSummary(ledger, m, today, display, converter)
         Triple(m, s.expectedIncome.money, s.expectedExpenses.money)
     }
@@ -81,9 +98,12 @@ fun cashFlowCharts(ledger: CashLedger, categories: List<Category>, rates: Exchan
     val balance = if (firstDate == null) {
         emptyList()
     } else {
-        val start = maxOf(YearMonth.from(firstDate), current.minusMonths(11))
+        val windowStart = current.minusMonths(span.months - 1L)
+        val start = maxOf(YearMonth.from(firstDate), windowStart)
         val months = generateSequence(start) { it.plusMonths(1) }.takeWhile { !it.isAfter(current) }.toList()
-        CashCalculator.balanceHistory(ledger, months, display, converter).map { it.first to it.second.money }
+        val ends = months.map { minOf(it.atEndOfMonth(), today) }
+        val dates = (listOfNotNull(firstDate.takeIf { !YearMonth.from(it).isBefore(windowStart) }) + ends).distinct().sorted()
+        CashCalculator.balanceOn(ledger, dates, display, converter).map { it.first to it.second.money }
     }
     fun top(kind: EntryKind) = CashCalculator.byCategory(ledger, month, kind, display, converter).let { list ->
         val head = list.take(TOP_CATEGORIES).map { CategoryTotal(byId[it.first], it.second) }
@@ -94,6 +114,7 @@ fun cashFlowCharts(ledger: CashLedger, categories: List<Category>, rates: Exchan
         loading = false,
         month = month,
         display = display,
+        span = span,
         incomeVsExpenses = bars,
         balance = balance,
         expensesByCategory = top(EntryKind.EXPENSE),
@@ -110,29 +131,40 @@ class CashFlowChartsViewModel @Inject constructor(
     private val time: TimeSource,
 ) : ViewModel() {
     private val month = MutableStateFlow(YearMonth.from(time.today()))
+    private val span = MutableStateFlow(ChartSpan.M6)
+    private val selection = combine(month, span) { m, s -> m to s }
 
-    val state: StateFlow<CashFlowChartsUiState> = combine(cash.ledger, categories.observeAll(), rates.rates, settings.settings, month) { l, c, r, s, m ->
-        cashFlowCharts(l, c, r, s.displayCurrency, m, time.today())
+    val state: StateFlow<CashFlowChartsUiState> = combine(cash.ledger, categories.observeAll(), rates.rates, settings.settings, selection) { l, c, r, s, (m, sp) ->
+        cashFlowCharts(l, c, r, s.displayCurrency, m, time.today(), sp)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CashFlowChartsUiState())
 
     fun setMonth(value: YearMonth) {
         month.value = value
+    }
+
+    fun setSpan(value: ChartSpan) {
+        span.value = value
     }
 }
 
 @Composable
 fun CashFlowChartsScreen(onBack: () -> Unit, viewModel: CashFlowChartsViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    CashFlowChartsContent(state, onBack, viewModel::setMonth)
+    CashFlowChartsContent(state, onBack, viewModel::setMonth, viewModel::setSpan)
 }
 
 @Composable
-fun CashFlowChartsContent(state: CashFlowChartsUiState, onBack: () -> Unit, onMonth: (YearMonth) -> Unit) {
+fun CashFlowChartsContent(state: CashFlowChartsUiState, onBack: () -> Unit, onMonth: (YearMonth) -> Unit, onSpan: (ChartSpan) -> Unit = {}) {
     val c = FinanceTheme.colors
     val formats = LocalFormats.current
     DetailScaffold(title = stringResource(R.string.charts_title), onBack = onBack) {
         if (state.loading) return@DetailScaffold
         MonthSwitcher(state.month, onMonth)
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            listOf(ChartSpan.M3 to R.string.pcharts_period_3m, ChartSpan.M6 to R.string.pcharts_period_6m, ChartSpan.Y1 to R.string.pcharts_period_1y).forEach { (span, label) ->
+                FinanceChip(stringResource(label), selected = state.span == span, onClick = { onSpan(span) })
+            }
+        }
 
         SectionHeader(stringResource(R.string.charts_income_vs_expenses))
         FinanceCard(Modifier.fillMaxWidth()) {
@@ -144,7 +176,7 @@ fun CashFlowChartsContent(state: CashFlowChartsUiState, onBack: () -> Unit, onMo
                 ),
                 xLabel = { i -> months.getOrNull(i)?.let { formats.dates.monthShort(it) } ?: "" },
                 yLabel = { v -> formats.money.formatShort((v * 100).toLong(), state.display) },
-                summary = stringResource(R.string.charts_summary_bars),
+                summary = stringResource(R.string.charts_summary_bars_months, state.span.months),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.l)) {
                 LegendDot(c.positive, stringResource(R.string.cashflow_income))
@@ -157,10 +189,16 @@ fun CashFlowChartsContent(state: CashFlowChartsUiState, onBack: () -> Unit, onMo
             if (state.balance.size < 2) {
                 Text(stringResource(R.string.charts_empty), style = FinanceTheme.type.body, color = c.textSecondary)
             } else {
-                val months = state.balance.map { it.first }
+                val dates = state.balance.map { it.first }
                 FinanceLineChart(
                     series = listOf(LineSeries(state.balance.mapIndexed { i, (_, m) -> i.toDouble() to m.toBigDecimal().toDouble() }, c.textPrimary, area = true)),
-                    xLabel = { v -> months.getOrNull(v.toInt())?.let { formats.dates.monthShort(it) } ?: "" },
+                    // Month ends read as the month; the first record's day and today as day/month.
+                    xLabel = { v ->
+                        dates.getOrNull(v.toInt())?.let { date ->
+                            val month = YearMonth.from(date)
+                            if (date == month.atEndOfMonth()) formats.dates.monthShort(month) else formats.dates.dayMonth(date)
+                        } ?: ""
+                    },
                     yLabel = { v -> formats.money.formatShort((v * 100).toLong(), state.display) },
                     summary = stringResource(R.string.charts_summary_balance),
                 )

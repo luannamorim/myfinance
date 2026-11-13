@@ -61,6 +61,7 @@ fun DisplayStatus.label(): String = stringResource(
         DisplayStatus.OVERDUE -> R.string.status_overdue
         DisplayStatus.PAID -> R.string.status_paid
         DisplayStatus.RECEIVED -> R.string.status_received
+        DisplayStatus.TRANSFERRED -> R.string.status_transferred
         DisplayStatus.CANCELLED -> R.string.status_cancelled
     },
 )

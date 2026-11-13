@@ -44,6 +44,8 @@ data class CashFlowUiState(
     val overdue: List<OccurrenceRow> = emptyList(),
     val pendingBills: List<OccurrenceRow> = emptyList(),
     val upcomingIncome: List<OccurrenceRow> = emptyList(),
+    /** Pending transfers between cash and assets due in the month (from today on). */
+    val pendingTransfers: List<OccurrenceRow> = emptyList(),
     val nextMonth: MonthSummary? = null,
     val nextMonthProjected: Total? = null,
     val rate: ExchangeRate? = null,
@@ -90,6 +92,7 @@ fun cashFlowState(
         overdue = if (month == current) rows(ledger.occurrences.filter { it.state == OccurrenceState.PENDING && it.dueDate.isBefore(today) }) else emptyList(),
         pendingBills = rows(pendingInMonth.filter { it.kind == EntryKind.EXPENSE }),
         upcomingIncome = rows(pendingInMonth.filter { it.kind == EntryKind.INCOME }),
+        pendingTransfers = rows(pendingInMonth.filter { it.kind.isTransfer }),
         nextMonth = CashCalculator.monthSummary(ledger, next, today, display, converter),
         nextMonthProjected = CashCalculator.consolidate(CashCalculator.projected(ledger, today, next.atEndOfMonth()), display, converter),
         rate = rates.latest(),

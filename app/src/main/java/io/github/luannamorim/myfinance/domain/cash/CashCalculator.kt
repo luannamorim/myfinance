@@ -23,6 +23,10 @@ data class MonthSummary(
     /** Pending expenses due before the month (or before today, whichever is earlier). */
     val overdueEarlier: Total,
     val overdueEarlierCount: Int,
+    /** Transfers from cash into assets in the month (done and pending); neither income nor expense. */
+    val transfersOut: Total,
+    /** Transfers from assets back into cash in the month (done and pending). */
+    val transfersIn: Total,
 )
 
 /**
@@ -47,7 +51,7 @@ object CashCalculator {
             val actual = it.actual
             val date = it.actualDate
             if (it.state == OccurrenceState.CONFIRMED && actual != null && date != null && actual.currency == currency && inRange(date)) {
-                total += if (it.kind == EntryKind.INCOME) actual.minor else -actual.minor
+                total += if (it.kind.cashInflow) actual.minor else -actual.minor
             }
         }
         return Money(total, currency)
@@ -56,13 +60,16 @@ object CashCalculator {
     fun available(ledger: CashLedger, today: LocalDate): Map<Currency, Money> =
         Currency.entries.associateWith { balance(it, today, ledger) }
 
-    /** Available cash plus pending income minus pending expenses due on or before [through] (overdue included). */
+    /**
+     * Available cash plus pending income and transfers in, minus pending expenses and transfers out, due on or
+     * before [through] (overdue included).
+     */
     fun projected(ledger: CashLedger, today: LocalDate, through: LocalDate): Map<Currency, Money> =
         Currency.entries.associateWith { currency ->
             var total = balance(currency, today, ledger).minor
             ledger.occurrences.forEach {
                 if (it.state == OccurrenceState.PENDING && it.expected.currency == currency && !it.dueDate.isAfter(through)) {
-                    total += if (it.kind == EntryKind.INCOME) it.expected.minor else -it.expected.minor
+                    total += if (it.kind.cashInflow) it.expected.minor else -it.expected.minor
                 }
             }
             Money(total, currency)
@@ -99,21 +106,24 @@ object CashCalculator {
             paidExpenses = total(EntryKind.EXPENSE, confirmedOnly = true),
             overdueEarlier = converter.sum(overdue.map { it.expected to null }, to),
             overdueEarlierCount = overdue.size,
+            transfersOut = total(EntryKind.TRANSFER_OUT, confirmedOnly = false),
+            transfersIn = total(EntryKind.TRANSFER_IN, confirmedOnly = false),
         )
     }
 
     /** Cash at the end of each month (all currencies, converted at that day's rate). */
     fun balanceHistory(ledger: CashLedger, months: List<YearMonth>, to: Currency, converter: Converter): List<Pair<YearMonth, Total>> =
-        months.map { month ->
-            val end = month.atEndOfMonth()
-            month to converter.sum(Currency.entries.map { balance(it, end, ledger) to end }, to)
-        }
+        months.zip(balanceOn(ledger, months.map { it.atEndOfMonth() }, to, converter)) { month, (_, total) -> month to total }
 
-    /** Totals per category for one month and kind, largest first. */
+    /** Cash at the end of each of [dates] (all currencies, converted at that day's rate). */
+    fun balanceOn(ledger: CashLedger, dates: List<LocalDate>, to: Currency, converter: Converter): List<Pair<LocalDate, Total>> =
+        dates.map { date -> date to converter.sum(Currency.entries.map { balance(it, date, ledger) to date }, to) }
+
+    /** Totals per category for one month and kind (INCOME or EXPENSE; transfers have no category), largest first. */
     fun byCategory(ledger: CashLedger, month: YearMonth, kind: EntryKind, to: Currency, converter: Converter): List<Pair<Long, Total>> =
         ledger.occurrences
             .filter { it.kind == kind && it.state != OccurrenceState.CANCELLED && monthOf(it) == month }
             .groupBy { it.categoryId }
-            .map { (category, items) -> category to converter.sum(items.mapNotNull { it.effective() }, to) }
+            .mapNotNull { (category, items) -> category?.let { it to converter.sum(items.mapNotNull { o -> o.effective() }, to) } }
             .sortedByDescending { it.second.money.minor }
 }

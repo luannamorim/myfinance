@@ -10,8 +10,6 @@ import io.github.luannamorim.myfinance.ui.feature.cashflow.CashFlowActions
 import io.github.luannamorim.myfinance.ui.feature.cashflow.CashFlowChartsScreen
 import io.github.luannamorim.myfinance.ui.feature.cashflow.CashFlowScreen
 import io.github.luannamorim.myfinance.ui.feature.cashflow.RecurringListScreen
-import io.github.luannamorim.myfinance.ui.feature.transaction.OccurrenceDetailScreen
-import io.github.luannamorim.myfinance.ui.feature.transaction.TransactionEditorScreen
 import io.github.luannamorim.myfinance.ui.feature.history.HistoryScreen
 import io.github.luannamorim.myfinance.ui.feature.overview.OverviewActions
 import io.github.luannamorim.myfinance.ui.feature.overview.OverviewScreen
@@ -20,12 +18,14 @@ import io.github.luannamorim.myfinance.ui.feature.portfolio.PortfolioChartsScree
 import io.github.luannamorim.myfinance.ui.feature.portfolio.PortfolioScreen
 import io.github.luannamorim.myfinance.ui.feature.settings.AboutScreen
 import io.github.luannamorim.myfinance.ui.feature.settings.AdjustBalanceScreen
-import io.github.luannamorim.myfinance.ui.feature.settings.PrivacyScreen
 import io.github.luannamorim.myfinance.ui.feature.settings.CategoriesScreen
 import io.github.luannamorim.myfinance.ui.feature.settings.CurrencySettingsScreen
 import io.github.luannamorim.myfinance.ui.feature.settings.OpeningBalancesScreen
+import io.github.luannamorim.myfinance.ui.feature.settings.PrivacyScreen
 import io.github.luannamorim.myfinance.ui.feature.settings.SettingsActions
 import io.github.luannamorim.myfinance.ui.feature.settings.SettingsScreen
+import io.github.luannamorim.myfinance.ui.feature.transaction.OccurrenceDetailScreen
+import io.github.luannamorim.myfinance.ui.feature.transaction.TransactionEditorScreen
 
 /** The five tab roots. */
 internal fun NavGraphBuilder.tabDestinations(navController: NavHostController) {
@@ -57,6 +57,7 @@ internal fun NavGraphBuilder.tabDestinations(navController: NavHostController) {
                 onAdd = { navController.navigate(AssetEditorRoute()) },
                 onOpen = { navController.navigate(AssetDetailRoute(it)) },
                 onCharts = { navController.navigate(PortfolioChartsRoute) },
+                onOpenCash = { navController.navigateToTopLevel(TopLevelDestination.CASH_FLOW) },
             ),
         )
     }
@@ -96,6 +97,7 @@ internal fun NavGraphBuilder.cashDestinations(navController: NavHostController) 
             onBack = { navController.popBackStack() },
             onEdit = { navController.navigate(TransactionEditorRoute(occurrenceId = it)) },
             onEditRecurring = { navController.navigate(TransactionEditorRoute(templateId = it)) },
+            onOpenAsset = { navController.navigate(AssetDetailRoute(it)) },
         )
     }
     composable<CashFlowChartsRoute> { CashFlowChartsScreen(onBack = { navController.popBackStack() }) }

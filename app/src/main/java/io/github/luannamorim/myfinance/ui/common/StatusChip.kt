@@ -13,8 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import io.github.luannamorim.myfinance.domain.cash.DisplayStatus
-import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import io.github.luannamorim.myfinance.ui.theme.FinanceShapes
+import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 
 /** The status colour: the chip carries the colour so amounts can stay neutral (docs/BRAND.md). */
 @Composable
@@ -24,7 +24,7 @@ fun DisplayStatus.color(): Color {
         DisplayStatus.OVERDUE -> c.danger
         DisplayStatus.PENDING -> c.warning
         DisplayStatus.UPCOMING -> c.textSecondary
-        DisplayStatus.PAID, DisplayStatus.RECEIVED -> c.positive
+        DisplayStatus.PAID, DisplayStatus.RECEIVED, DisplayStatus.TRANSFERRED -> c.positive
         DisplayStatus.CANCELLED -> c.textTertiary
     }
 }

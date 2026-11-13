@@ -25,14 +25,19 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.luannamorim.myfinance.R
 import io.github.luannamorim.myfinance.domain.model.EntryKind
+import io.github.luannamorim.myfinance.domain.model.FlowKind
 import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.domain.model.OccurrenceState
+import io.github.luannamorim.myfinance.ui.common.ActionErrorDialog
 import io.github.luannamorim.myfinance.ui.common.CategoryIcons
 import io.github.luannamorim.myfinance.ui.common.ConfirmSheet
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
 import io.github.luannamorim.myfinance.ui.common.StatusChip
+import io.github.luannamorim.myfinance.ui.common.TransferIcon
+import io.github.luannamorim.myfinance.ui.common.directionLabel
 import io.github.luannamorim.myfinance.ui.common.displayName
 import io.github.luannamorim.myfinance.ui.common.label
+import io.github.luannamorim.myfinance.ui.common.suggestAssetAmount
 import io.github.luannamorim.myfinance.ui.components.AmountDisplay
 import io.github.luannamorim.myfinance.ui.components.AmountTone
 import io.github.luannamorim.myfinance.ui.components.ConfirmDialog
@@ -50,7 +55,9 @@ data class OccurrenceDetailActions(
     val onBack: () -> Unit = {},
     val onStartConfirm: () -> Unit = {},
     val onDismissConfirm: () -> Unit = {},
-    val onConfirm: (Money, LocalDate, String?) -> Unit = { _, _, _ -> },
+    val onConfirm: (Money, LocalDate, String?, Money?) -> Unit = { _, _, _, _ -> },
+    val onDismissError: () -> Unit = {},
+    val onOpenAsset: (Long) -> Unit = {},
     val onUnconfirm: () -> Unit = {},
     val onCancel: () -> Unit = {},
     val onRestore: () -> Unit = {},
@@ -64,6 +71,7 @@ fun OccurrenceDetailScreen(
     onBack: () -> Unit,
     onEdit: (Long) -> Unit,
     onEditRecurring: (Long) -> Unit,
+    onOpenAsset: (Long) -> Unit = {},
     viewModel: OccurrenceDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -81,6 +89,8 @@ fun OccurrenceDetailScreen(
             onDelete = { viewModel.delete() },
             onEdit = { state.occurrence?.let { onEdit(it.id) } },
             onEditRecurring = onEditRecurring,
+            onDismissError = viewModel::dismissError,
+            onOpenAsset = onOpenAsset,
         ),
     )
 }
@@ -103,37 +113,69 @@ fun OccurrenceDetailContent(state: OccurrenceDetailUiState, actions: OccurrenceD
         },
     ) {
         if (o == null) return@DetailScaffold
-        val income = o.kind == EntryKind.INCOME
+        val transfer = o.kind.isTransfer
+        val inflow = o.kind.cashInflow
         Row(verticalAlignment = Alignment.CenterVertically) {
-            CategoryBadge(CategoryIcons.of(state.category?.icon ?: "category"))
+            CategoryBadge(if (transfer) TransferIcon else CategoryIcons.of(state.category?.icon ?: "category"))
             Spacer(Modifier.width(Spacing.m))
             Column(Modifier.weight(1f)) {
                 Text(o.name, style = FinanceTheme.type.headline, color = c.textPrimary)
-                Text(state.category?.displayName().orEmpty(), style = FinanceTheme.type.caption, color = c.textSecondary)
+                val subtitle = if (transfer) {
+                    o.kind.directionLabel() + " · " + (state.target?.name ?: stringResource(R.string.transfer_asset_deleted))
+                } else {
+                    state.category?.displayName().orEmpty()
+                }
+                Text(subtitle, style = FinanceTheme.type.caption, color = c.textSecondary)
             }
             StatusChip(state.status)
         }
         FinanceCard(Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.detail_expected), style = FinanceTheme.type.caption, color = c.textSecondary)
-            AmountDisplay(if (income) o.expected else -o.expected, style = FinanceTheme.type.numericLarge, signed = income)
+            AmountDisplay(if (inflow) o.expected else -o.expected, style = FinanceTheme.type.numericLarge, signed = inflow)
             Text("${stringResource(R.string.detail_due)} ${formats.dates.date(o.dueDate)}", style = FinanceTheme.type.caption, color = c.textSecondary)
             if (o.state == OccurrenceState.CONFIRMED && o.actual != null && o.actualDate != null) {
                 Spacer(Modifier.height(Spacing.l))
+                val actualLabel = when (o.kind) {
+                    EntryKind.INCOME -> R.string.detail_actual_received
+                    EntryKind.EXPENSE -> R.string.detail_actual_paid
+                    EntryKind.TRANSFER_OUT, EntryKind.TRANSFER_IN -> R.string.detail_actual_transferred
+                }
                 Text(
-                    stringResource(if (income) R.string.detail_actual_received else R.string.detail_actual_paid) + " · " + formats.dates.date(o.actualDate),
+                    stringResource(actualLabel) + " · " + formats.dates.date(o.actualDate),
                     style = FinanceTheme.type.caption,
                     color = c.textSecondary,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                AmountDisplay(if (income) o.actual else -o.actual, style = FinanceTheme.type.numericLarge, signed = income)
+                AmountDisplay(if (inflow) o.actual else -o.actual, style = FinanceTheme.type.numericLarge, signed = inflow)
                 state.difference?.takeIf { !it.isZero }?.let { diff ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(stringResource(R.string.detail_difference) + " ", style = FinanceTheme.type.caption, color = c.textSecondary)
                         // Paying more than expected (or receiving less) is worse: red; the opposite is green.
-                        val good = if (income) !diff.isNegative else diff.isNegative
-                        AmountDisplay(diff, style = FinanceTheme.type.numeric, signed = true, tone = if (good) AmountTone.POSITIVE else AmountTone.NEGATIVE)
+                        // A transfer only moves money between cash and an asset: neither better nor worse.
+                        val tone = when (o.kind) {
+                            EntryKind.INCOME -> if (diff.isNegative) AmountTone.NEGATIVE else AmountTone.POSITIVE
+                            EntryKind.EXPENSE -> if (diff.isNegative) AmountTone.POSITIVE else AmountTone.NEGATIVE
+                            EntryKind.TRANSFER_OUT, EntryKind.TRANSFER_IN -> AmountTone.NEUTRAL
+                        }
+                        AmountDisplay(diff, style = FinanceTheme.type.numeric, signed = true, tone = tone)
                     }
                 }
+            }
+        }
+        state.target?.let { target ->
+            FinanceCard(onClick = { actions.onOpenAsset(target.assetId) }, modifier = Modifier.fillMaxWidth()) {
+                Text(target.name, style = FinanceTheme.type.bodyStrong, color = c.textPrimary)
+                val flow = state.transferFlow
+                val caption = if (flow != null) {
+                    stringResource(
+                        if (flow.kind.inflow) R.string.transfer_recorded_contribution else R.string.transfer_recorded_withdrawal,
+                        formats.money.format(flow.amount),
+                        formats.dates.date(flow.date),
+                    )
+                } else {
+                    stringResource(if (o.kind == EntryKind.TRANSFER_OUT) R.string.transfer_pending_contribution else R.string.transfer_pending_withdrawal)
+                }
+                Text(caption, style = FinanceTheme.type.caption, color = c.textSecondary)
             }
         }
         o.note?.let { Field(stringResource(R.string.detail_note), it) }
@@ -148,7 +190,13 @@ fun OccurrenceDetailContent(state: OccurrenceDetailUiState, actions: OccurrenceD
             when (o.state) {
                 OccurrenceState.PENDING -> {
                     PrimaryButton(
-                        stringResource(if (income) R.string.confirm_receipt else R.string.confirm_payment),
+                        stringResource(
+                            when (o.kind) {
+                                EntryKind.INCOME -> R.string.confirm_receipt
+                                EntryKind.EXPENSE -> R.string.confirm_payment
+                                EntryKind.TRANSFER_OUT, EntryKind.TRANSFER_IN -> R.string.confirm_transfer
+                            },
+                        ),
                         onClick = actions.onStartConfirm,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -160,11 +208,14 @@ fun OccurrenceDetailContent(state: OccurrenceDetailUiState, actions: OccurrenceD
                     TextAction(stringResource(R.string.detail_cancel), onClick = { dialog = PendingDialog.CANCEL }, color = c.textSecondary)
                 }
                 OccurrenceState.CONFIRMED -> {
-                    SecondaryButton(
-                        stringResource(if (income) R.string.detail_mark_unreceived else R.string.detail_mark_unpaid),
-                        onClick = { dialog = PendingDialog.UNCONFIRM },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    // A transfer that created the asset's initial investment can only be deleted.
+                    if (state.transferFlow?.kind != FlowKind.INITIAL) {
+                        SecondaryButton(
+                            o.kind.unconfirmLabel(),
+                            onClick = { dialog = PendingDialog.UNCONFIRM },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                     if (o.standalone) SecondaryButton(stringResource(R.string.detail_edit), onClick = actions.onEdit, modifier = Modifier.fillMaxWidth())
                 }
                 OccurrenceState.CANCELLED -> SecondaryButton(stringResource(R.string.detail_restore), onClick = actions.onRestore, modifier = Modifier.fillMaxWidth())
@@ -172,13 +223,18 @@ fun OccurrenceDetailContent(state: OccurrenceDetailUiState, actions: OccurrenceD
         }
     }
     if (state.confirming && o != null) {
-        ConfirmSheet(o, state.today, onConfirm = actions.onConfirm, onDismiss = actions.onDismissConfirm)
+        ConfirmSheet(
+            o, state.today, onConfirm = actions.onConfirm, onDismiss = actions.onDismissConfirm,
+            target = state.target,
+            suggest = { money, currency, date -> state.rates.suggestAssetAmount(money, currency, date) },
+        )
     }
+    ActionErrorDialog(state.error, actions.onDismissError)
     when (dialog) {
         PendingDialog.UNCONFIRM -> ConfirmDialog(
             title = stringResource(R.string.detail_unconfirm_title),
-            message = stringResource(R.string.detail_unconfirm_message),
-            confirmText = stringResource(if (o?.kind == EntryKind.INCOME) R.string.detail_mark_unreceived else R.string.detail_mark_unpaid),
+            message = stringResource(if (o?.kind?.isTransfer == true) R.string.detail_unconfirm_transfer_message else R.string.detail_unconfirm_message),
+            confirmText = o?.kind?.unconfirmLabel().orEmpty(),
             onConfirm = { dialog = null; actions.onUnconfirm() },
             onDismiss = { dialog = null },
         )
@@ -193,7 +249,7 @@ fun OccurrenceDetailContent(state: OccurrenceDetailUiState, actions: OccurrenceD
         )
         PendingDialog.DELETE -> ConfirmDialog(
             title = stringResource(R.string.editor_delete_title),
-            message = stringResource(R.string.editor_delete_message),
+            message = stringResource(if (o?.kind?.isTransfer == true) R.string.editor_delete_transfer_message else R.string.editor_delete_message),
             confirmText = stringResource(R.string.action_delete),
             onConfirm = { dialog = null; actions.onDelete() },
             onDismiss = { dialog = null },
@@ -210,3 +266,12 @@ private fun Field(label: String, value: String) {
         Text(value, style = FinanceTheme.type.body, color = FinanceTheme.colors.textPrimary)
     }
 }
+
+@Composable
+private fun EntryKind.unconfirmLabel(): String = stringResource(
+    when (this) {
+        EntryKind.INCOME -> R.string.detail_mark_unreceived
+        EntryKind.EXPENSE -> R.string.detail_mark_unpaid
+        EntryKind.TRANSFER_OUT, EntryKind.TRANSFER_IN -> R.string.detail_mark_not_transferred
+    },
+)

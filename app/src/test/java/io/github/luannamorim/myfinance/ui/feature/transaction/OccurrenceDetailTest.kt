@@ -10,11 +10,14 @@ import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.lifecycle.SavedStateHandle
 import androidx.navigation.testing.invoke
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.luannamorim.myfinance.core.time.FakeTimeSource
+import io.github.luannamorim.myfinance.data.images.ImageStore
 import io.github.luannamorim.myfinance.data.repository.BackupTrigger
 import io.github.luannamorim.myfinance.data.repository.CashRepository
 import io.github.luannamorim.myfinance.data.repository.CategoryRepository
+import io.github.luannamorim.myfinance.data.repository.PortfolioRepository
 import io.github.luannamorim.myfinance.data.repository.TransactionDraft
 import io.github.luannamorim.myfinance.domain.cash.DisplayStatus
 import io.github.luannamorim.myfinance.domain.cash.RecurrenceRule
@@ -27,8 +30,11 @@ import io.github.luannamorim.myfinance.testutil.brl
 import io.github.luannamorim.myfinance.testutil.d
 import io.github.luannamorim.myfinance.testutil.inMemoryDb
 import io.github.luannamorim.myfinance.testutil.snapBothThemes
+import io.github.luannamorim.myfinance.testutil.testRates
+import io.github.luannamorim.myfinance.testutil.testSettings
 import io.github.luannamorim.myfinance.ui.navigation.OccurrenceDetailRoute
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -50,12 +56,14 @@ class OccurrenceDetailTest {
     private val time = FakeTimeSource()
     private val categories = CategoryRepository(db, time, BackupTrigger { })
     private val cash = CashRepository(db, time, BackupTrigger { })
+    private val portfolio = PortfolioRepository(db, time, BackupTrigger { }, ImageStore(ApplicationProvider.getApplicationContext(), Dispatchers.Unconfined))
+    private val rates = testRates(db, testSettings(), time)
 
     // The in-memory database is not closed: ViewModel collectors may still be querying it when the test ends.
 
     private fun category(seedKey: String) = runBlocking { db.categoryDao().getAll().first { it.seedKey == seedKey }.id }
 
-    private fun detail(id: Long) = OccurrenceDetailViewModel(SavedStateHandle(route = OccurrenceDetailRoute(id)), cash, categories, time)
+    private fun detail(id: Long) = OccurrenceDetailViewModel(SavedStateHandle(route = OccurrenceDetailRoute(id)), cash, categories, portfolio, rates, time)
 
     /** Rent, monthly from 05/11/2026, R$ 2.500; returns the November occurrence id. */
     private fun rent(): Long = runBlocking {
@@ -120,9 +128,9 @@ class OccurrenceDetailTest {
         val id = rent()
         val vm = detail(id)
         vm.state.awaitUntil { it.occurrence != null }
-        vm.cancel().join()
+        vm.cancel()
         vm.state.awaitUntil { it.status == DisplayStatus.CANCELLED }
-        vm.restore().join()
+        vm.restore()
         vm.state.awaitUntil { it.status == DisplayStatus.OVERDUE }
         Unit
     }

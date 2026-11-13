@@ -31,12 +31,13 @@ import io.github.luannamorim.myfinance.R
 import io.github.luannamorim.myfinance.domain.fx.Total
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.Money
+import io.github.luannamorim.myfinance.ui.common.ActionErrorDialog
 import io.github.luannamorim.myfinance.ui.common.ConfirmSheet
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
 import io.github.luannamorim.myfinance.ui.common.OccurrenceRowItem
 import io.github.luannamorim.myfinance.ui.common.TotalTiles
+import io.github.luannamorim.myfinance.ui.common.suggestAssetAmount
 import io.github.luannamorim.myfinance.ui.components.AdaptiveRow
-import io.github.luannamorim.myfinance.ui.components.shrinkToFit
 import io.github.luannamorim.myfinance.ui.components.AmountDisplay
 import io.github.luannamorim.myfinance.ui.components.AmountTone
 import io.github.luannamorim.myfinance.ui.components.FinanceCard
@@ -48,6 +49,7 @@ import io.github.luannamorim.myfinance.ui.components.RateFooter
 import io.github.luannamorim.myfinance.ui.components.SectionHeader
 import io.github.luannamorim.myfinance.ui.components.TabScreen
 import io.github.luannamorim.myfinance.ui.components.TextAction
+import io.github.luannamorim.myfinance.ui.components.shrinkToFit
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import io.github.luannamorim.myfinance.ui.theme.Spacing
 import java.time.LocalDate
@@ -57,7 +59,8 @@ data class OverviewActions(
     val onOpen: (Long) -> Unit = {},
     val onStartConfirm: (Long) -> Unit = {},
     val onDismissConfirm: () -> Unit = {},
-    val onConfirm: (Money, LocalDate, String?) -> Unit = { _, _, _ -> },
+    val onConfirm: (Money, LocalDate, String?, Money?) -> Unit = { _, _, _, _ -> },
+    val onDismissError: () -> Unit = {},
     val onUpdateRates: () -> Unit = {},
     val onSeeCashFlow: () -> Unit = {},
     val onSeeHistory: () -> Unit = {},
@@ -76,6 +79,7 @@ fun OverviewScreen(actions: OverviewActions, viewModel: OverviewViewModel = hilt
             onStartConfirm = viewModel::startConfirm,
             onDismissConfirm = viewModel::dismissConfirm,
             onConfirm = viewModel::confirm,
+            onDismissError = viewModel::dismissError,
             onUpdateRates = viewModel::updateRates,
         ),
     )
@@ -135,7 +139,14 @@ fun OverviewContent(state: OverviewUiState, actions: OverviewActions, modifier: 
         }
         if (state.usesConversion) RateFooter(state.rate, onUpdate = actions.onUpdateRates, updating = state.updatingRates)
     }
-    state.confirming?.let { row -> ConfirmSheet(row.occurrence, state.today, actions.onConfirm, actions.onDismissConfirm) }
+    state.confirming?.let { row ->
+        ConfirmSheet(
+            row.occurrence, state.today, actions.onConfirm, actions.onDismissConfirm,
+            target = row.occurrence.assetId?.let(state.targets::get),
+            suggest = { money, currency, date -> state.rates.suggestAssetAmount(money, currency, date) },
+        )
+    }
+    ActionErrorDialog(state.error, actions.onDismissError)
 }
 
 @Composable

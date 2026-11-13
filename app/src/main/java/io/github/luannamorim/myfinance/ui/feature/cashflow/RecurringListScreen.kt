@@ -34,6 +34,8 @@ import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.domain.model.OccurrenceState
 import io.github.luannamorim.myfinance.ui.common.CategoryIcons
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
+import io.github.luannamorim.myfinance.ui.common.TransferIcon
+import io.github.luannamorim.myfinance.ui.common.directionLabel
 import io.github.luannamorim.myfinance.ui.common.displayName
 import io.github.luannamorim.myfinance.ui.common.label
 import io.github.luannamorim.myfinance.ui.components.AmountDisplay
@@ -119,13 +121,13 @@ private fun TemplateCard(row: TemplateRow, onOpen: (Long) -> Unit) {
     val formats = LocalFormats.current
     FinanceCard(onClick = { onOpen(row.id) }, modifier = Modifier.fillMaxWidth(), contentPadding = Spacing.m) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            CategoryBadge(CategoryIcons.of(row.category?.icon ?: "category"), dimmed = !row.active)
+            CategoryBadge(if (row.kind.isTransfer) TransferIcon else CategoryIcons.of(row.category?.icon ?: "category"), dimmed = !row.active)
             Spacer(Modifier.width(Spacing.m))
             Column(Modifier.weight(1f)) {
                 Text(row.name, style = FinanceTheme.type.bodyStrong, color = if (row.active) c.textPrimary else c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 val next = row.nextDue?.let { stringResource(R.string.recurring_next, formats.dates.dayMonth(it)) }
                 Text(
-                    listOfNotNull(row.rule.label(), row.category?.displayName(), next).joinToString(" · "),
+                    listOfNotNull(row.rule.label(), if (row.kind.isTransfer) row.kind.directionLabel() else row.category?.displayName(), next).joinToString(" · "),
                     style = FinanceTheme.type.caption,
                     color = c.textSecondary,
                     maxLines = 1,
@@ -133,7 +135,7 @@ private fun TemplateCard(row: TemplateRow, onOpen: (Long) -> Unit) {
                 )
             }
             Spacer(Modifier.width(Spacing.s))
-            AmountDisplay(if (row.kind == EntryKind.EXPENSE) -row.amount else row.amount, signed = row.kind == EntryKind.INCOME)
+            AmountDisplay(if (row.kind.cashInflow) row.amount else -row.amount, signed = row.kind.cashInflow)
         }
     }
 }

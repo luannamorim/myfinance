@@ -68,6 +68,6 @@ class CategoryRepositoryTest {
         assertEquals(DeleteResult.IN_USE, repo.deleteAssetCategory(custom))
         val other = repo.createAssetCategory(AssetGroup.INVESTMENT, "Bonds", "receipt_long")
         assertEquals(DeleteResult.DELETED, repo.deleteAssetCategory(other))
-        assertEquals(12 + 1, repo.observeAssetCategories().first().size)
+        assertEquals(13 + 1, repo.observeAssetCategories().first().size)
     }
 }

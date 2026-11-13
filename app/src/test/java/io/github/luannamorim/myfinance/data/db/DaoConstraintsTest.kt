@@ -43,9 +43,9 @@ class DaoConstraintsTest {
         val cash = db.categoryDao().getAll()
         val assets = db.categoryDao().getAllAssetCategories()
         assertEquals(6, cash.count { it.kind == EntryKind.INCOME })
-        assertEquals(15, cash.count { it.kind == EntryKind.EXPENSE })
+        assertEquals(17, cash.count { it.kind == EntryKind.EXPENSE })
         assertEquals(7, assets.count { it.assetGroup == AssetGroup.INVESTMENT })
-        assertEquals(5, assets.count { it.assetGroup == AssetGroup.PERSONAL })
+        assertEquals(6, assets.count { it.assetGroup == AssetGroup.PERSONAL })
         assertTrue(cash.all { it.name == null } && assets.all { it.name == null })
         val frozen = javaClass.getResource("/seed-keys.txt")!!.readText().lines()
             .filter { it.isNotBlank() && !it.startsWith("#") }

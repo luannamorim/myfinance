@@ -45,6 +45,13 @@ interface PortfolioDao {
     @Query("DELETE FROM asset_flow WHERE id = :id")
     suspend fun deleteFlow(id: Long)
 
+    @Update
+    suspend fun updateFlow(flow: AssetFlowEntity)
+
+    /** The flow a confirmed transfer created, if any. */
+    @Query("SELECT * FROM asset_flow WHERE occurrenceId = :occurrenceId")
+    suspend fun getFlowByOccurrence(occurrenceId: Long): AssetFlowEntity?
+
     @Query("SELECT * FROM asset_valuation WHERE assetId = :assetId ORDER BY date, id")
     suspend fun getValuations(assetId: Long): List<AssetValuationEntity>
 

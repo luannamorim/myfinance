@@ -29,6 +29,8 @@ private val seedNames: Map<String, Int> = mapOf(
     "expense.entertainment" to R.string.seed_expense_entertainment,
     "expense.education" to R.string.seed_expense_education,
     "expense.shopping" to R.string.seed_expense_shopping,
+    "expense.credit_card" to R.string.seed_expense_credit_card,
+    "expense.loans" to R.string.seed_expense_loans,
     "expense.other_expenses" to R.string.seed_expense_other_expenses,
     "asset.fixed_income" to R.string.seed_asset_fixed_income,
     "asset.stocks" to R.string.seed_asset_stocks,
@@ -41,6 +43,7 @@ private val seedNames: Map<String, Int> = mapOf(
     "asset.startup_equity" to R.string.seed_asset_startup_equity,
     "asset.real_estate" to R.string.seed_asset_real_estate,
     "asset.vehicles" to R.string.seed_asset_vehicles,
+    "asset.loans_receivable" to R.string.seed_asset_loans_receivable,
     "asset.other_assets" to R.string.seed_asset_other_assets,
 )
 

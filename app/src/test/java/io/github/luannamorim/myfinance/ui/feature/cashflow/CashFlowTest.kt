@@ -104,7 +104,8 @@ class CashFlowTest {
         assertEquals(brl("10500.00"), nov.second) // 9.000 received + 1.500 pending
         assertEquals(brl("3112.40"), nov.third)
         assertEquals(listOf(20L, 30L, 40L), charts.expensesByCategory.map { it.category!!.id })
-        assertEquals(listOf(YearMonth.of(2026, 11)), charts.balance.map { it.first })
+        // The first record's day, then today (this month's end hasn't come yet): a line from the first month.
+        assertEquals(listOf(d("2026-11-01"), today), charts.balance.map { it.first })
     }
 
     @Test

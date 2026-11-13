@@ -33,6 +33,7 @@ import io.github.luannamorim.myfinance.domain.fx.Total
 import io.github.luannamorim.myfinance.domain.model.AssetFlow
 import io.github.luannamorim.myfinance.domain.model.FlowKind
 import io.github.luannamorim.myfinance.domain.model.Money
+import io.github.luannamorim.myfinance.ui.common.ActionErrorDialog
 import io.github.luannamorim.myfinance.ui.common.CategoryIcons
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
 import io.github.luannamorim.myfinance.ui.common.StoredImage
@@ -62,7 +63,8 @@ data class AssetDetailActions(
     val onEdit: () -> Unit = {},
     val onOpenSheet: (AssetSheet?) -> Unit = {},
     val onAddValuation: (LocalDate, Money, String?) -> Unit = { _, _, _ -> },
-    val onAddFlow: (FlowKind, LocalDate, Money, BigDecimal?, String?, Money?) -> Unit = { _, _, _, _, _, _ -> },
+    val onAddFlow: (FlowKind, LocalDate, Money, BigDecimal?, String?, Money?, Money?) -> Unit = { _, _, _, _, _, _, _ -> },
+    val onDismissError: () -> Unit = {},
     val onDeleteFlow: (Long) -> Unit = {},
     val onDeleteValuation: (Long) -> Unit = {},
     val onDeleteAsset: () -> Unit = {},
@@ -80,6 +82,7 @@ fun AssetDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, viewModel: Ass
             onOpenSheet = viewModel::open,
             onAddValuation = viewModel::addValuation,
             onAddFlow = viewModel::addFlow,
+            onDismissError = viewModel::dismissError,
             onDeleteFlow = { viewModel.deleteFlow(it) },
             onDeleteValuation = { viewModel.deleteValuation(it) },
             onDeleteAsset = { viewModel.deleteAsset() },
@@ -229,11 +232,12 @@ fun AssetDetailContent(state: AssetDetailUiState, actions: AssetDetailActions) {
         val minDate = state.flows.firstOrNull { it.kind == FlowKind.INITIAL }?.date
         when (state.sheet) {
             AssetSheet.VALUATION -> ValuationSheet(asset.currency, state.today, minDate, state.valuationDates, actions.onAddValuation) { actions.onOpenSheet(null) }
-            AssetSheet.CONTRIBUTE -> FlowSheet(false, asset.currency, state.today, minDate, s.value, actions.onAddFlow) { actions.onOpenSheet(null) }
-            AssetSheet.WITHDRAW -> FlowSheet(true, asset.currency, state.today, minDate, s.value, actions.onAddFlow) { actions.onOpenSheet(null) }
+            AssetSheet.CONTRIBUTE -> FlowSheet(false, asset.currency, state.today, minDate, s.value, actions.onAddFlow, { actions.onOpenSheet(null) }, state.rates)
+            AssetSheet.WITHDRAW -> FlowSheet(true, asset.currency, state.today, minDate, s.value, actions.onAddFlow, { actions.onOpenSheet(null) }, state.rates)
             null -> Unit
         }
     }
+    ActionErrorDialog(state.error, actions.onDismissError)
     if (deleting) {
         ConfirmDialog(
             title = stringResource(R.string.asset_delete_title),
@@ -268,21 +272,37 @@ private fun TotalLine(label: String, total: Total, tone: AmountTone = AmountTone
 private fun AssetFlowRow(flow: AssetFlow, onDelete: (Long) -> Unit) {
     val c = FinanceTheme.colors
     val formats = LocalFormats.current
+    var confirmDelete by rememberSaveable(flow.id) { mutableStateOf(false) }
+    val linked = flow.occurrenceId != null
     FinanceCard(Modifier.fillMaxWidth(), contentPadding = Spacing.m) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             AdaptiveRow(
                 main = {
                     Column {
                         Text(flow.kind.label(), style = FinanceTheme.type.bodyStrong, color = c.textPrimary)
-                        Text(listOfNotNull(formats.dates.date(flow.date), flow.note).joinToString(" · "), style = FinanceTheme.type.caption, color = c.textSecondary)
+                        val cash = if (linked) stringResource(if (flow.kind.inflow) R.string.flow_from_cash else R.string.flow_to_cash) else null
+                        Text(listOfNotNull(formats.dates.date(flow.date), cash, flow.note).joinToString(" · "), style = FinanceTheme.type.caption, color = c.textSecondary)
                     }
                 },
                 trailing = { AmountDisplay(if (flow.kind.inflow) flow.amount else -flow.amount, signed = flow.kind.inflow) },
                 modifier = Modifier.weight(1f),
             )
             if (flow.kind != FlowKind.INITIAL) {
-                IconButton(onClick = { onDelete(flow.id) }) { Icon(Icons.Rounded.DeleteOutline, stringResource(R.string.action_delete), tint = c.textTertiary) }
+                // A flow linked to cash takes its transfer with it: ask first.
+                IconButton(onClick = { if (linked) confirmDelete = true else onDelete(flow.id) }) {
+                    Icon(Icons.Rounded.DeleteOutline, stringResource(R.string.action_delete), tint = c.textTertiary)
+                }
             }
         }
+    }
+    if (confirmDelete) {
+        ConfirmDialog(
+            title = stringResource(R.string.flow_delete_linked_title),
+            message = stringResource(R.string.flow_delete_linked_message),
+            confirmText = stringResource(R.string.action_delete),
+            onConfirm = { confirmDelete = false; onDelete(flow.id) },
+            onDismiss = { confirmDelete = false },
+            destructive = true,
+        )
     }
 }

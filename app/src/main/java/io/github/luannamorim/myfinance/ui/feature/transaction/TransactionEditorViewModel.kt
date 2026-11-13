@@ -11,16 +11,26 @@ import io.github.luannamorim.myfinance.core.time.today
 import io.github.luannamorim.myfinance.data.prefs.SettingsRepository
 import io.github.luannamorim.myfinance.data.repository.CashRepository
 import io.github.luannamorim.myfinance.data.repository.CategoryRepository
+import io.github.luannamorim.myfinance.data.repository.ExchangeRateRepository
+import io.github.luannamorim.myfinance.data.repository.PortfolioRepository
 import io.github.luannamorim.myfinance.data.repository.TransactionDraft
 import io.github.luannamorim.myfinance.domain.cash.Recurrence
 import io.github.luannamorim.myfinance.domain.cash.RecurrenceRule
+import io.github.luannamorim.myfinance.domain.fx.ExchangeRates
 import io.github.luannamorim.myfinance.domain.model.Category
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.EntryKind
 import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.domain.model.OccurrenceState
 import io.github.luannamorim.myfinance.domain.model.RecurrenceUnit
+import io.github.luannamorim.myfinance.ui.common.ActionError
+import io.github.luannamorim.myfinance.ui.common.TransferTarget
+import io.github.luannamorim.myfinance.ui.common.suggestAssetAmount
+import io.github.luannamorim.myfinance.ui.common.toActionError
+import io.github.luannamorim.myfinance.ui.common.transferTarget
+import io.github.luannamorim.myfinance.ui.common.transferTargets
 import io.github.luannamorim.myfinance.ui.navigation.TransactionEditorRoute
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -85,7 +95,35 @@ data class TransactionEditorUiState(
     val amountError: Boolean = false,
     val categoryError: Boolean = false,
     val done: Boolean = false,
+    /** Transfers: the asset, the assets to choose from, and what the asset received when currencies differ. */
+    val assetId: Long? = null,
+    val assets: List<TransferTarget> = emptyList(),
+    val assetError: Boolean = false,
+    /** The amount on the asset side as typed; null while the suggestion (at the date's rate) is used. */
+    val assetDigits: String? = null,
+    val rates: ExchangeRates = ExchangeRates.EMPTY,
+    val error: ActionError? = null,
 ) {
+    val isTransfer: Boolean get() = kind.isTransfer
+
+    val target: TransferTarget? get() = assets.firstOrNull { it.assetId == assetId }
+
+    /** A done transfer keeps its asset and direction (undo it first); a done income or expense can't become one. */
+    val kindLocked: Boolean get() = settledAlready && isTransfer
+
+    /** Settling a transfer between currencies records what the asset received or gave. */
+    val needsAssetAmount: Boolean
+        get() = isTransfer && canSettle && alreadySettled && target.let { it != null && it.currency != currency }
+
+    /** The asset-side amount: typed, or suggested at the rate of the date. */
+    val assetAmountDigits: String
+        get() {
+            assetDigits?.let { return it }
+            val t = target ?: return ""
+            val minor = AmountInput.minorOf(digits) ?: return ""
+            return rates.suggestAssetAmount(Money(minor, currency), t.currency, date)?.let { AmountInput.digitsOf(it.minor) }.orEmpty()
+        }
+
     val isRecurring: Boolean get() = mode == EditorMode.TEMPLATE || (mode == EditorMode.NEW && repeat != RepeatChoice.Never)
 
     val rule: RecurrenceRule?
@@ -106,6 +144,8 @@ class TransactionEditorViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val cash: CashRepository,
     categories: CategoryRepository,
+    portfolio: PortfolioRepository,
+    rates: ExchangeRateRepository,
     private val settings: SettingsRepository,
     private val time: TimeSource,
 ) : ViewModel() {
@@ -115,9 +155,11 @@ class TransactionEditorViewModel @Inject constructor(
 
     private val categoryList = form.map { it.kind }.distinctUntilChanged().flatMapLatest { categories.observe(it, includeArchived = true) }
 
-    val state: StateFlow<TransactionEditorUiState> = combine(form, categoryList) { f, list ->
-        // Archived categories are hidden, except the one already chosen (editing old data).
-        f.copy(categories = list.filter { !it.archived || it.id == f.categoryId })
+    val state: StateFlow<TransactionEditorUiState> = combine(form, categoryList, portfolio.data, rates.rates) { f, list, assets, r ->
+        // Archived categories are hidden, except the one already chosen (editing old data); closed assets too.
+        val open = assets.transferTargets()
+        val chosen = assets.transferTarget(f.assetId)?.takeIf { c -> open.none { it.assetId == c.assetId } }
+        f.copy(categories = list.filter { !it.archived || it.id == f.categoryId }, assets = open + listOfNotNull(chosen), rates = r)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), form.value)
 
     init {
@@ -137,7 +179,7 @@ class TransactionEditorViewModel @Inject constructor(
                 form.update {
                     it.copy(
                         loading = false, mode = EditorMode.TEMPLATE, kind = t.kind, name = t.name, digits = AmountInput.digitsOf(t.expected.minor),
-                        currency = t.expected.currency, categoryId = t.categoryId, date = t.startDate,
+                        currency = t.expected.currency, categoryId = t.categoryId, assetId = t.assetId, date = t.startDate,
                         repeat = if (preset != null) RepeatChoice.Preset(preset) else RepeatChoice.Custom,
                         customInterval = t.rule.interval, customUnit = t.rule.unit, endDate = t.endDate, description = t.description.orEmpty(),
                         active = t.active, nextDueDate = next, customizedCount = cash.customizedReplaceableCount(t.id), today = today,
@@ -150,7 +192,7 @@ class TransactionEditorViewModel @Inject constructor(
                     it.copy(
                         loading = false, mode = if (o.standalone) EditorMode.STANDALONE else EditorMode.OCCURRENCE,
                         kind = o.kind, name = o.name, digits = AmountInput.digitsOf(o.expected.minor), currency = o.expected.currency,
-                        categoryId = o.categoryId, date = o.dueDate, description = o.description.orEmpty(),
+                        categoryId = o.categoryId, assetId = o.assetId, date = o.dueDate, description = o.description.orEmpty(),
                         alreadySettled = false, settledAlready = o.state != OccurrenceState.PENDING, today = today,
                     )
                 }
@@ -162,7 +204,17 @@ class TransactionEditorViewModel @Inject constructor(
         }
     }
 
-    fun setKind(kind: EntryKind) = form.update { if (it.kind == kind) it else it.copy(kind = kind, categoryId = null, categoryError = false) }
+    fun setKind(kind: EntryKind) = form.update {
+        when {
+            it.kind == kind -> it
+            // Switching direction keeps the chosen asset.
+            it.kind.isTransfer && kind.isTransfer -> it.copy(kind = kind)
+            else -> it.copy(kind = kind, categoryId = null, categoryError = false, assetId = null, assetError = false, assetDigits = null)
+        }
+    }
+    fun setAsset(id: Long) = form.update { it.copy(assetId = id, assetError = false, assetDigits = null) }
+    fun setAssetDigits(digits: String) = form.update { it.copy(assetDigits = digits) }
+    fun dismissError() = form.update { it.copy(error = null) }
     fun setName(name: String) = form.update { it.copy(name = name, nameError = false) }
     fun setDigits(digits: String) = form.update { it.copy(digits = digits, amountError = false) }
     fun setCurrency(currency: Currency) = form.update { it.copy(currency = currency) }
@@ -178,37 +230,46 @@ class TransactionEditorViewModel @Inject constructor(
 
     /** Validates and saves; returns false (and flags the fields) when something is missing. */
     fun save(): Boolean {
-        val s = form.value
+        // The form is the source of truth; assets and rates come from the combined state.
+        val s = form.value.copy(assets = state.value.assets, rates = state.value.rates)
         val minor = AmountInput.minorOf(s.digits) ?: 0
-        val nameError = s.name.isBlank()
+        // A transfer's name is optional: it defaults to the asset's.
+        val nameError = s.name.isBlank() && (!s.isTransfer || s.mode == EditorMode.OCCURRENCE)
         val amountError = minor <= 0
-        val categoryError = s.categoryId == null && s.mode != EditorMode.OCCURRENCE
-        if (nameError || amountError || categoryError) {
-            form.update { it.copy(nameError = nameError, amountError = amountError, categoryError = categoryError) }
+        val categoryError = !s.isTransfer && s.categoryId == null && s.mode != EditorMode.OCCURRENCE
+        val assetMinor = if (s.needsAssetAmount) AmountInput.minorOf(s.assetAmountDigits) ?: 0 else 0
+        val assetError = s.isTransfer && s.mode != EditorMode.OCCURRENCE && (s.assetId == null || s.needsAssetAmount && assetMinor <= 0)
+        if (nameError || amountError || categoryError || assetError) {
+            form.update { it.copy(nameError = nameError, amountError = amountError, categoryError = categoryError, assetError = assetError) }
             return false
         }
         val amount = Money(minor, s.currency)
         viewModelScope.launch {
-            when (s.mode) {
-                EditorMode.OCCURRENCE -> cash.editOccurrence(route.occurrenceId, s.name, amount, s.date)
-                else -> {
-                    val draft = TransactionDraft(
-                        name = s.name, categoryId = s.categoryId!!, kind = s.kind, amount = amount, date = s.date,
-                        rule = if (s.isRecurring) s.rule else null, endDate = if (s.isRecurring) s.endDate else null,
-                        description = s.description, alreadySettled = s.canSettle && s.alreadySettled,
-                    )
-                    when (s.mode) {
-                        EditorMode.NEW -> cash.create(draft)
-                        EditorMode.TEMPLATE -> {
-                            cash.updateTemplate(route.templateId, draft, nextDueDate = s.nextDueDate.takeIf { s.nextDueChanged })
-                            cash.setTemplateActive(route.templateId, s.active)
+            val saved = runCatching {
+                when (s.mode) {
+                    EditorMode.OCCURRENCE -> cash.editOccurrence(route.occurrenceId, s.name, amount, s.date)
+                    else -> {
+                        val draft = TransactionDraft(
+                            name = s.name, categoryId = if (s.isTransfer) null else s.categoryId, kind = s.kind, amount = amount, date = s.date,
+                            rule = if (s.isRecurring) s.rule else null, endDate = if (s.isRecurring) s.endDate else null,
+                            description = s.description, alreadySettled = s.canSettle && s.alreadySettled,
+                            assetId = if (s.isTransfer) s.assetId else null,
+                            assetAmount = s.target?.takeIf { s.needsAssetAmount }?.let { Money(assetMinor, it.currency) },
+                        )
+                        when (s.mode) {
+                            EditorMode.NEW -> cash.create(draft)
+                            EditorMode.TEMPLATE -> {
+                                cash.updateTemplate(route.templateId, draft, nextDueDate = s.nextDueDate.takeIf { s.nextDueChanged })
+                                cash.setTemplateActive(route.templateId, s.active)
+                            }
+                            EditorMode.STANDALONE -> cash.updateStandalone(route.occurrenceId, draft)
+                            EditorMode.OCCURRENCE -> Unit
                         }
-                        EditorMode.STANDALONE -> cash.updateStandalone(route.occurrenceId, draft)
-                        EditorMode.OCCURRENCE -> Unit
                     }
                 }
             }
-            form.update { it.copy(done = true) }
+            saved.exceptionOrNull()?.let { e -> if (e is CancellationException) throw e }
+            form.update { if (saved.isSuccess) it.copy(done = true) else it.copy(error = saved.exceptionOrNull()?.toActionError()) }
         }
         return true
     }

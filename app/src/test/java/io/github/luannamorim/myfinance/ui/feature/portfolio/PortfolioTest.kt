@@ -106,7 +106,9 @@ class PortfolioTest {
 
     @Test
     fun screenshots() {
-        compose.snapBothThemes("portfolio") { PortfolioContent(portfolioState(data, rates, Currency.BRL, null, null, today), PortfolioActions()) }
+        // With Cash Flow in use, "All" shows cash for reference (a slice and a card).
+        val cash = io.github.luannamorim.myfinance.domain.cash.CashLedger(adjustments = listOf(io.github.luannamorim.myfinance.testutil.opening(brl("18944.75"), "2026-11-01")))
+        compose.snapBothThemes("portfolio") { PortfolioContent(portfolioState(data, rates, Currency.BRL, null, null, today, cash), PortfolioActions()) }
     }
 
     @Test

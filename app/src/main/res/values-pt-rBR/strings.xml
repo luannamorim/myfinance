@@ -14,7 +14,7 @@
 
     <!-- Navegação -->
     <string name="nav_overview">Resumo</string>
-    <string name="nav_cash_flow">Fluxo de caixa</string>
+    <string name="nav_cash_flow">Fluxo</string>
     <string name="nav_portfolio">Carteira</string>
     <string name="nav_history">Histórico</string>
     <string name="nav_settings">Ajustes</string>
@@ -103,8 +103,6 @@
     <string name="settings_date_format">Formato de data</string>
     <string name="settings_date_dmy">DD/MM/AAAA</string>
     <string name="settings_date_mdy">MM/DD/AAAA</string>
-    <string name="settings_language">Idioma</string>
-    <string name="settings_language_hint">Segue o celular; mude só para o MyFinance</string>
 
     <!-- Recurrence -->
     <string name="repeat_never">Não repete</string>
@@ -291,13 +289,12 @@
     <!-- Cash flow charts -->
     <string name="charts_title">Gráficos do fluxo de caixa</string>
     <string name="charts_income_vs_expenses">Receitas x despesas</string>
-    <string name="charts_balance">Saldo no fim do mês</string>
+    <string name="charts_balance">Saldo do caixa</string>
     <string name="charts_expenses_by_category">Despesas por categoria</string>
     <string name="charts_income_by_category">Receitas por categoria</string>
     <string name="charts_other">Outras</string>
     <string name="charts_empty">Ainda não há dados suficientes.</string>
-    <string name="charts_summary_bars">Receitas e despesas nos últimos seis meses.</string>
-    <string name="charts_summary_balance">Saldo de caixa no fim de cada mês.</string>
+    <string name="charts_summary_balance">Saldo de caixa desde o primeiro registro, no fim de cada mês (hoje, no mês atual).</string>
 
     <!-- History -->
     <string name="history_search">Buscar transações</string>
@@ -451,7 +448,7 @@
     <string name="overview_start_transaction_hint">Salário, aluguel, contas: únicas ou recorrentes</string>
     <string name="overview_start_asset">Adicione um investimento ou bem</string>
     <string name="overview_start_asset_hint">Renda fixa, ações, ETFs, imóveis, veículos</string>
-    <string name="overview_composition_note">Caixa e carteira ficam separados: aplicar dinheiro num investimento não muda o caixa até você ajustar o saldo.</string>
+    <string name="overview_composition_note">Moveu dinheiro entre o caixa e um investimento? Lance como transferência: caixa e ativo mudam juntos, sem contar como receita ou despesa.</string>
 
     <!-- Backup -->
     <string name="backup_title">Backup</string>
@@ -543,4 +540,62 @@
     <string name="about_geist">Fonte Geist, da Vercel, SIL Open Font License 1.1.</string>
     <string name="about_bcb">Cotações: Banco Central do Brasil, série SGS 1 (dólar americano, venda, PTAX).</string>
     <string name="about_sibling">Irmão do MyFit: mesmo design, mesmo cuidado.</string>
+    <string name="cashflow_title">Fluxo de caixa</string>
+    <string name="status_transferred">Transferida</string>
+    <!-- Transfers (1.1.0) -->
+    <string name="kind_transfer">Transferência</string>
+    <string name="transfer_to_asset">Para investimento</string>
+    <string name="transfer_from_asset">Do investimento</string>
+    <string name="error_title">Não foi possível salvar</string>
+    <string name="error_asset_closed">Essa posição está encerrada. Reabra (exclua o encerramento) ou escolha outro ativo.</string>
+    <string name="error_before_acquisition">A data é anterior ao primeiro investimento do ativo.</string>
+    <string name="error_amount_missing">Informe o valor na moeda do ativo.</string>
+    <string name="error_initial_transfer">Essa transferência é o investimento inicial do ativo. Exclua a transferência ou o ativo.</string>
+    <string name="error_transfer_locked">Uma transferência feita mantém o ativo e a direção. Desfaça primeiro.</string>
+    <string name="error_failed">Algo deu errado. Nada foi alterado.</string>
+    <string name="confirm_transfer">Confirmar transferência</string>
+    <string name="confirm_transfer_out_amount">Valor que saiu do caixa</string>
+    <string name="confirm_transfer_in_amount">Valor que entrou no caixa</string>
+    <string name="confirm_transferred_on">Transferido em</string>
+    <string name="transfer_asset_received">Valor que o ativo recebeu (%1$s)</string>
+    <string name="transfer_asset_gave">Valor que saiu do ativo (%1$s)</string>
+    <string name="transfer_asset_amount_hint">Sugerido pela PTAX da data; use o que sua corretora mostrar.</string>
+    <string name="transfer_asset_deleted">Ativo excluído</string>
+    <string name="detail_actual_transferred">Transferido</string>
+    <string name="detail_mark_not_transferred">Marcar como não feita</string>
+    <string name="detail_unconfirm_transfer_message">A transferência volta a ficar pendente, e o aporte ou resgate que ela registrou no ativo é removido.</string>
+    <string name="editor_delete_transfer_message">A transferência e o aporte ou resgate que ela registrou no ativo são excluídos. Um investimento inicial continua no ativo.</string>
+    <string name="transfer_recorded_contribution">Aporte de %1$s em %2$s</string>
+    <string name="transfer_recorded_withdrawal">Resgate de %1$s em %2$s</string>
+    <string name="transfer_pending_contribution">Vira um aporte quando você confirmar</string>
+    <string name="transfer_pending_withdrawal">Vira um resgate quando você confirmar</string>
+    <string name="seed_asset_loans_receivable">Empréstimos a receber</string>
+    <string name="editor_asset">Investimento ou bem</string>
+    <string name="editor_no_assets">Cadastre um ativo na Carteira primeiro.</string>
+    <string name="error_asset_required">Escolha um investimento ou bem</string>
+    <string name="editor_name_optional">Nome (opcional)</string>
+    <string name="editor_transfer_name_hint">Usa o nome do ativo</string>
+    <string name="editor_transfer_out_hint">Sai do seu caixa e vira um aporte no ativo. Não é despesa.</string>
+    <string name="editor_transfer_in_hint">Sai do ativo (um resgate) e entra no seu caixa. Não é receita.</string>
+    <string name="editor_transfer_locked">%1$s · %2$s (desfaça a transferência para mudar)</string>
+    <string name="editor_already_transferred">Já feita</string>
+    <string name="seed_expense_credit_card">Cartão de crédito</string>
+    <string name="seed_expense_loans">Empréstimos</string>
+    <string name="cashflow_transfers">Transferências do mês</string>
+    <string name="cashflow_pending_transfers">Transferências</string>
+    <string name="cash_link_from">Sai do caixa</string>
+    <string name="cash_link_from_hint">Registra uma transferência: seu caixa diminui no mesmo valor</string>
+    <string name="cash_link_to">Vai para o caixa</string>
+    <string name="cash_link_to_hint">Registra uma transferência: seu caixa aumenta no mesmo valor</string>
+    <string name="cash_link_amount_out">Valor que saiu do caixa (%1$s)</string>
+    <string name="cash_link_amount_in">Valor que entrou no caixa (%1$s)</string>
+    <string name="flow_from_cash">Do caixa</string>
+    <string name="flow_to_cash">Para o caixa</string>
+    <string name="flow_delete_linked_title">Excluir este lançamento?</string>
+    <string name="flow_delete_linked_message">Ele veio de uma transferência com o seu caixa: uma transferência avulsa também é excluída; uma recorrente volta a ficar pendente.</string>
+    <string name="portfolio_cash">Caixa</string>
+    <string name="portfolio_cash_available">Caixa disponível</string>
+    <string name="portfolio_cash_hint">Do Fluxo de Caixa, só referência</string>
+    <string name="portfolio_total_with_cash">Total com caixa</string>
+    <string name="charts_summary_bars_months">Receitas e despesas nos últimos %1$d meses.</string>
 </resources>

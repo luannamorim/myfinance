@@ -22,9 +22,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.luannamorim.myfinance.R
+import io.github.luannamorim.myfinance.core.format.AmountInput
 import io.github.luannamorim.myfinance.domain.model.AssetGroup
 import io.github.luannamorim.myfinance.domain.model.Currency
+import io.github.luannamorim.myfinance.domain.model.Money
+import io.github.luannamorim.myfinance.ui.common.ActionErrorDialog
 import io.github.luannamorim.myfinance.ui.common.AssetCategoryPicker
+import io.github.luannamorim.myfinance.ui.common.CashLinkFields
 import io.github.luannamorim.myfinance.ui.common.StoredImage
 import io.github.luannamorim.myfinance.ui.components.ChoiceRow
 import io.github.luannamorim.myfinance.ui.components.CurrencyInput
@@ -44,6 +48,7 @@ data class AssetEditorActions(
     val onPickPhoto: () -> Unit = {},
     val onRemovePhoto: () -> Unit = {},
     val onSave: () -> Unit = {},
+    val onDismissError: () -> Unit = {},
 )
 
 @Composable
@@ -60,6 +65,7 @@ fun AssetEditorScreen(onClose: () -> Unit, viewModel: AssetEditorViewModel = hil
             onPickPhoto = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
             onRemovePhoto = viewModel::removePhoto,
             onSave = { viewModel.save() },
+            onDismissError = viewModel::dismissError,
         ),
     )
 }
@@ -105,6 +111,19 @@ fun AssetEditorContent(state: AssetEditorUiState, actions: AssetEditorActions) {
                 label = stringResource(R.string.asset_invested),
                 supportingText = stringResource(R.string.asset_invested_hint),
             )
+            val invested = AmountInput.minorOf(state.investedDigits) ?: 0
+            CashLinkFields(
+                linked = state.fromCash,
+                onLinked = { v -> actions.onEdit { it.copy(fromCash = v) } },
+                inflow = true,
+                assetAmount = Money(invested, state.currency).takeIf { invested > 0 },
+                date = state.acquisitionDate,
+                cashCurrency = state.cashCurrency ?: state.currency,
+                onCashCurrency = { cur -> actions.onEdit { it.copy(cashCurrency = cur, cashDigits = null) } },
+                cashDigits = state.cashDigits,
+                onCashDigits = { d -> actions.onEdit { it.copy(cashDigits = d) } },
+                rates = state.rates,
+            )
             CurrencyInput(
                 digits = state.valueDigits,
                 currency = state.currency,
@@ -135,4 +154,5 @@ fun AssetEditorContent(state: AssetEditorUiState, actions: AssetEditorActions) {
             if (state.imagePath != null) TextAction(stringResource(R.string.asset_photo_remove), onClick = actions.onRemovePhoto, color = c.textSecondary)
         }
     }
+    ActionErrorDialog(state.error, actions.onDismissError)
 }

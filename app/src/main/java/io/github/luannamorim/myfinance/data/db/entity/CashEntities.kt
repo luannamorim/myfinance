@@ -26,18 +26,22 @@ data class CategoryEntity(
     val createdAtMs: Long,
 )
 
-/** Recurring transaction definition; dates are epoch days, amounts minor units. */
+/**
+ * Recurring transaction definition; dates are epoch days, amounts minor units. Income and expenses have a
+ * category; transfers have an asset instead (NULL again if the asset is deleted).
+ */
 @Entity(
     tableName = "transaction_template",
     foreignKeys = [
         ForeignKey(entity = CategoryEntity::class, parentColumns = ["id"], childColumns = ["categoryId"], onDelete = ForeignKey.RESTRICT),
+        ForeignKey(entity = AssetEntity::class, parentColumns = ["id"], childColumns = ["assetId"], onDelete = ForeignKey.SET_NULL),
     ],
-    indices = [Index("categoryId")],
+    indices = [Index("categoryId"), Index("assetId")],
 )
 data class TransactionTemplateEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
-    val categoryId: Long,
+    val categoryId: Long?,
     val kind: EntryKind,
     val currency: Currency,
     val expectedAmount: Long,
@@ -51,17 +55,21 @@ data class TransactionTemplateEntity(
     val generatedThrough: Long? = null,
     val createdAtMs: Long,
     val updatedAtMs: Long,
+    val assetId: Long? = null,
 )
 
 /**
- * One dated income/expense. `scheduledDate` is the nominal date from the rule (part of the unique key, never
- * changes); `dueDate` can be moved for this occurrence alone. Name, kind, currency and description are snapshots.
+ * One dated income, expense or transfer. `scheduledDate` is the nominal date from the rule (part of the unique
+ * key, never changes); `dueDate` can be moved for this occurrence alone. Name, kind, currency and description
+ * are snapshots. Transfers have `assetId` instead of `categoryId`; it becomes NULL if the asset is deleted, and
+ * the transfer stays in the cash history.
  */
 @Entity(
     tableName = "transaction_occurrence",
     foreignKeys = [
         ForeignKey(entity = TransactionTemplateEntity::class, parentColumns = ["id"], childColumns = ["templateId"], onDelete = ForeignKey.SET_NULL),
         ForeignKey(entity = CategoryEntity::class, parentColumns = ["id"], childColumns = ["categoryId"], onDelete = ForeignKey.RESTRICT),
+        ForeignKey(entity = AssetEntity::class, parentColumns = ["id"], childColumns = ["assetId"], onDelete = ForeignKey.SET_NULL),
     ],
     indices = [
         Index(value = ["templateId", "scheduledDate"], unique = true),
@@ -69,6 +77,7 @@ data class TransactionTemplateEntity(
         Index("actualDate"),
         Index("state"),
         Index("categoryId"),
+        Index("assetId"),
     ],
 )
 data class OccurrenceEntity(
@@ -77,7 +86,7 @@ data class OccurrenceEntity(
     val scheduledDate: Long?,
     val dueDate: Long,
     val name: String,
-    val categoryId: Long,
+    val categoryId: Long?,
     val kind: EntryKind,
     val currency: Currency,
     val expectedAmount: Long,
@@ -91,6 +100,7 @@ data class OccurrenceEntity(
     val customized: Boolean = false,
     val createdAtMs: Long,
     val updatedAtMs: Long,
+    val assetId: Long? = null,
 )
 
 /** Opening balance (one per currency) or a balance adjustment; `amount` is signed. */

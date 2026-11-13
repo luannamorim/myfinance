@@ -48,19 +48,23 @@ data class CategoryDto(
 
 @Serializable
 data class TemplateDto(
-    val id: Long, val name: String, val categoryId: Long, val kind: String, val currency: String, val expectedAmount: Long,
+    val id: Long, val name: String, val categoryId: Long? = null, val kind: String, val currency: String, val expectedAmount: Long,
     val recurrenceUnit: String, val recurrenceInterval: Int, val startDate: Long, val anchorDate: Long, val endDate: Long? = null,
     val description: String? = null, val active: Boolean = true, val generatedThrough: Long? = null,
     val createdAtMs: Long, val updatedAtMs: Long,
+    /** Since app 1.1.0 (transfers). */
+    val assetId: Long? = null,
 )
 
 @Serializable
 data class OccurrenceDto(
     val id: Long, val templateId: Long? = null, val scheduledDate: Long? = null, val dueDate: Long, val name: String,
-    val categoryId: Long, val kind: String, val currency: String, val expectedAmount: Long, val description: String? = null,
+    val categoryId: Long? = null, val kind: String, val currency: String, val expectedAmount: Long, val description: String? = null,
     val state: String, val actualAmount: Long? = null, val actualCurrency: String? = null, val actualDate: Long? = null,
     val note: String? = null, val confirmedAtMs: Long? = null, val customized: Boolean = false,
     val createdAtMs: Long, val updatedAtMs: Long,
+    /** Since app 1.1.0 (transfers). */
+    val assetId: Long? = null,
 )
 
 @Serializable
@@ -85,6 +89,8 @@ data class AssetDto(
 data class AssetFlowDto(
     val id: Long, val assetId: Long, val kind: String, val date: Long, val amount: Long, val quantityDelta: String? = null,
     val note: String? = null, val createdAtMs: Long,
+    /** Since app 1.1.0: the cash transfer this flow belongs to. */
+    val occurrenceId: Long? = null,
 )
 
 @Serializable

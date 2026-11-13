@@ -56,7 +56,8 @@ fun ConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     destructive: Boolean = false,
-    dismissText: String = stringResource(R.string.action_cancel),
+    /** Null hides the dismiss button (an information dialog with a single "OK"). */
+    dismissText: String? = stringResource(R.string.action_cancel),
 ) {
     val c = FinanceTheme.colors
     AlertDialog(
@@ -68,6 +69,6 @@ fun ConfirmDialog(
         confirmButton = {
             TextAction(confirmText, onClick = onConfirm, color = if (destructive) c.danger else c.accent)
         },
-        dismissButton = { TextAction(dismissText, onClick = onDismiss, color = c.textSecondary) },
+        dismissButton = dismissText?.let { text -> { TextAction(text, onClick = onDismiss, color = c.textSecondary) } },
     )
 }

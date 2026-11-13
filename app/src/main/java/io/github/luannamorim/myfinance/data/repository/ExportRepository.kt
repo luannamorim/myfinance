@@ -2,12 +2,12 @@ package io.github.luannamorim.myfinance.data.repository
 
 import android.content.Context
 import android.net.Uri
+import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.luannamorim.myfinance.data.db.MyFinanceDatabase
 import io.github.luannamorim.myfinance.data.db.seed.CategorySeed
 import io.github.luannamorim.myfinance.di.IoDispatcher
 import io.github.luannamorim.myfinance.domain.export.Csv
 import io.github.luannamorim.myfinance.domain.model.Money
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -57,10 +57,11 @@ class ExportRepository @Inject constructor(
 
         file(
             "transactions.csv",
-            listOf("id", "type", "name", "category", "status", "due_date", "expected_amount", "currency", "actual_date", "actual_amount", "actual_currency", "recurring", "description", "note"),
+            listOf("id", "type", "name", "category", "asset", "status", "due_date", "expected_amount", "currency", "actual_date", "actual_amount", "actual_currency", "recurring", "description", "note"),
             cash.getAllOccurrences().sortedWith(compareBy({ it.dueDate }, { it.id })).map { o ->
                 listOf(
-                    o.id.toString(), o.kind.name, Csv.safeText(o.name), Csv.safeText(categoryName[o.categoryId]), o.state.name, day(o.dueDate),
+                    o.id.toString(), o.kind.name, Csv.safeText(o.name), Csv.safeText(o.categoryId?.let(categoryName::get)),
+                    Csv.safeText(o.assetId?.let { assetById[it]?.name }), o.state.name, day(o.dueDate),
                     Csv.amount(Money(o.expectedAmount, o.currency)), o.currency.name, day(o.actualDate),
                     o.actualAmount?.let { Csv.amount(Money(it, o.actualCurrency ?: o.currency)) }, (o.actualCurrency ?: o.currency.takeIf { o.actualAmount != null })?.name,
                     if (o.templateId != null) "yes" else "no", Csv.safeText(o.description), Csv.safeText(o.note),
@@ -86,12 +87,13 @@ class ExportRepository @Inject constructor(
         )
         file(
             "asset_flows.csv",
-            listOf("asset_id", "asset", "kind", "direction", "date", "amount", "currency", "quantity_delta", "note"),
+            listOf("asset_id", "asset", "kind", "direction", "date", "amount", "currency", "quantity_delta", "note", "transfer_id"),
             portfolio.getAllFlows().sortedWith(compareBy({ it.date }, { it.id })).mapNotNull { f ->
                 val asset = assetById[f.assetId] ?: return@mapNotNull null
                 listOf(
                     f.assetId.toString(), Csv.safeText(asset.name), f.kind.name, if (f.kind.inflow) "in" else "out", day(f.date),
                     Csv.amount(Money(f.amount, asset.currency)), asset.currency.name, f.quantityDelta, Csv.safeText(f.note),
+                    f.occurrenceId?.toString(),
                 )
             },
         )

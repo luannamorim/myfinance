@@ -1,20 +1,7 @@
 package io.github.luannamorim.myfinance.ui.feature.settings
 
-import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Shield
-import androidx.compose.material.icons.rounded.TableChart
-import androidx.compose.material3.Text
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import io.github.luannamorim.myfinance.ui.components.ConfirmDialog
-import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
-import android.net.Uri
-import android.os.Build
-import android.provider.Settings
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,13 +11,18 @@ import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.CloudUpload
 import androidx.compose.material.icons.rounded.CurrencyExchange
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Repeat
+import androidx.compose.material.icons.rounded.Shield
+import androidx.compose.material.icons.rounded.TableChart
 import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,10 +32,12 @@ import io.github.luannamorim.myfinance.domain.model.DateFormatStyle
 import io.github.luannamorim.myfinance.domain.model.NumberFormatStyle
 import io.github.luannamorim.myfinance.domain.model.ThemeMode
 import io.github.luannamorim.myfinance.ui.components.ChoiceRow
+import io.github.luannamorim.myfinance.ui.components.ConfirmDialog
 import io.github.luannamorim.myfinance.ui.components.FinanceCard
 import io.github.luannamorim.myfinance.ui.components.NavRow
 import io.github.luannamorim.myfinance.ui.components.SectionHeader
 import io.github.luannamorim.myfinance.ui.components.TabScreen
+import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import io.github.luannamorim.myfinance.ui.theme.Spacing
 
 data class SettingsActions(
@@ -58,22 +52,11 @@ data class SettingsActions(
     val onDismissExport: () -> Unit = {},
     val onOpenPrivacy: () -> Unit = {},
     val onOpenAbout: () -> Unit = {},
-    val onOpenLanguage: (() -> Unit)? = null,
 )
 
 @Composable
 fun SettingsScreen(actions: SettingsActions, viewModel: SettingsViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-    val openLanguage = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        {
-            context.startActivity(
-                Intent(Settings.ACTION_APP_LOCALE_SETTINGS, Uri.fromParts("package", context.packageName, null)),
-            )
-        }
-    } else {
-        null
-    }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         uri?.let(viewModel::exportTo)
     }
@@ -82,7 +65,6 @@ fun SettingsScreen(actions: SettingsActions, viewModel: SettingsViewModel = hilt
         state,
         actions.copy(
             onUpdate = viewModel::update,
-            onOpenLanguage = openLanguage,
             onExport = { exportLauncher.launch(fileName) },
             onDismissExport = viewModel::dismissExportMessage,
         ),
@@ -127,9 +109,6 @@ fun SettingsContent(state: SettingsUiState, actions: SettingsActions, modifier: 
                 selected = s.dateFormat,
                 onSelect = { style -> actions.onUpdate { it.copy(dateFormat = style) } },
             )
-        }
-        actions.onOpenLanguage?.let {
-            NavRow(Icons.Rounded.Language, stringResource(R.string.settings_language), stringResource(R.string.settings_language_hint), it)
         }
 
         SectionHeader(stringResource(R.string.settings_data), Modifier.padding(top = Spacing.s))

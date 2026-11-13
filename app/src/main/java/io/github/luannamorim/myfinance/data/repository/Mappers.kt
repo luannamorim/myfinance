@@ -43,6 +43,7 @@ internal fun TransactionTemplateEntity.toDomain() = TransactionTemplate(
     description = description,
     active = active,
     generatedThrough = generatedThrough?.toDate(),
+    assetId = assetId,
 )
 
 internal fun OccurrenceEntity.toDomain() = Occurrence(
@@ -60,6 +61,7 @@ internal fun OccurrenceEntity.toDomain() = Occurrence(
     actualDate = actualDate?.toDate(),
     note = note,
     customized = customized,
+    assetId = assetId,
 )
 
 internal fun CashAdjustmentEntity.toDomain() = CashAdjustment(id, kind, date.toDate(), Money(amount, currency), note)
@@ -78,7 +80,7 @@ internal fun AssetEntity.toDomain() = Asset(
 )
 
 internal fun AssetFlowEntity.toDomain(currency: Currency) =
-    AssetFlow(id, assetId, kind, date.toDate(), Money(amount, currency), quantityDelta?.let(::BigDecimal), note)
+    AssetFlow(id, assetId, kind, date.toDate(), Money(amount, currency), quantityDelta?.let(::BigDecimal), note, occurrenceId)
 
 internal fun AssetValuationEntity.toDomain(currency: Currency) = Valuation(id, assetId, date.toDate(), Money(value, currency), note)
 

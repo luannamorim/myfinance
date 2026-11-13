@@ -14,11 +14,17 @@ import io.github.luannamorim.myfinance.data.images.ImageStore
 import io.github.luannamorim.myfinance.data.prefs.SettingsRepository
 import io.github.luannamorim.myfinance.data.repository.AssetDraft
 import io.github.luannamorim.myfinance.data.repository.CategoryRepository
+import io.github.luannamorim.myfinance.data.repository.ExchangeRateRepository
 import io.github.luannamorim.myfinance.data.repository.PortfolioRepository
+import io.github.luannamorim.myfinance.domain.fx.ExchangeRates
 import io.github.luannamorim.myfinance.domain.model.AssetCategory
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.Money
+import io.github.luannamorim.myfinance.ui.common.ActionError
+import io.github.luannamorim.myfinance.ui.common.cashLinkAmount
+import io.github.luannamorim.myfinance.ui.common.toActionError
 import io.github.luannamorim.myfinance.ui.navigation.AssetEditorRoute
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -65,6 +71,12 @@ data class AssetEditorUiState(
     val categoryError: Boolean = false,
     val quantityError: Boolean = false,
     val done: Boolean = false,
+    /** New assets: the initial investment came from cash (a transfer), in [cashCurrency] (null: the asset's). */
+    val fromCash: Boolean = false,
+    val cashCurrency: Currency? = null,
+    val cashDigits: String? = null,
+    val rates: ExchangeRates = ExchangeRates.EMPTY,
+    val error: ActionError? = null,
 )
 
 @HiltViewModel
@@ -74,6 +86,7 @@ class AssetEditorViewModel @Inject constructor(
     categories: CategoryRepository,
     private val settings: SettingsRepository,
     private val images: ImageStore,
+    rates: ExchangeRateRepository,
     time: TimeSource,
 ) : ViewModel() {
 
@@ -82,8 +95,8 @@ class AssetEditorViewModel @Inject constructor(
     private var originalImage: String? = null
     private var saved = false
 
-    val state: StateFlow<AssetEditorUiState> = combine(form, categories.observeAssetCategories(includeArchived = true)) { f, cats ->
-        f.copy(categories = cats.filter { !it.archived || it.id == f.categoryId }, imageFile = f.imagePath?.let(images::file))
+    val state: StateFlow<AssetEditorUiState> = combine(form, categories.observeAssetCategories(includeArchived = true), rates.rates) { f, cats, r ->
+        f.copy(categories = cats.filter { !it.archived || it.id == f.categoryId }, imageFile = f.imagePath?.let(images::file), rates = r)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), form.value)
 
     init {
@@ -136,19 +149,26 @@ class AssetEditorViewModel @Inject constructor(
             name = s.name, categoryId = s.categoryId!!, currency = s.currency, description = s.description, institution = s.institution,
             acquisitionDate = s.acquisitionDate, quantity = quantity.getOrNull(), notes = s.notes, imagePath = s.imagePath,
         )
+        val invested = Money(AmountInput.minorOf(s.investedDigits) ?: 0, s.currency)
+        val rates = state.value.rates
+        val cash = if (s.isNew && invested.minor > 0) cashLinkAmount(s.fromCash, invested, s.acquisitionDate, s.cashCurrency ?: s.currency, s.cashDigits, rates) else null
         saved = true
         viewModelScope.launch {
-            if (s.isNew) {
-                val invested = Money(AmountInput.minorOf(s.investedDigits) ?: 0, s.currency)
-                val value = AmountInput.minorOf(s.valueDigits)?.takeIf { s.valueDigits.isNotEmpty() }?.let { Money(it, s.currency) }
-                portfolio.createAsset(draft, invested, value)
-            } else {
-                portfolio.updateAsset(id, draft)
+            val result = runCatching {
+                if (s.isNew) {
+                    val value = AmountInput.minorOf(s.valueDigits)?.takeIf { s.valueDigits.isNotEmpty() }?.let { Money(it, s.currency) }
+                    portfolio.createAsset(draft, invested, value, fromCash = cash)
+                } else {
+                    portfolio.updateAsset(id, draft)
+                }
             }
-            form.update { it.copy(done = true) }
+            result.exceptionOrNull()?.let { e -> if (e is CancellationException) throw e }
+            form.update { if (result.isSuccess) it.copy(done = true) else it.copy(error = result.exceptionOrNull()?.toActionError()) }
         }
         return true
     }
+
+    fun dismissError() = form.update { it.copy(error = null) }
 
     override fun onCleared() {
         // A photo picked but never saved would be orphaned.

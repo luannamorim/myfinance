@@ -7,11 +7,14 @@ import io.github.luannamorim.myfinance.data.db.MyFinanceDatabase
 import io.github.luannamorim.myfinance.data.db.entity.AssetEntity
 import io.github.luannamorim.myfinance.data.db.entity.AssetFlowEntity
 import io.github.luannamorim.myfinance.data.db.entity.AssetValuationEntity
+import io.github.luannamorim.myfinance.data.db.entity.OccurrenceEntity
 import io.github.luannamorim.myfinance.data.images.ImageStore
 import io.github.luannamorim.myfinance.domain.model.Asset
 import io.github.luannamorim.myfinance.domain.model.Currency
+import io.github.luannamorim.myfinance.domain.model.EntryKind
 import io.github.luannamorim.myfinance.domain.model.FlowKind
 import io.github.luannamorim.myfinance.domain.model.Money
+import io.github.luannamorim.myfinance.domain.model.OccurrenceState
 import io.github.luannamorim.myfinance.domain.portfolio.PortfolioData
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -50,6 +53,7 @@ class PortfolioRepository @Inject constructor(
     private val images: ImageStore,
 ) {
     private val dao = db.portfolioDao()
+    private val cashDao = db.cashDao()
 
     val data: Flow<PortfolioData> = combine(
         dao.observeAssets(),
@@ -71,14 +75,20 @@ class PortfolioRepository @Inject constructor(
 
     /**
      * Creates the asset with its INITIAL flow on the acquisition date ([initial] may be 0 for inherited or
-     * granted assets) and, when [initialValue] differs from it, a first valuation dated today.
+     * granted assets) and, when [initialValue] differs from it, a first valuation dated today. With [fromCash]
+     * (the amount that left cash, in the cash currency) the initial investment is also a transfer out of cash.
      */
-    suspend fun createAsset(draft: AssetDraft, initial: Money, initialValue: Money?): Long {
+    suspend fun createAsset(draft: AssetDraft, initial: Money, initialValue: Money?, fromCash: Money? = null): Long {
         validate(draft)
         require(initial.currency == draft.currency && (initialValue == null || initialValue.currency == draft.currency)) { "Currency mismatch" }
         require(initial.minor >= 0 && (initialValue == null || initialValue.minor >= 0)) { "Amounts can't be negative" }
         val now = time.nowMs()
         val today = time.today()
+        if (fromCash != null) {
+            require(initial.minor > 0 && fromCash.minor > 0) { "A transfer needs an amount" }
+            require(fromCash.currency != initial.currency || fromCash == initial) { "Same currency, same amount" }
+            require(!draft.acquisitionDate.isAfter(today)) { "A transfer can't be in the future" }
+        }
         val id = db.withTransaction {
             val id = dao.insertAsset(
                 AssetEntity(
@@ -88,7 +98,13 @@ class PortfolioRepository @Inject constructor(
                     createdAtMs = now, updatedAtMs = now,
                 ),
             )
-            dao.insertFlow(AssetFlowEntity(assetId = id, kind = FlowKind.INITIAL, date = draft.acquisitionDate.toEpochDay(), amount = initial.minor, createdAtMs = now))
+            val transfer = fromCash?.let { insertTransfer(EntryKind.TRANSFER_OUT, id, draft.name.trim(), it, draft.acquisitionDate, null, now) }
+            dao.insertFlow(
+                AssetFlowEntity(
+                    assetId = id, kind = FlowKind.INITIAL, date = draft.acquisitionDate.toEpochDay(), amount = initial.minor,
+                    createdAtMs = now, occurrenceId = transfer,
+                ),
+            )
             if (initialValue != null && initialValue != initial) {
                 val date = maxOf(today, draft.acquisitionDate)
                 dao.insertValuation(AssetValuationEntity(assetId = id, date = date.toEpochDay(), value = initialValue.minor, createdAtMs = now))
@@ -117,26 +133,70 @@ class PortfolioRepository @Inject constructor(
 
     /**
      * Records a contribution, withdrawal or disposal; optionally the new estimated value on the same date.
-     * Not allowed after the position was closed or in the future.
+     * Not allowed after the position was closed or in the future. With [cash] (in the cash currency) the money
+     * comes from cash (a contribution) or goes to it (a withdrawal or disposal): a confirmed one-time transfer
+     * is recorded with the flow. Closing the position stops its recurring transfers.
      */
-    suspend fun addFlow(assetId: Long, kind: FlowKind, date: LocalDate, amount: Money, quantityDelta: BigDecimal? = null, note: String? = null, newValue: Money? = null) {
+    suspend fun addFlow(
+        assetId: Long,
+        kind: FlowKind,
+        date: LocalDate,
+        amount: Money,
+        quantityDelta: BigDecimal? = null,
+        note: String? = null,
+        newValue: Money? = null,
+        cash: Money? = null,
+    ) {
         require(kind != FlowKind.INITIAL) { "The initial flow is created with the asset" }
         require(amount.minor > 0) { "Amount must be positive" }
-        require(!date.isAfter(time.today())) { "Date can't be in the future" }
+        require(cash == null || cash.minor > 0) { "Cash amount must be positive" }
+        require(cash == null || cash.currency != amount.currency || cash == amount) { "Same currency, same amount" }
+        val today = time.today()
+        require(!date.isAfter(today)) { "Date can't be in the future" }
         db.withTransaction {
             val asset = checkNotNull(dao.getAsset(assetId)) { "Asset $assetId not found" }
             require(asset.currency == amount.currency) { "Flows are in the asset currency" }
             val flows = dao.getFlows(assetId)
             if (flows.any { it.kind == FlowKind.FULL_DISPOSAL }) throw AssetClosedException()
+            val now = time.nowMs()
+            val transfer = cash?.let {
+                val direction = if (kind.inflow) EntryKind.TRANSFER_OUT else EntryKind.TRANSFER_IN
+                insertTransfer(direction, assetId, asset.name, it, date, note, now)
+            }
             dao.insertFlow(
                 AssetFlowEntity(
                     assetId = assetId, kind = kind, date = date.toEpochDay(), amount = amount.minor,
-                    quantityDelta = quantityDelta?.stripTrailingZeros()?.toPlainString(), note = note.clean(), createdAtMs = time.nowMs(),
+                    quantityDelta = quantityDelta?.stripTrailingZeros()?.toPlainString(), note = note.clean(), createdAtMs = now,
+                    occurrenceId = transfer,
                 ),
             )
             if (newValue != null && kind != FlowKind.FULL_DISPOSAL) upsertValuation(assetId, date, newValue, null)
+            if (kind == FlowKind.FULL_DISPOSAL) stopRecurringTransfers(assetId, today, delete = false)
         }
         backup.onDataChanged()
+    }
+
+    /** A confirmed one-time transfer between cash and [assetId]; returns its id (the caller links the flow). */
+    private suspend fun insertTransfer(kind: EntryKind, assetId: Long, name: String, amount: Money, date: LocalDate, note: String?, now: Long): Long =
+        cashDao.insertOccurrence(
+            OccurrenceEntity(
+                templateId = null, scheduledDate = null, dueDate = date.toEpochDay(), name = name, categoryId = null, kind = kind,
+                currency = amount.currency, expectedAmount = amount.minor, state = OccurrenceState.CONFIRMED, actualAmount = amount.minor,
+                actualCurrency = amount.currency, actualDate = date.toEpochDay(), note = note.clean(), confirmedAtMs = now,
+                createdAtMs = now, updatedAtMs = now, assetId = assetId,
+            ),
+        )
+
+    /**
+     * Recurring transfers of an asset that is closed ([delete] false: deactivated, future pending ones removed)
+     * or deleted ([delete] true: the templates and every pending transfer go; done ones stay in the cash history).
+     */
+    private suspend fun stopRecurringTransfers(assetId: Long, today: LocalDate, delete: Boolean) {
+        cashDao.getTemplatesForAsset(assetId).forEach { t ->
+            cashDao.deleteReplaceable(t.id, today.toEpochDay(), includeCustomized = delete)
+            if (delete) cashDao.deleteTemplate(t.id) else if (t.active) cashDao.updateTemplate(t.copy(active = false, updatedAtMs = time.nowMs()))
+        }
+        if (delete) cashDao.deletePendingForAsset(assetId)
     }
 
     /** Adds a valuation; a second one on the same date replaces that day's. */
@@ -167,11 +227,28 @@ class PortfolioRepository @Inject constructor(
 
     suspend fun hasValuationOn(assetId: Long, date: LocalDate): Boolean = dao.getValuationOn(assetId, date.toEpochDay()) != null
 
-    /** Deletes a flow; the INITIAL flow stays (it defines the asset). Deleting the closing reopens the position. */
+    /**
+     * Deletes a flow; the INITIAL flow stays (it defines the asset). Deleting the closing reopens the position.
+     * A flow that came from a transfer takes the transfer with it: a one-time transfer is deleted, a recurring
+     * one goes back to pending.
+     */
     suspend fun deleteFlow(id: Long) {
-        val flow = checkNotNull(dao.getFlow(id)) { "Flow $id not found" }
-        check(flow.kind != FlowKind.INITIAL) { "The initial flow can't be deleted" }
-        dao.deleteFlow(id)
+        db.withTransaction {
+            val flow = checkNotNull(dao.getFlow(id)) { "Flow $id not found" }
+            check(flow.kind != FlowKind.INITIAL) { "The initial flow can't be deleted" }
+            dao.deleteFlow(id)
+            val transfer = flow.occurrenceId?.let { cashDao.getOccurrence(it) } ?: return@withTransaction
+            if (transfer.templateId == null) {
+                cashDao.deleteOccurrence(transfer.id)
+            } else {
+                cashDao.updateOccurrence(
+                    transfer.copy(
+                        state = OccurrenceState.PENDING, actualAmount = null, actualCurrency = null, actualDate = null, note = null,
+                        confirmedAtMs = null, updatedAtMs = time.nowMs(),
+                    ),
+                )
+            }
+        }
         backup.onDataChanged()
     }
 
@@ -180,10 +257,16 @@ class PortfolioRepository @Inject constructor(
         backup.onDataChanged()
     }
 
-    /** Deletes the asset with its flows, valuations and photo. */
+    /**
+     * Deletes the asset with its flows, valuations and photo, and its planned transfers (recurring ones and
+     * pending ones). Transfers already done stay in the cash history, without the asset.
+     */
     suspend fun deleteAsset(id: Long) {
         val asset = dao.getAsset(id) ?: return
-        dao.deleteAsset(id)
+        db.withTransaction {
+            stopRecurringTransfers(id, time.today(), delete = true)
+            dao.deleteAsset(id)
+        }
         images.delete(asset.imagePath)
         backup.onDataChanged()
     }

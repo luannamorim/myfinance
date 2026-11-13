@@ -7,6 +7,8 @@ import io.github.luannamorim.myfinance.domain.model.Currency.BRL
 import io.github.luannamorim.myfinance.domain.model.Currency.USD
 import io.github.luannamorim.myfinance.domain.model.EntryKind.EXPENSE
 import io.github.luannamorim.myfinance.domain.model.EntryKind.INCOME
+import io.github.luannamorim.myfinance.domain.model.EntryKind.TRANSFER_IN
+import io.github.luannamorim.myfinance.domain.model.EntryKind.TRANSFER_OUT
 import io.github.luannamorim.myfinance.domain.model.OccurrenceState
 import io.github.luannamorim.myfinance.testutil.adjustment
 import io.github.luannamorim.myfinance.testutil.brl
@@ -15,6 +17,7 @@ import io.github.luannamorim.myfinance.testutil.d
 import io.github.luannamorim.myfinance.testutil.opening
 import io.github.luannamorim.myfinance.testutil.pending
 import io.github.luannamorim.myfinance.testutil.rate
+import io.github.luannamorim.myfinance.testutil.transfer
 import io.github.luannamorim.myfinance.testutil.usd
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -124,5 +127,39 @@ class CashCalculatorTest {
         assertEquals(brl("0.00"), history[0].second.money)
         assertEquals(brl("16137.60"), history[1].second.money)
         assertFalse(history[1].second.incomplete)
+    }
+
+    private val withTransfers = ledger.copy(
+        occurrences = ledger.occurrences + listOf(
+            transfer(TRANSFER_OUT, brl("3000.00"), "2026-11-11", on = "2026-11-11", name = "To Tesouro"),
+            transfer(TRANSFER_IN, brl("500.00"), "2026-11-12", on = "2026-11-12", name = "From CDB"),
+            transfer(TRANSFER_OUT, brl("1000.00"), "2026-11-25", name = "Monthly contribution"),
+        ),
+    )
+
+    @Test
+    fun transfers_moveCash_butAreNeitherIncomeNorExpense() {
+        // 16.137,60 − 3.000 (to Tesouro) + 500 (from CDB) = 13.637,60
+        assertEquals(brl("13637.60"), CashCalculator.balance(BRL, today, withTransfers))
+        // Projection also takes the pending 1.000 contribution: 13.637,60 − 250 − 120 − 1.000 = 12.267,60
+        assertEquals(brl("12267.60"), CashCalculator.projected(withTransfers, today, d("2026-11-30"))[BRL])
+
+        val nov = CashCalculator.monthSummary(withTransfers, YearMonth.of(2026, 11), today, BRL, noRates)
+        // Income and expenses are the same as without transfers.
+        assertEquals(Total(brl("9000.00")), nov.expectedIncome)
+        assertEquals(Total(brl("3112.40")), nov.expectedExpenses)
+        assertEquals(Total(brl("2862.40")), nov.paidExpenses)
+        // 3.000 done + 1.000 pending out; 500 in.
+        assertEquals(Total(brl("4000.00")), nov.transfersOut)
+        assertEquals(Total(brl("500.00")), nov.transfersIn)
+        // Category charts ignore transfers (they have no category).
+        assertEquals(listOf(20L, 30L, 40L), CashCalculator.byCategory(withTransfers, YearMonth.of(2026, 11), EXPENSE, BRL, noRates).map { it.first })
+    }
+
+    @Test
+    fun transferStatus_isTransferred_onceDone() {
+        assertEquals(DisplayStatus.TRANSFERRED, OccurrenceStatus.of(transfer(TRANSFER_OUT, brl("1.00"), "2026-11-10", on = "2026-11-10"), today))
+        assertEquals(DisplayStatus.TRANSFERRED, OccurrenceStatus.of(transfer(TRANSFER_IN, brl("1.00"), "2026-11-10", on = "2026-11-10"), today))
+        assertEquals(DisplayStatus.OVERDUE, OccurrenceStatus.of(transfer(TRANSFER_OUT, brl("1.00"), "2026-11-10"), today))
     }
 }

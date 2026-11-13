@@ -28,7 +28,10 @@ import io.github.luannamorim.myfinance.domain.portfolio.PortfolioData
 import io.github.luannamorim.myfinance.domain.portfolio.Series
 import io.github.luannamorim.myfinance.domain.portfolio.SeriesPoint
 import io.github.luannamorim.myfinance.domain.portfolio.ValuationRow
+import io.github.luannamorim.myfinance.ui.common.ActionError
+import io.github.luannamorim.myfinance.ui.common.toActionError
 import io.github.luannamorim.myfinance.ui.navigation.AssetDetailRoute
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -60,6 +63,8 @@ data class AssetDetailUiState(
     val today: LocalDate = LocalDate.MIN,
     val sheet: AssetSheet? = null,
     val gone: Boolean = false,
+    val rates: ExchangeRates = ExchangeRates.EMPTY,
+    val error: ActionError? = null,
 ) {
     val closed: Boolean get() = snapshot?.closed == true
     val valuationDates: Set<LocalDate> get() = valuations.map { it.valuation.date }.toSet()
@@ -85,6 +90,7 @@ fun assetDetailState(data: PortfolioData, assetId: Long, rates: ExchangeRates, d
         imageFile = asset.imagePath?.let(imageFile),
         rate = rates.latest(),
         today = today,
+        rates = rates,
     )
 }
 
@@ -100,9 +106,10 @@ class AssetDetailViewModel @Inject constructor(
 
     private val id = savedStateHandle.toRoute<AssetDetailRoute>().assetId
     private val sheet = MutableStateFlow<AssetSheet?>(null)
+    private val error = MutableStateFlow<ActionError?>(null)
 
-    val state: StateFlow<AssetDetailUiState> = combine(portfolio.data, rates.rates, settings.settings, sheet) { data, r, s, open ->
-        assetDetailState(data, id, r, s.displayCurrency, time.today(), images::file).copy(sheet = open)
+    val state: StateFlow<AssetDetailUiState> = combine(portfolio.data, rates.rates, settings.settings, sheet, error) { data, r, s, open, e ->
+        assetDetailState(data, id, r, s.displayCurrency, time.today(), images::file).copy(sheet = open, error = e)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AssetDetailUiState())
 
     fun open(value: AssetSheet?) {
@@ -111,15 +118,24 @@ class AssetDetailViewModel @Inject constructor(
 
     fun addValuation(date: LocalDate, value: Money, note: String?) {
         sheet.value = null
-        viewModelScope.launch { portfolio.addValuation(id, date, value, note) }
+        perform { portfolio.addValuation(id, date, value, note) }
     }
 
-    fun addFlow(kind: FlowKind, date: LocalDate, amount: Money, quantity: BigDecimal?, note: String?, newValue: Money?) {
+    /** [cash]: what left cash (a contribution) or entered it (a withdrawal), recorded as a transfer. */
+    fun addFlow(kind: FlowKind, date: LocalDate, amount: Money, quantity: BigDecimal?, note: String?, newValue: Money?, cash: Money?) {
         sheet.update { null }
-        viewModelScope.launch { portfolio.addFlow(id, kind, date, amount, quantity, note, newValue) }
+        perform { portfolio.addFlow(id, kind, date, amount, quantity, note, newValue, cash) }
     }
 
-    fun deleteFlow(flowId: Long) = viewModelScope.launch { portfolio.deleteFlow(flowId) }
-    fun deleteValuation(valuationId: Long) = viewModelScope.launch { portfolio.deleteValuation(valuationId) }
-    fun deleteAsset() = viewModelScope.launch { portfolio.deleteAsset(id) }
+    fun deleteFlow(flowId: Long) = perform { portfolio.deleteFlow(flowId) }
+    fun deleteValuation(valuationId: Long) = perform { portfolio.deleteValuation(valuationId) }
+    fun deleteAsset() = perform { portfolio.deleteAsset(id) }
+    fun dismissError() = error.update { null }
+
+    /** Runs a write; a refusal becomes a dialog instead of a crash. */
+    private fun perform(action: suspend () -> Unit) {
+        viewModelScope.launch {
+            runCatching { action() }.onFailure { e -> if (e is CancellationException) throw e else error.update { e.toActionError() } }
+        }
+    }
 }

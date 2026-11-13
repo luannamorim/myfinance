@@ -78,6 +78,14 @@ interface CashDao {
     @Query("SELECT * FROM transaction_occurrence ORDER BY id")
     suspend fun getAllOccurrences(): List<OccurrenceEntity>
 
+    /** Recurring transfers to or from an asset. */
+    @Query("SELECT * FROM transaction_template WHERE assetId = :assetId")
+    suspend fun getTemplatesForAsset(assetId: Long): List<TransactionTemplateEntity>
+
+    /** Transfers to or from an asset that haven't happened (they can't any more once the asset is gone). */
+    @Query("DELETE FROM transaction_occurrence WHERE assetId = :assetId AND state = 'PENDING'")
+    suspend fun deletePendingForAsset(assetId: Long): Int
+
     // Adjustments
 
     @Query("SELECT * FROM cash_adjustment ORDER BY date, id")

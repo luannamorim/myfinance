@@ -47,13 +47,18 @@ data class AssetEntity(
     val updatedAtMs: Long,
 )
 
-/** Contribution, withdrawal or disposal; `amount` > 0 (INITIAL may be 0), direction given by `kind`. */
+/**
+ * Contribution, withdrawal or disposal; `amount` > 0 (INITIAL may be 0), direction given by `kind`.
+ * `occurrenceId` links the flow to the cash transfer it came from or went to; the repositories keep the pair
+ * in step (the foreign key only sets it NULL, so a flow is never deleted behind the asset's back).
+ */
 @Entity(
     tableName = "asset_flow",
     foreignKeys = [
         ForeignKey(entity = AssetEntity::class, parentColumns = ["id"], childColumns = ["assetId"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(entity = OccurrenceEntity::class, parentColumns = ["id"], childColumns = ["occurrenceId"], onDelete = ForeignKey.SET_NULL),
     ],
-    indices = [Index(value = ["assetId", "date"])],
+    indices = [Index(value = ["assetId", "date"]), Index(value = ["occurrenceId"], unique = true)],
 )
 data class AssetFlowEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -64,6 +69,7 @@ data class AssetFlowEntity(
     val quantityDelta: String? = null,
     val note: String? = null,
     val createdAtMs: Long,
+    val occurrenceId: Long? = null,
 )
 
 /** Estimated value on a date; one per asset and day. */

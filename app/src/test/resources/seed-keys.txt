@@ -19,6 +19,8 @@ expense.subscriptions
 expense.entertainment
 expense.education
 expense.shopping
+expense.credit_card
+expense.loans
 expense.other_expenses
 asset.fixed_income
 asset.stocks
@@ -31,4 +33,5 @@ asset.business_ownership
 asset.startup_equity
 asset.real_estate
 asset.vehicles
+asset.loans_receivable
 asset.other_assets

@@ -146,7 +146,7 @@ class AccessibilityScreenshotTest {
 
     @Test
     fun settings_largeFont() {
-        compose.snapBothThemes("a11y_settings_font150") { SettingsContent(SettingsUiState(loading = false), SettingsActions(onOpenLanguage = {})) }
+        compose.snapBothThemes("a11y_settings_font150") { SettingsContent(SettingsUiState(loading = false), SettingsActions()) }
     }
 
     @Test
