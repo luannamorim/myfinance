@@ -234,4 +234,31 @@
     <string name="detail_cancel_title">Cancel this occurrence?</string>
     <string name="detail_cancel_message">It stops counting in balances and forecasts. You can restore it later.</string>
     <string name="detail_keep">Keep</string>
+
+    <!-- Balances -->
+    <string name="opening_title">Opening balances</string>
+    <string name="opening_hint">Your cash when you started using MyFinance</string>
+    <string name="opening_intro">Enter the cash you had on a date. Transactions confirmed from that date on update the balance.</string>
+    <string name="opening_currency">Cash in %1$s</string>
+    <string name="opening_amount">Opening balance</string>
+    <string name="opening_date">On</string>
+    <string name="opening_negative">Negative</string>
+    <string name="opening_saved">Saved</string>
+    <string name="opening_not_set">Not set</string>
+    <string name="opening_after_adjustment">There is a balance adjustment before this date. Delete it first or choose an earlier date.</string>
+    <string name="adjust_title">Adjust balance</string>
+    <string name="adjust_hint">Match the app with your bank balance</string>
+    <string name="adjust_intro">Type what you really have. MyFinance records the difference as an adjustment, which is neither income nor expense.</string>
+    <string name="adjust_current">Balance in MyFinance</string>
+    <string name="adjust_real">Real balance</string>
+    <string name="adjust_date">On</string>
+    <string name="adjust_difference">Difference</string>
+    <string name="adjust_note">Note (optional)</string>
+    <string name="adjust_save">Save adjustment</string>
+    <string name="adjust_none">No difference to record</string>
+    <string name="adjust_history">Adjustments</string>
+    <string name="adjust_delete_title">Delete adjustment?</string>
+    <string name="adjust_delete_message">The balance goes back to what the transactions say.</string>
+    <string name="adjust_needs_opening">Set an opening balance for this currency first.</string>
+    <string name="balance_adjustment">Balance adjustment</string>
 </resources>

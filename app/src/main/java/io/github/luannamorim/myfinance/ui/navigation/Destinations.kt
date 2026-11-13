@@ -10,7 +10,9 @@ import io.github.luannamorim.myfinance.ui.feature.transaction.TransactionEditorS
 import io.github.luannamorim.myfinance.ui.feature.history.HistoryScreen
 import io.github.luannamorim.myfinance.ui.feature.overview.OverviewScreen
 import io.github.luannamorim.myfinance.ui.feature.portfolio.PortfolioScreen
+import io.github.luannamorim.myfinance.ui.feature.settings.AdjustBalanceScreen
 import io.github.luannamorim.myfinance.ui.feature.settings.CategoriesScreen
+import io.github.luannamorim.myfinance.ui.feature.settings.OpeningBalancesScreen
 import io.github.luannamorim.myfinance.ui.feature.settings.SettingsActions
 import io.github.luannamorim.myfinance.ui.feature.settings.SettingsScreen
 
@@ -21,13 +23,22 @@ internal fun NavGraphBuilder.tabDestinations(navController: NavHostController) {
     composable<PortfolioRoute> { PortfolioScreen() }
     composable<HistoryRoute> { HistoryScreen() }
     composable<SettingsRoute> {
-        SettingsScreen(SettingsActions(onOpenCategories = { navController.navigate(CategoriesRoute()) }))
+        SettingsScreen(
+            SettingsActions(
+                onOpenCategories = { navController.navigate(CategoriesRoute()) },
+                onOpenOpening = { navController.navigate(OpeningBalancesRoute) },
+                onOpenAdjust = { navController.navigate(AdjustBalanceRoute) },
+                onOpenRecurring = { navController.navigate(RecurringListRoute) },
+            ),
+        )
     }
 }
 
 /** Settings sub-screens. */
 internal fun NavGraphBuilder.settingsDestinations(navController: NavHostController) {
     composable<CategoriesRoute> { CategoriesScreen(onBack = { navController.popBackStack() }) }
+    composable<OpeningBalancesRoute> { OpeningBalancesScreen(onBack = { navController.popBackStack() }) }
+    composable<AdjustBalanceRoute> { AdjustBalanceScreen(onBack = { navController.popBackStack() }) }
 }
 
 /** Transactions: editor, recurring list. */

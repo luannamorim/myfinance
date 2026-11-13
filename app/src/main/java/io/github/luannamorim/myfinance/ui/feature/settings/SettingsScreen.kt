@@ -9,7 +9,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Category
+import androidx.compose.material.icons.rounded.Repeat
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,6 +36,9 @@ import io.github.luannamorim.myfinance.ui.theme.Spacing
 data class SettingsActions(
     val onUpdate: ((AppSettings) -> AppSettings) -> Unit = {},
     val onOpenCategories: () -> Unit = {},
+    val onOpenOpening: () -> Unit = {},
+    val onOpenAdjust: () -> Unit = {},
+    val onOpenRecurring: () -> Unit = {},
     val onOpenLanguage: (() -> Unit)? = null,
 )
 
@@ -57,6 +63,9 @@ fun SettingsContent(state: SettingsUiState, actions: SettingsActions, modifier: 
     val s = state.settings
     TabScreen(title = stringResource(R.string.nav_settings), modifier = modifier) {
         SectionHeader(stringResource(R.string.settings_cash))
+        NavRow(Icons.Rounded.AccountBalanceWallet, stringResource(R.string.opening_title), stringResource(R.string.opening_hint), actions.onOpenOpening)
+        NavRow(Icons.Rounded.Tune, stringResource(R.string.adjust_title), stringResource(R.string.adjust_hint), actions.onOpenAdjust)
+        NavRow(Icons.Rounded.Repeat, stringResource(R.string.recurring_title), stringResource(R.string.recurring_hint), actions.onOpenRecurring)
         NavRow(Icons.Rounded.Category, stringResource(R.string.categories_title), stringResource(R.string.categories_hint), actions.onOpenCategories)
 
         SectionHeader(stringResource(R.string.settings_display), Modifier.padding(top = Spacing.s))

@@ -236,4 +236,31 @@
     <string name="detail_cancel_title">Cancelar esta ocorrência?</string>
     <string name="detail_cancel_message">Ela deixa de contar nos saldos e previsões. Você pode restaurá-la depois.</string>
     <string name="detail_keep">Manter</string>
+
+    <!-- Balances -->
+    <string name="opening_title">Saldos iniciais</string>
+    <string name="opening_hint">Seu dinheiro em caixa quando começou a usar o MyFinance</string>
+    <string name="opening_intro">Informe quanto dinheiro você tinha numa data. As transações confirmadas a partir dessa data atualizam o saldo.</string>
+    <string name="opening_currency">Caixa em %1$s</string>
+    <string name="opening_amount">Saldo inicial</string>
+    <string name="opening_date">Em</string>
+    <string name="opening_negative">Negativo</string>
+    <string name="opening_saved">Salvo</string>
+    <string name="opening_not_set">Não definido</string>
+    <string name="opening_after_adjustment">Existe um ajuste de saldo antes desta data. Exclua-o primeiro ou escolha uma data anterior.</string>
+    <string name="adjust_title">Ajustar saldo</string>
+    <string name="adjust_hint">Alinhe o app com o saldo do banco</string>
+    <string name="adjust_intro">Digite quanto você realmente tem. O MyFinance registra a diferença como um ajuste, que não é receita nem despesa.</string>
+    <string name="adjust_current">Saldo no MyFinance</string>
+    <string name="adjust_real">Saldo real</string>
+    <string name="adjust_date">Em</string>
+    <string name="adjust_difference">Diferença</string>
+    <string name="adjust_note">Observação (opcional)</string>
+    <string name="adjust_save">Salvar ajuste</string>
+    <string name="adjust_none">Nenhuma diferença a registrar</string>
+    <string name="adjust_history">Ajustes</string>
+    <string name="adjust_delete_title">Excluir ajuste?</string>
+    <string name="adjust_delete_message">O saldo volta a ser o que as transações indicam.</string>
+    <string name="adjust_needs_opening">Defina primeiro um saldo inicial para esta moeda.</string>
+    <string name="balance_adjustment">Ajuste de saldo</string>
 </resources>
