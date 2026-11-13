@@ -2,6 +2,7 @@ package io.github.luannamorim.myfinance.ui.feature.asset
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,6 +37,7 @@ import io.github.luannamorim.myfinance.ui.common.CategoryIcons
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
 import io.github.luannamorim.myfinance.ui.common.StoredImage
 import io.github.luannamorim.myfinance.ui.common.displayName
+import io.github.luannamorim.myfinance.ui.components.AdaptiveRow
 import io.github.luannamorim.myfinance.ui.components.AmountDisplay
 import io.github.luannamorim.myfinance.ui.components.AmountTone
 import io.github.luannamorim.myfinance.ui.components.ConfirmDialog
@@ -141,10 +143,11 @@ fun AssetDetailContent(state: AssetDetailUiState, actions: AssetDetailActions) {
             if (!s.withdrawn.isZero) Line(stringResource(R.string.asset_withdrawn), s.withdrawn)
             Line(stringResource(R.string.asset_gain), s.gain, AmountTone.AUTO, signed = true)
             s.simpleReturn?.let { r ->
-                Row(Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.asset_return), style = FinanceTheme.type.body, color = c.textSecondary, modifier = Modifier.weight(1f))
-                    Text(formats.money.formatPercent(r, signed = true), style = FinanceTheme.type.numeric, color = if (r.signum() < 0) c.negative else c.positive)
-                }
+                AdaptiveRow(
+                    main = { Text(stringResource(R.string.asset_return), style = FinanceTheme.type.body, color = c.textSecondary) },
+                    trailing = { Text(formats.money.formatPercent(r, signed = true), style = FinanceTheme.type.numeric, color = if (r.signum() < 0) c.negative else c.positive, maxLines = 1) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
         state.converted?.let { conv ->
@@ -193,17 +196,24 @@ fun AssetDetailContent(state: AssetDetailUiState, actions: AssetDetailActions) {
             state.valuations.forEach { row ->
                 FinanceCard(Modifier.fillMaxWidth(), contentPadding = Spacing.m) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(formats.dates.date(row.valuation.date), style = FinanceTheme.type.bodyStrong, color = c.textPrimary)
-                            Text(stringResource(R.string.asset_valuation_row, formats.money.format(row.netInvested)), style = FinanceTheme.type.caption, color = c.textSecondary)
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            AmountDisplay(row.valuation.value)
-                            Row {
-                                AmountDisplay(row.gain, style = FinanceTheme.type.caption.copy(fontFeatureSettings = "tnum"), signed = true, tone = AmountTone.AUTO)
-                                row.simpleReturn?.let { Text(" · " + formats.money.formatPercent(it, signed = true), style = FinanceTheme.type.caption, color = c.textSecondary) }
-                            }
-                        }
+                        AdaptiveRow(
+                            main = {
+                                Column {
+                                    Text(formats.dates.date(row.valuation.date), style = FinanceTheme.type.bodyStrong, color = c.textPrimary, maxLines = 1)
+                                    Text(stringResource(R.string.asset_valuation_row, formats.money.format(row.netInvested)), style = FinanceTheme.type.caption, color = c.textSecondary)
+                                }
+                            },
+                            trailing = {
+                                Column(horizontalAlignment = Alignment.End) {
+                                    AmountDisplay(row.valuation.value)
+                                    FlowRow(itemVerticalAlignment = Alignment.CenterVertically) {
+                                        AmountDisplay(row.gain, style = FinanceTheme.type.caption.copy(fontFeatureSettings = "tnum"), signed = true, tone = AmountTone.AUTO)
+                                        row.simpleReturn?.let { Text(" · " + formats.money.formatPercent(it, signed = true), style = FinanceTheme.type.caption, color = c.textSecondary, maxLines = 1) }
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
                         IconButton(onClick = { actions.onDeleteValuation(row.valuation.id) }) { Icon(Icons.Rounded.DeleteOutline, stringResource(R.string.action_delete), tint = c.textTertiary) }
                     }
                 }
@@ -211,7 +221,7 @@ fun AssetDetailContent(state: AssetDetailUiState, actions: AssetDetailActions) {
         }
 
         SectionHeader(stringResource(R.string.asset_flows), Modifier.padding(top = Spacing.s))
-        state.flows.forEach { flow -> FlowRow(flow, actions.onDeleteFlow) }
+        state.flows.forEach { flow -> AssetFlowRow(flow, actions.onDeleteFlow) }
     }
 
     val s = state.snapshot
@@ -238,31 +248,38 @@ fun AssetDetailContent(state: AssetDetailUiState, actions: AssetDetailActions) {
 
 @Composable
 private fun Line(label: String, money: Money, tone: AmountTone = AmountTone.NEUTRAL, signed: Boolean = false) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = FinanceTheme.type.body, color = FinanceTheme.colors.textSecondary, modifier = Modifier.weight(1f))
-        AmountDisplay(money, tone = tone, signed = signed)
-    }
+    AdaptiveRow(
+        main = { Text(label, style = FinanceTheme.type.body, color = FinanceTheme.colors.textSecondary) },
+        trailing = { AmountDisplay(money, tone = tone, signed = signed) },
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable
 private fun TotalLine(label: String, total: Total, tone: AmountTone = AmountTone.NEUTRAL) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = FinanceTheme.type.body, color = FinanceTheme.colors.textSecondary, modifier = Modifier.weight(1f))
-        AmountDisplay(total.money, tone = tone, signed = tone == AmountTone.AUTO, approximate = total.incomplete)
-    }
+    AdaptiveRow(
+        main = { Text(label, style = FinanceTheme.type.body, color = FinanceTheme.colors.textSecondary) },
+        trailing = { AmountDisplay(total.money, tone = tone, signed = tone == AmountTone.AUTO, approximate = total.incomplete) },
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable
-private fun FlowRow(flow: AssetFlow, onDelete: (Long) -> Unit) {
+private fun AssetFlowRow(flow: AssetFlow, onDelete: (Long) -> Unit) {
     val c = FinanceTheme.colors
     val formats = LocalFormats.current
     FinanceCard(Modifier.fillMaxWidth(), contentPadding = Spacing.m) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(flow.kind.label(), style = FinanceTheme.type.bodyStrong, color = c.textPrimary)
-                Text(listOfNotNull(formats.dates.date(flow.date), flow.note).joinToString(" · "), style = FinanceTheme.type.caption, color = c.textSecondary)
-            }
-            AmountDisplay(if (flow.kind.inflow) flow.amount else -flow.amount, signed = flow.kind.inflow)
+            AdaptiveRow(
+                main = {
+                    Column {
+                        Text(flow.kind.label(), style = FinanceTheme.type.bodyStrong, color = c.textPrimary)
+                        Text(listOfNotNull(formats.dates.date(flow.date), flow.note).joinToString(" · "), style = FinanceTheme.type.caption, color = c.textSecondary)
+                    }
+                },
+                trailing = { AmountDisplay(if (flow.kind.inflow) flow.amount else -flow.amount, signed = flow.kind.inflow) },
+                modifier = Modifier.weight(1f),
+            )
             if (flow.kind != FlowKind.INITIAL) {
                 IconButton(onClick = { onDelete(flow.id) }) { Icon(Icons.Rounded.DeleteOutline, stringResource(R.string.action_delete), tint = c.textTertiary) }
             }

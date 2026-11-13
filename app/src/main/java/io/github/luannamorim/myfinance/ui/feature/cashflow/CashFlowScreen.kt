@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,7 +18,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
@@ -32,6 +30,8 @@ import io.github.luannamorim.myfinance.domain.fx.Total
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
 import io.github.luannamorim.myfinance.ui.common.OccurrenceRow
 import io.github.luannamorim.myfinance.ui.common.OccurrenceRowItem
+import io.github.luannamorim.myfinance.ui.common.TotalTiles
+import io.github.luannamorim.myfinance.ui.components.AdaptiveRow
 import io.github.luannamorim.myfinance.ui.components.AmountDisplay
 import io.github.luannamorim.myfinance.ui.components.AmountTone
 import io.github.luannamorim.myfinance.ui.components.EmptyState
@@ -80,14 +80,12 @@ fun CashFlowContent(state: CashFlowUiState, actions: CashFlowActions, modifier: 
             return@TabScreen
         }
         MonthSwitcher(state.month, actions.onMonth)
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
-            BalanceTile(
-                if (state.balanceIsToday) stringResource(R.string.cashflow_available) else stringResource(R.string.cashflow_balance_end, formats.dates.dayMonth(state.month.atEndOfMonth())),
-                state.balance,
-                Modifier.weight(1f),
-            )
-            BalanceTile(stringResource(R.string.cashflow_projected, formats.dates.dayMonth(state.month.atEndOfMonth())), state.projectedEnd, Modifier.weight(1f))
-        }
+        TotalTiles(
+            if (state.balanceIsToday) stringResource(R.string.cashflow_available) else stringResource(R.string.cashflow_balance_end, formats.dates.dayMonth(state.month.atEndOfMonth())),
+            state.balance,
+            stringResource(R.string.cashflow_projected, formats.dates.dayMonth(state.month.atEndOfMonth())),
+            state.projectedEnd,
+        )
         state.summary?.let { s ->
             ProgressCard(stringResource(R.string.cashflow_income), s.receivedIncome, s.expectedIncome, stringResource(R.string.cashflow_received_of, formats.money.format(s.expectedIncome.money)), c.positive)
             ProgressCard(stringResource(R.string.cashflow_expenses), s.paidExpenses, s.expectedExpenses, stringResource(R.string.cashflow_paid_of, formats.money.format(s.expectedExpenses.money)), c.negative)
@@ -123,24 +121,14 @@ fun CashFlowContent(state: CashFlowUiState, actions: CashFlowActions, modifier: 
 }
 
 @Composable
-private fun BalanceTile(label: String, total: Total?, modifier: Modifier = Modifier) {
-    FinanceCard(modifier) {
-        Text(label, style = FinanceTheme.type.caption, color = FinanceTheme.colors.textSecondary, maxLines = 1)
-        Spacer(Modifier.height(Spacing.s))
-        total?.let {
-            AmountDisplay(it.money, style = FinanceTheme.type.title.copy(fontFeatureSettings = "tnum"), tone = if (it.money.isNegative) AmountTone.NEGATIVE else AmountTone.NEUTRAL, approximate = it.incomplete)
-        }
-    }
-}
-
-@Composable
 private fun ProgressCard(title: String, done: Total, expected: Total, caption: String, color: Color) {
     val c = FinanceTheme.colors
     FinanceCard(Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(title, style = FinanceTheme.type.bodyStrong, color = c.textPrimary, modifier = Modifier.weight(1f))
-            AmountDisplay(done.money, approximate = done.incomplete)
-        }
+        AdaptiveRow(
+            main = { Text(title, style = FinanceTheme.type.bodyStrong, color = c.textPrimary) },
+            trailing = { AmountDisplay(done.money, approximate = done.incomplete) },
+            modifier = Modifier.fillMaxWidth(),
+        )
         Text(caption, style = FinanceTheme.type.caption, color = c.textSecondary)
         Spacer(Modifier.height(Spacing.s))
         val share = if (expected.money.minor > 0) (done.money.minor.toFloat() / expected.money.minor).coerceIn(0f, 1f) else 0f
@@ -153,10 +141,11 @@ private fun ProgressCard(title: String, done: Total, expected: Total, caption: S
 
 @Composable
 private fun SummaryLine(label: String, total: Total, tone: AmountTone) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = FinanceTheme.type.body, color = FinanceTheme.colors.textSecondary, modifier = Modifier.weight(1f))
-        AmountDisplay(total.money, tone = tone, approximate = total.incomplete)
-    }
+    AdaptiveRow(
+        main = { Text(label, style = FinanceTheme.type.body, color = FinanceTheme.colors.textSecondary) },
+        trailing = { AmountDisplay(total.money, tone = tone, approximate = total.incomplete) },
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable

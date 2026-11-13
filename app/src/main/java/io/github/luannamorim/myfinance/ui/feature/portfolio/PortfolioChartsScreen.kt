@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -38,6 +37,7 @@ import io.github.luannamorim.myfinance.domain.portfolio.SeriesPoint
 import io.github.luannamorim.myfinance.domain.portfolio.Slice
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
 import io.github.luannamorim.myfinance.ui.common.displayName
+import io.github.luannamorim.myfinance.ui.components.AdaptiveRow
 import io.github.luannamorim.myfinance.ui.components.AmountDisplay
 import io.github.luannamorim.myfinance.ui.components.AmountTone
 import io.github.luannamorim.myfinance.ui.components.BarItem
@@ -171,10 +171,11 @@ fun PortfolioChartsContent(state: PortfolioChartsUiState, onBack: () -> Unit, on
         SectionHeader(stringResource(R.string.pcharts_performance))
         state.periodGain?.let { gain ->
             FinanceCard(Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.pcharts_period_gain), style = FinanceTheme.type.bodyStrong, color = c.textPrimary, modifier = Modifier.weight(1f))
-                    AmountDisplay(gain.money, signed = true, tone = AmountTone.AUTO, approximate = gain.incomplete)
-                }
+                AdaptiveRow(
+                    main = { Text(stringResource(R.string.pcharts_period_gain), style = FinanceTheme.type.bodyStrong, color = c.textPrimary) },
+                    trailing = { AmountDisplay(gain.money, signed = true, tone = AmountTone.AUTO, approximate = gain.incomplete) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
                 Text(stringResource(R.string.pcharts_period_gain_hint), style = FinanceTheme.type.caption, color = c.textSecondary)
             }
         }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,6 +31,7 @@ import io.github.luannamorim.myfinance.domain.model.AssetGroup
 import io.github.luannamorim.myfinance.ui.common.CategoryIcons
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
 import io.github.luannamorim.myfinance.ui.common.displayName
+import io.github.luannamorim.myfinance.ui.components.AdaptiveRow
 import io.github.luannamorim.myfinance.ui.components.AmountDisplay
 import io.github.luannamorim.myfinance.ui.components.AmountTone
 import io.github.luannamorim.myfinance.ui.components.DonutChart
@@ -81,7 +83,7 @@ fun PortfolioContent(state: PortfolioUiState, actions: PortfolioActions, modifie
             )
             return@TabScreen
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
             FinanceChip(stringResource(R.string.portfolio_all), selected = state.group == null, onClick = { actions.onGroup(null) })
             FinanceChip(stringResource(R.string.group_investment), selected = state.group == AssetGroup.INVESTMENT, onClick = { actions.onGroup(AssetGroup.INVESTMENT) })
             FinanceChip(stringResource(R.string.group_personal), selected = state.group == AssetGroup.PERSONAL, onClick = { actions.onGroup(AssetGroup.PERSONAL) })
@@ -107,10 +109,17 @@ fun PortfolioContent(state: PortfolioUiState, actions: PortfolioActions, modifie
                     Modifier.fillMaxWidth().clickable { actions.onSelect(if (selected) null else slice.categoryId) }.padding(vertical = Spacing.s),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    LegendDot(if (selected) c.accent else c.chart[i % c.chart.size], category?.displayName().orEmpty(), Modifier.weight(1f))
-                    Text(formats.money.formatPercent(slice.share), style = FinanceTheme.type.numeric, color = c.textSecondary)
-                    Spacer(Modifier.width(Spacing.m))
-                    AmountDisplay(slice.value, approximate = slice.incomplete)
+                    AdaptiveRow(
+                        main = { LegendDot(if (selected) c.accent else c.chart[i % c.chart.size], category?.displayName().orEmpty()) },
+                        trailing = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(formats.money.formatPercent(slice.share), style = FinanceTheme.type.numeric, color = c.textSecondary, maxLines = 1)
+                                Spacer(Modifier.width(Spacing.m))
+                                AmountDisplay(slice.value, approximate = slice.incomplete)
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
             if (state.selectedCategory != null) TextAction(stringResource(R.string.portfolio_show_all), onClick = { actions.onSelect(null) })
@@ -121,10 +130,11 @@ fun PortfolioContent(state: PortfolioUiState, actions: PortfolioActions, modifie
                 TotalRow(stringResource(R.string.portfolio_invested), t.invested)
                 TotalRow(stringResource(R.string.portfolio_gain), t.gain, AmountTone.AUTO)
                 t.simpleReturn?.let { r ->
-                    Row(Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.portfolio_return), style = FinanceTheme.type.body, color = c.textSecondary, modifier = Modifier.weight(1f))
-                        Text(formats.money.formatPercent(r, signed = true), style = FinanceTheme.type.numeric, color = if (r.signum() < 0) c.negative else c.positive)
-                    }
+                    AdaptiveRow(
+                        main = { Text(stringResource(R.string.portfolio_return), style = FinanceTheme.type.body, color = c.textSecondary) },
+                        trailing = { Text(formats.money.formatPercent(r, signed = true), style = FinanceTheme.type.numeric, color = if (r.signum() < 0) c.negative else c.positive) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
                 if (!t.realizedClosed.money.isZero) TotalRow(stringResource(R.string.portfolio_realized), t.realizedClosed, AmountTone.AUTO)
                 t.lastValuationDate?.let {
@@ -148,10 +158,11 @@ fun PortfolioContent(state: PortfolioUiState, actions: PortfolioActions, modifie
 
 @Composable
 private fun TotalRow(label: String, total: Total, tone: AmountTone = AmountTone.NEUTRAL) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = FinanceTheme.type.body, color = FinanceTheme.colors.textSecondary, modifier = Modifier.weight(1f))
-        AmountDisplay(total.money, tone = tone, signed = tone == AmountTone.AUTO, approximate = total.incomplete)
-    }
+    AdaptiveRow(
+        main = { Text(label, style = FinanceTheme.type.body, color = FinanceTheme.colors.textSecondary) },
+        trailing = { AmountDisplay(total.money, tone = tone, signed = tone == AmountTone.AUTO, approximate = total.incomplete) },
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable
@@ -163,17 +174,24 @@ private fun AssetCard(row: AssetRow, onOpen: (Long) -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             CategoryBadge(CategoryIcons.of(row.category?.icon ?: "category"), dimmed = s.closed)
             Spacer(Modifier.width(Spacing.m))
-            Column(Modifier.weight(1f)) {
-                Text(s.asset.name, style = FinanceTheme.type.bodyStrong, color = if (s.closed) c.textTertiary else c.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    AmountDisplay(s.gain, style = FinanceTheme.type.caption.copy(fontFeatureSettings = "tnum"), signed = true, tone = AmountTone.AUTO)
-                    s.simpleReturn?.let { Text(" · " + formats.money.formatPercent(it, signed = true), style = FinanceTheme.type.caption, color = c.textSecondary) }
-                }
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                AmountDisplay(s.value)
-                row.displayValue?.let { AmountDisplay(it.money, style = FinanceTheme.type.caption.copy(fontFeatureSettings = "tnum"), approximate = true) }
-            }
+            AdaptiveRow(
+                main = {
+                    Column {
+                        Text(s.asset.name, style = FinanceTheme.type.bodyStrong, color = if (s.closed) c.textTertiary else c.textPrimary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        FlowRow(itemVerticalAlignment = Alignment.CenterVertically) {
+                            AmountDisplay(s.gain, style = FinanceTheme.type.caption.copy(fontFeatureSettings = "tnum"), signed = true, tone = AmountTone.AUTO)
+                            s.simpleReturn?.let { Text(" · " + formats.money.formatPercent(it, signed = true), style = FinanceTheme.type.caption, color = c.textSecondary, maxLines = 1) }
+                        }
+                    }
+                },
+                trailing = {
+                    Column(horizontalAlignment = Alignment.End) {
+                        AmountDisplay(s.value)
+                        row.displayValue?.let { AmountDisplay(it.money, style = FinanceTheme.type.caption.copy(fontFeatureSettings = "tnum"), approximate = true) }
+                    }
+                },
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }

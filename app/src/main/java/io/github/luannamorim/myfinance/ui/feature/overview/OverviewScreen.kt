@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -35,6 +34,9 @@ import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.ui.common.ConfirmSheet
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
 import io.github.luannamorim.myfinance.ui.common.OccurrenceRowItem
+import io.github.luannamorim.myfinance.ui.common.TotalTiles
+import io.github.luannamorim.myfinance.ui.components.AdaptiveRow
+import io.github.luannamorim.myfinance.ui.components.shrinkToFit
 import io.github.luannamorim.myfinance.ui.components.AmountDisplay
 import io.github.luannamorim.myfinance.ui.components.AmountTone
 import io.github.luannamorim.myfinance.ui.components.FinanceCard
@@ -96,10 +98,10 @@ fun OverviewContent(state: OverviewUiState, actions: OverviewActions, modifier: 
         val nw = state.netWorth
         if (nw != null) NetWorthHero(nw.total, nw.cash, nw.investments, nw.personal)
 
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
-            Tile(stringResource(R.string.overview_available), state.available, Modifier.weight(1f))
-            Tile(stringResource(R.string.overview_projected, formats.dates.dayMonth(state.today.withDayOfMonth(state.today.lengthOfMonth()))), state.projected, Modifier.weight(1f))
-        }
+        TotalTiles(
+            stringResource(R.string.overview_available), state.available,
+            stringResource(R.string.overview_projected, formats.dates.dayMonth(state.today.withDayOfMonth(state.today.lengthOfMonth()))), state.projected,
+        )
 
         state.month?.takeIf { state.hasTransactions }?.let { m ->
             SectionHeader(stringResource(R.string.overview_this_month), action = { TextAction(stringResource(R.string.overview_see_all), onClick = actions.onSeeCashFlow) })
@@ -174,25 +176,19 @@ private fun CompositionBar(parts: List<Pair<Float, Color>>) {
 }
 
 @Composable
-private fun Tile(label: String, total: Total?, modifier: Modifier = Modifier) {
-    FinanceCard(modifier) {
-        Text(label, style = FinanceTheme.type.caption, color = FinanceTheme.colors.textSecondary, maxLines = 1)
-        Spacer(Modifier.height(Spacing.s))
-        total?.let {
-            AmountDisplay(it.money, style = FinanceTheme.type.title.copy(fontFeatureSettings = "tnum"), tone = if (it.money.isNegative) AmountTone.NEGATIVE else AmountTone.NEUTRAL, approximate = it.incomplete)
-        }
-    }
-}
-
-@Composable
 private fun MonthLine(label: String, done: Total, expected: Total) {
     val formats = LocalFormats.current
-    Row(Modifier.fillMaxWidth().padding(vertical = Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = FinanceTheme.type.body, color = FinanceTheme.colors.textSecondary, modifier = Modifier.weight(1f))
-        Text(
-            stringResource(R.string.overview_income_line, formats.money.format(done.money), formats.money.formatNumber(expected.money.minor, expected.money.currency)),
-            style = FinanceTheme.type.numeric,
-            color = FinanceTheme.colors.textPrimary,
-        )
-    }
+    AdaptiveRow(
+        main = { Text(label, style = FinanceTheme.type.body, color = FinanceTheme.colors.textSecondary) },
+        trailing = {
+            Text(
+                stringResource(R.string.overview_income_line, formats.money.format(done.money), formats.money.formatNumber(expected.money.minor, expected.money.currency)),
+                style = FinanceTheme.type.numeric,
+                color = FinanceTheme.colors.textPrimary,
+                maxLines = 1,
+                autoSize = shrinkToFit(FinanceTheme.type.numeric),
+            )
+        },
+        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xs),
+    )
 }

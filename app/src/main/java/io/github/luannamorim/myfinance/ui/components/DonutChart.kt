@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -109,9 +110,11 @@ fun DonutChart(
                 start += sweep
             }
         }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(centerTitle, style = FinanceTheme.type.caption, color = c.textSecondary, textAlign = TextAlign.Center)
-            Text(centerValue, style = FinanceTheme.type.title.copy(fontFeatureSettings = "tnum"), color = c.textPrimary, textAlign = TextAlign.Center)
+        // Kept inside the hole (the selected slice grows inwards), shrinking rather than overflowing.
+        Column(Modifier.widthIn(max = size - thickness * 4), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(centerTitle, style = FinanceTheme.type.caption, color = c.textSecondary, textAlign = TextAlign.Center, maxLines = 1, autoSize = shrinkToFit(FinanceTheme.type.caption))
+            val valueStyle = FinanceTheme.type.title.copy(fontFeatureSettings = "tnum")
+            Text(centerValue, style = valueStyle, color = c.textPrimary, textAlign = TextAlign.Center, maxLines = 1, autoSize = shrinkToFit(valueStyle))
         }
     }
 }

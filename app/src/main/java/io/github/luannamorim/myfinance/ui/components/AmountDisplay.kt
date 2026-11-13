@@ -1,5 +1,6 @@
 package io.github.luannamorim.myfinance.ui.components
 
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -8,6 +9,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 import io.github.luannamorim.myfinance.R
 import io.github.luannamorim.myfinance.core.format.MINUS
 import io.github.luannamorim.myfinance.domain.model.Money
@@ -29,7 +31,11 @@ enum class AmountTone {
     AUTO,
 }
 
-/** A formatted amount with tabular figures. The spoken description says "minus" instead of the symbol. */
+/**
+ * A formatted amount with tabular figures. The spoken description says "minus" instead of the symbol.
+ * It stays on one line and shrinks (down to half its size) rather than being cut: a clipped amount reads
+ * as a different number.
+ */
 @Composable
 fun AmountDisplay(
     money: Money,
@@ -56,5 +62,10 @@ fun AmountDisplay(
         color = color,
         textAlign = textAlign,
         maxLines = 1,
+        autoSize = shrinkToFit(style),
     )
 }
+
+/** Shrinks single-line text to fit its width, from the style's size down to half of it. */
+fun shrinkToFit(style: TextStyle): TextAutoSize? =
+    if (style.fontSize.isSp) TextAutoSize.StepBased(minFontSize = (style.fontSize.value / 2).sp, maxFontSize = style.fontSize, stepSize = 0.5.sp) else null

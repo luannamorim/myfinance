@@ -1,6 +1,7 @@
 package io.github.luannamorim.myfinance.ui.common
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +18,7 @@ import io.github.luannamorim.myfinance.domain.model.EntryKind
 import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.domain.model.Occurrence
 import io.github.luannamorim.myfinance.domain.model.OccurrenceState
+import io.github.luannamorim.myfinance.ui.components.AdaptiveRow
 import io.github.luannamorim.myfinance.ui.components.AmountDisplay
 import io.github.luannamorim.myfinance.ui.components.FinanceCard
 import io.github.luannamorim.myfinance.ui.feature.settings.CategoryBadge
@@ -61,18 +63,24 @@ fun OccurrenceRowItem(row: OccurrenceRow, onClick: () -> Unit, modifier: Modifie
         Row(verticalAlignment = Alignment.CenterVertically) {
             CategoryBadge(CategoryIcons.of(row.category?.icon ?: "category"), dimmed = row.status == DisplayStatus.CANCELLED)
             Spacer(Modifier.width(Spacing.m))
-            Column(Modifier.weight(1f)) {
-                Text(row.name, style = FinanceTheme.type.bodyStrong, color = if (row.status == DisplayStatus.CANCELLED) c.textTertiary else c.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(formats.dates.dayMonth(row.date) + " · ", style = FinanceTheme.type.caption, color = c.textSecondary)
-                    Text(row.status.label(), style = FinanceTheme.type.caption, color = row.status.color())
-                }
-            }
-            Spacer(Modifier.width(Spacing.s))
-            Column(horizontalAlignment = Alignment.End) {
-                AmountDisplay(if (row.kind == EntryKind.EXPENSE) -row.amount else row.amount, signed = row.kind == EntryKind.INCOME)
-                trailing?.invoke()
-            }
+            AdaptiveRow(
+                main = {
+                    Column {
+                        Text(row.name, style = FinanceTheme.type.bodyStrong, color = if (row.status == DisplayStatus.CANCELLED) c.textTertiary else c.textPrimary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        FlowRow(itemVerticalAlignment = Alignment.CenterVertically) {
+                            Text(formats.dates.dayMonth(row.date) + " · ", style = FinanceTheme.type.caption, color = c.textSecondary)
+                            Text(row.status.label(), style = FinanceTheme.type.caption, color = row.status.color())
+                        }
+                    }
+                },
+                trailing = {
+                    Column(horizontalAlignment = Alignment.End) {
+                        AmountDisplay(if (row.kind == EntryKind.EXPENSE) -row.amount else row.amount, signed = row.kind == EntryKind.INCOME)
+                        trailing?.invoke()
+                    }
+                },
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }

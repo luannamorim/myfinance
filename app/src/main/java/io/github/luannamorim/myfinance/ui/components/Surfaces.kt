@@ -82,7 +82,7 @@ fun StatTile(
         Text(label, style = FinanceTheme.type.caption, color = c.textSecondary)
         Spacer(Modifier.height(Spacing.s))
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(value, style = valueStyle, color = c.textPrimary)
+            Text(value, style = valueStyle, color = c.textPrimary, maxLines = 1, autoSize = shrinkToFit(valueStyle), modifier = Modifier.weight(1f, fill = false))
             if (unit != null) {
                 Text(
                     " $unit",

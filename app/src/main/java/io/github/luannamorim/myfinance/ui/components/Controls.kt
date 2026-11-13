@@ -148,6 +148,6 @@ fun FinanceChip(text: String, selected: Boolean, onClick: () -> Unit, modifier: 
         contentColor = if (selected) c.background else c.textSecondary,
         border = BorderStroke(1.dp, if (selected) c.textPrimary else c.outline),
     ) {
-        Text(text, style = FinanceTheme.type.label, modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp))
+        Text(text, style = FinanceTheme.type.label, maxLines = 1, modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp))
     }
 }
