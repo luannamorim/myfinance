@@ -595,4 +595,7 @@
     <string name="portfolio_cash_hint">From Cash Flow, for reference</string>
     <string name="portfolio_total_with_cash">Total with cash</string>
     <string name="charts_summary_bars_months">Income and expenses over the last %1$d months.</string>
+    <string name="cashflow_result">Month result</string>
+    <string name="cashflow_result_hint">Expected income − expected expenses. Transfers don\'t count.</string>
+    <string name="cashflow_result_so_far">So far: %1$s (received − paid)</string>
 </resources>

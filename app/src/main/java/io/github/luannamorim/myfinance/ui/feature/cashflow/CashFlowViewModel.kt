@@ -36,6 +36,10 @@ data class CashFlowUiState(
     val today: LocalDate = LocalDate.now(),
     val display: Currency = Currency.BRL,
     val summary: MonthSummary? = null,
+    /** The month's result: expected income − expected expenses (transfers don't count); green or red. */
+    val result: Total? = null,
+    /** The result so far: income received − expenses paid. */
+    val resultSoFar: Total? = null,
     /** Cash today (current month) or at the end of a past month. */
     val balance: Total? = null,
     val balanceIsToday: Boolean = true,
@@ -80,12 +84,15 @@ fun cashFlowState(
     fun rows(list: List<io.github.luannamorim.myfinance.domain.model.Occurrence>) = list.sortedBy { it.dueDate }.map { OccurrenceRow.of(it, byId, today) }
     val usesConversion = ledger.occurrences.any { it.expected.currency != display || it.actual?.currency?.let { c -> c != display } == true } ||
         ledger.adjustments.any { it.amount.currency != display }
+    val summary = CashCalculator.monthSummary(ledger, month, today, display, converter)
     return CashFlowUiState(
         loading = false,
         month = month,
         today = today,
         display = display,
-        summary = CashCalculator.monthSummary(ledger, month, today, display, converter),
+        summary = summary,
+        result = summary.expectedIncome - summary.expectedExpenses,
+        resultSoFar = summary.receivedIncome - summary.paidExpenses,
         balance = balance,
         balanceIsToday = !past,
         projectedEnd = projectedEnd,

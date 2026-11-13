@@ -87,4 +87,19 @@ class StateBuildersTest {
         assertEquals(listOf("This month"), s.pendingBills.map { it.name })
         assertEquals(brl("1000.00"), s.summary!!.transfersOut.money)
     }
+
+    @Test
+    fun cashFlowResult_isIncomeMinusExpenses_withoutTransfers() {
+        val withIncome = ledger.copy(
+            occurrences = ledger.occurrences + listOf(
+                confirmed(EntryKind.INCOME, brl("9000.00"), "2026-11-05", category = 10),
+                confirmed(EntryKind.EXPENSE, brl("50.00"), "2026-11-02", category = 20),
+            ),
+        )
+        val s = cashFlowState(withIncome, categories, ExchangeRates.EMPTY, Currency.BRL, YearMonth.of(2026, 11), today)
+        // 9.000 − (2.500 pending + 50 paid) = 6.450; the R$ 1.000 transfer and October's overdue bill don't count.
+        assertEquals(brl("6450.00"), s.result!!.money)
+        // Received − paid: 9.000 − 50 = 8.950
+        assertEquals(brl("8950.00"), s.resultSoFar!!.money)
+    }
 }

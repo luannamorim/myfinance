@@ -598,4 +598,7 @@
     <string name="portfolio_cash_hint">Do Fluxo de Caixa, só referência</string>
     <string name="portfolio_total_with_cash">Total com caixa</string>
     <string name="charts_summary_bars_months">Receitas e despesas nos últimos %1$d meses.</string>
+    <string name="cashflow_result">Resultado do mês</string>
+    <string name="cashflow_result_hint">Receitas previstas − despesas previstas. Transferências não entram.</string>
+    <string name="cashflow_result_so_far">Até agora: %1$s (recebido − pago)</string>
 </resources>

@@ -89,6 +89,9 @@ fun CashFlowContent(state: CashFlowUiState, actions: CashFlowActions, modifier: 
         state.summary?.let { s ->
             ProgressCard(stringResource(R.string.cashflow_income), s.receivedIncome, s.expectedIncome, stringResource(R.string.cashflow_received_of, formats.money.format(s.expectedIncome.money)), c.positive)
             ProgressCard(stringResource(R.string.cashflow_expenses), s.paidExpenses, s.expectedExpenses, stringResource(R.string.cashflow_paid_of, formats.money.format(s.expectedExpenses.money)), c.negative)
+            val result = state.result
+            val soFar = state.resultSoFar
+            if (result != null && soFar != null) ResultCard(result, soFar)
             if (!s.transfersOut.money.isZero || !s.transfersIn.money.isZero) {
                 // Neither income nor expense: money moved between cash and the portfolio.
                 FinanceCard(Modifier.fillMaxWidth()) {
@@ -128,6 +131,27 @@ fun CashFlowContent(state: CashFlowUiState, actions: CashFlowActions, modifier: 
         NavRow(Icons.Rounded.Repeat, stringResource(R.string.recurring_title), stringResource(R.string.recurring_hint), actions.onRecurring, Modifier.padding(top = Spacing.s))
         NavRow(Icons.AutoMirrored.Rounded.ShowChart, stringResource(R.string.cashflow_charts), stringResource(R.string.cashflow_charts_hint), actions.onCharts)
         if (state.usesConversion) RateFooter(state.rate)
+    }
+}
+
+/** Income − expenses of the month (not the cash balance): green when it's left over, red when it's short. */
+@Composable
+private fun ResultCard(result: Total, soFar: Total) {
+    val c = FinanceTheme.colors
+    val formats = LocalFormats.current
+    FinanceCard(Modifier.fillMaxWidth()) {
+        AdaptiveRow(
+            main = { Text(stringResource(R.string.cashflow_result), style = FinanceTheme.type.bodyStrong, color = c.textPrimary) },
+            trailing = { AmountDisplay(result.money, signed = true, tone = AmountTone.AUTO, approximate = result.incomplete) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(stringResource(R.string.cashflow_result_hint), style = FinanceTheme.type.caption, color = c.textSecondary)
+        Text(
+            stringResource(R.string.cashflow_result_so_far, (if (soFar.incomplete) "≈ " else "") + formats.money.format(soFar.money, signed = true)),
+            style = FinanceTheme.type.caption,
+            color = c.textSecondary,
+            modifier = Modifier.padding(top = Spacing.xs),
+        )
     }
 }
 
