@@ -304,4 +304,16 @@
     <string name="charts_empty">Ainda não há dados suficientes.</string>
     <string name="charts_summary_bars">Receitas e despesas nos últimos seis meses.</string>
     <string name="charts_summary_balance">Saldo de caixa no fim de cada mês.</string>
+
+    <!-- History -->
+    <string name="history_search">Buscar transações</string>
+    <string name="history_filters">Filtros</string>
+    <string name="history_more_filters">Categorias e datas</string>
+    <string name="history_clear">Limpar filtros</string>
+    <string name="history_from">De</string>
+    <string name="history_to">Até</string>
+    <string name="history_any_date">Qualquer data</string>
+    <string name="history_apply">Aplicar</string>
+    <string name="history_no_results">Nenhuma transação corresponde a estes filtros.</string>
+    <string name="history_all_currencies">Todas</string>
 </resources>

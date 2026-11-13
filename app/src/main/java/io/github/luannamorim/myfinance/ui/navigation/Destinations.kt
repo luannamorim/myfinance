@@ -32,7 +32,7 @@ internal fun NavGraphBuilder.tabDestinations(navController: NavHostController) {
         )
     }
     composable<PortfolioRoute> { PortfolioScreen() }
-    composable<HistoryRoute> { HistoryScreen() }
+    composable<HistoryRoute> { HistoryScreen(onOpen = { navController.navigate(OccurrenceDetailRoute(it)) }) }
     composable<SettingsRoute> {
         SettingsScreen(
             SettingsActions(

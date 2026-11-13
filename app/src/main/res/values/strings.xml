@@ -301,4 +301,16 @@
     <string name="charts_empty">Not enough data yet.</string>
     <string name="charts_summary_bars">Income and expenses over the last six months.</string>
     <string name="charts_summary_balance">Cash balance at the end of each month.</string>
+
+    <!-- History -->
+    <string name="history_search">Search transactions</string>
+    <string name="history_filters">Filters</string>
+    <string name="history_more_filters">Categories and dates</string>
+    <string name="history_clear">Clear filters</string>
+    <string name="history_from">From</string>
+    <string name="history_to">To</string>
+    <string name="history_any_date">Any date</string>
+    <string name="history_apply">Apply</string>
+    <string name="history_no_results">No transactions match these filters.</string>
+    <string name="history_all_currencies">All</string>
 </resources>
