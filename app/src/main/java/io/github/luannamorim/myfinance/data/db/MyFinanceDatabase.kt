@@ -2,6 +2,7 @@ package io.github.luannamorim.myfinance.data.db
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import io.github.luannamorim.myfinance.data.db.dao.BackupDao
 import io.github.luannamorim.myfinance.data.db.dao.CashDao
 import io.github.luannamorim.myfinance.data.db.dao.CategoryDao
 import io.github.luannamorim.myfinance.data.db.dao.PortfolioDao
@@ -36,6 +37,7 @@ abstract class MyFinanceDatabase : RoomDatabase() {
     abstract fun cashDao(): CashDao
     abstract fun portfolioDao(): PortfolioDao
     abstract fun rateDao(): RateDao
+    abstract fun backupDao(): BackupDao
 
     companion object {
         const val VERSION = 1
