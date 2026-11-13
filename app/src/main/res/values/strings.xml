@@ -201,4 +201,37 @@
     <string name="recurring_next">next %1$s</string>
     <string name="recurring_empty_title">No recurring transactions</string>
     <string name="recurring_empty_message">Add rent, salary or subscriptions once and MyFinance plans every month for you.</string>
+
+    <!-- Confirmation -->
+    <string name="confirm_payment">Confirm payment</string>
+    <string name="confirm_receipt">Confirm receipt</string>
+    <string name="confirm_actual_amount">Amount paid</string>
+    <string name="confirm_actual_received">Amount received</string>
+    <string name="confirm_paid_on">Paid on</string>
+    <string name="confirm_received_on">Received on</string>
+    <string name="confirm_note">Note (optional)</string>
+    <string name="confirm_expected">Expected %1$s · due %2$s</string>
+
+    <!-- Occurrence detail -->
+    <string name="detail_title">Transaction</string>
+    <string name="detail_expected">Expected</string>
+    <string name="detail_actual_paid">Paid</string>
+    <string name="detail_actual_received">Received</string>
+    <string name="detail_difference">Difference from expected</string>
+    <string name="detail_due">Due</string>
+    <string name="detail_note">Note</string>
+    <string name="detail_description">Description</string>
+    <string name="detail_recurring">Part of a recurring transaction</string>
+    <string name="detail_edit_recurring">Edit recurring</string>
+    <string name="detail_edit_this">Edit this one</string>
+    <string name="detail_edit">Edit</string>
+    <string name="detail_cancel">Cancel this occurrence</string>
+    <string name="detail_restore">Restore</string>
+    <string name="detail_mark_unpaid">Mark as unpaid</string>
+    <string name="detail_mark_unreceived">Mark as not received</string>
+    <string name="detail_unconfirm_title">Undo confirmation?</string>
+    <string name="detail_unconfirm_message">The actual amount, date and note are cleared. The expected amount stays.</string>
+    <string name="detail_cancel_title">Cancel this occurrence?</string>
+    <string name="detail_cancel_message">It stops counting in balances and forecasts. You can restore it later.</string>
+    <string name="detail_keep">Keep</string>
 </resources>

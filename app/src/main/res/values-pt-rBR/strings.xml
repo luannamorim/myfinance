@@ -203,4 +203,37 @@
     <string name="recurring_next">próxima %1$s</string>
     <string name="recurring_empty_title">Nenhuma transação recorrente</string>
     <string name="recurring_empty_message">Cadastre aluguel, salário ou assinaturas uma vez e o MyFinance planeja todos os meses para você.</string>
+
+    <!-- Confirmation -->
+    <string name="confirm_payment">Confirmar pagamento</string>
+    <string name="confirm_receipt">Confirmar recebimento</string>
+    <string name="confirm_actual_amount">Valor pago</string>
+    <string name="confirm_actual_received">Valor recebido</string>
+    <string name="confirm_paid_on">Pago em</string>
+    <string name="confirm_received_on">Recebido em</string>
+    <string name="confirm_note">Observação (opcional)</string>
+    <string name="confirm_expected">Previsto %1$s · vence %2$s</string>
+
+    <!-- Occurrence detail -->
+    <string name="detail_title">Transação</string>
+    <string name="detail_expected">Previsto</string>
+    <string name="detail_actual_paid">Pago</string>
+    <string name="detail_actual_received">Recebido</string>
+    <string name="detail_difference">Diferença do previsto</string>
+    <string name="detail_due">Vencimento</string>
+    <string name="detail_note">Observação</string>
+    <string name="detail_description">Descrição</string>
+    <string name="detail_recurring">Parte de uma transação recorrente</string>
+    <string name="detail_edit_recurring">Editar recorrente</string>
+    <string name="detail_edit_this">Editar só esta</string>
+    <string name="detail_edit">Editar</string>
+    <string name="detail_cancel">Cancelar esta ocorrência</string>
+    <string name="detail_restore">Restaurar</string>
+    <string name="detail_mark_unpaid">Marcar como não paga</string>
+    <string name="detail_mark_unreceived">Marcar como não recebida</string>
+    <string name="detail_unconfirm_title">Desfazer confirmação?</string>
+    <string name="detail_unconfirm_message">O valor real, a data e a observação são apagados. O valor previsto continua.</string>
+    <string name="detail_cancel_title">Cancelar esta ocorrência?</string>
+    <string name="detail_cancel_message">Ela deixa de contar nos saldos e previsões. Você pode restaurá-la depois.</string>
+    <string name="detail_keep">Manter</string>
 </resources>

@@ -5,6 +5,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import io.github.luannamorim.myfinance.ui.feature.cashflow.CashFlowScreen
 import io.github.luannamorim.myfinance.ui.feature.cashflow.RecurringListScreen
+import io.github.luannamorim.myfinance.ui.feature.transaction.OccurrenceDetailScreen
 import io.github.luannamorim.myfinance.ui.feature.transaction.TransactionEditorScreen
 import io.github.luannamorim.myfinance.ui.feature.history.HistoryScreen
 import io.github.luannamorim.myfinance.ui.feature.overview.OverviewScreen
@@ -32,6 +33,13 @@ internal fun NavGraphBuilder.settingsDestinations(navController: NavHostControll
 /** Transactions: editor, recurring list. */
 internal fun NavGraphBuilder.cashDestinations(navController: NavHostController) {
     composable<TransactionEditorRoute> { TransactionEditorScreen(onClose = { navController.popBackStack() }) }
+    composable<OccurrenceDetailRoute> {
+        OccurrenceDetailScreen(
+            onBack = { navController.popBackStack() },
+            onEdit = { navController.navigate(TransactionEditorRoute(occurrenceId = it)) },
+            onEditRecurring = { navController.navigate(TransactionEditorRoute(templateId = it)) },
+        )
+    }
     composable<RecurringListRoute> {
         RecurringListScreen(
             onBack = { navController.popBackStack() },
