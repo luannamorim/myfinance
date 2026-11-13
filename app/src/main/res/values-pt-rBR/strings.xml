@@ -415,7 +415,6 @@
     <string name="portfolio_charts">Gráficos</string>
     <string name="portfolio_charts_hint">Patrimônio, valor x investido, desempenho</string>
     <string name="portfolio_show_all">Mostrar todas as categorias</string>
-    <string name="portfolio_asset_gain">%1$s · %2$s</string>
 
     <!-- Portfolio charts -->
     <string name="pcharts_title">Gráficos da carteira</string>

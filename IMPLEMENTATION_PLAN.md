@@ -297,8 +297,8 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 - `RateRefreshWorker` (`@HiltWorker`, daily, `NetworkType.CONNECTED`), started from `MyFinanceApp` (plus a refresh on start if last fetch > 6 h and auto-fetch on).
 - `@Composable fun RateFooter(rate: ExchangeRate?, onUpdate: (() -> Unit)?, updating: Boolean)` → "US$ 1 = R$ 5,6143 · PTAX 12/11 · Update".
 
-- [ ] Tests: parser with the real sample `[{"data":"12/11/2026","valor":"5.6143"}]`, empty array, malformed entry dropped, `"valor":"0"` dropped, HTML body → exception; client maps the real 404 body `{"erro":{"statusCode":404,"detail":"...SGSNegocioException: Value(s) not found"}}` to `[]`; repository with a fake client: first refresh with no records requests today−30..today; with a record dated 2025-03-02 requests 2025-02-23..today; second refresh only from last date+1 and a weekend 404 → UpToDate with `lastFetchMs` updated; adding a record older than the first stored rate triggers a backfill window; MANUAL and BCB coexist and `deleteManual` leaves the BCB rate; `autoFetchRates=false` → Disabled for automatic runs but `refresh(force = true)` fetches; refresh within 6 h → Throttled unless forced; client failure → Failed and existing rates intact; worker maps Failed(NETWORK) to `Result.retry()` and FORMAT to failure.
-- [ ] Currency settings screen: default currency, display currency, auto-fetch switch, Update, last fetch time, rate list (latest 30) with manual add/edit/delete. Commit `feat(fx): fetch ptax rates from banco central with manual fallback`.
+- [x] Tests: parser with the real sample `[{"data":"12/11/2026","valor":"5.6143"}]`, empty array, malformed entry dropped, `"valor":"0"` dropped, HTML body → exception; client maps the real 404 body `{"erro":{"statusCode":404,"detail":"...SGSNegocioException: Value(s) not found"}}` to `[]`; repository with a fake client: first refresh with no records requests today−30..today; with a record dated 2025-03-02 requests 2025-02-23..today; second refresh only from last date+1 and a weekend 404 → UpToDate with `lastFetchMs` updated; adding a record older than the first stored rate triggers a backfill window; MANUAL and BCB coexist and `deleteManual` leaves the BCB rate; `autoFetchRates=false` → Disabled for automatic runs but `refresh(force = true)` fetches; refresh within 6 h → Throttled unless forced; client failure → Failed and existing rates intact; worker maps Failed(NETWORK) to `Result.retry()` and FORMAT to failure.
+- [x] Currency settings screen: default currency, display currency, auto-fetch switch, Update, last fetch time, rate list (latest 30) with manual add/edit/delete. Commit `feat(fx): fetch ptax rates from banco central with manual fallback`.
 
 ### Task 4.2: Portfolio calculations (pure)
 
@@ -311,8 +311,8 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 - `object Allocation { fun of(data, at, to, converter, group: AssetGroup?): List<Slice(categoryId, value: Money, share: BigDecimal)> }` (open assets; shares at scale 4 summing to exactly 1, remainder on the largest slice; sorted by value).
 - `enum class Period(val months: Long?) { M1(1), M3(3), M6(6), Y1(12), ALL(null) }`; `object Series { fun sampleDates(period, firstRecord: LocalDate, today): List<LocalDate>; fun portfolio(data, period, today, to, converter): List<SeriesPoint(date, value: Money, invested: Money, gain: Money)> }` (1M weekly + today; others month ends + today; nothing before first record).
 
-- [ ] Tests (hand-computed, BRL): car with INITIAL 0 and valuation R$ 40.000 → gain 40.000, simpleReturn null; withdrawal larger than the carried value → value 0, not negative. Tesouro: INITIAL 5.000,00 on 2026-01-10, valuation 5.120,00 on 2026-03-31 → gain 120,00, return 2,40%; CONTRIBUTION 1.000,00 on 2026-04-15, no new valuation → value 6.120,00 (carriedForward), gain 120,00; PARTIAL_DISPOSAL 2.000,00 on 2026-05-01 → value 4.120,00, netInvested 4.000,00, gain 120,00, return 120/6.000 = 2,00%; valuation 4.300,00 on 2026-06-30 → gain 300,00; FULL_DISPOSAL 4.350,00 on 2026-07-10 → value 0, closed, gain 350,00. Same-day valuation includes same-day flows. Snapshot before 2026-01-10 → null. `valuationRows` keep earlier rows unchanged after later records. USD asset: INITIAL US$ 1.000,00 on 2026-02-02 (rate 5,0000), valuation US$ 1.100,00 on 2026-11-12 (rate 5,6143) → gain US$ 100,00; in BRL contributed 5.000,00, value 6.175,73, gain 1.175,73. Period gain 3M = (V_end − V_start) − net flows. Allocation of 6.000 / 3.000 / 1.000 → 0,6 / 0,3 / 0,1. Series 1Y with first record 2026-01-10 starts at 2026-01-31, ends at today.
-- [ ] Implement. Commit `feat(portfolio): add valuation, gain, allocation and series calculations`.
+- [x] Tests (hand-computed, BRL): car with INITIAL 0 and valuation R$ 40.000 → gain 40.000, simpleReturn null; withdrawal larger than the carried value → value 0, not negative. Tesouro: INITIAL 5.000,00 on 2026-01-10, valuation 5.120,00 on 2026-03-31 → gain 120,00, return 2,40%; CONTRIBUTION 1.000,00 on 2026-04-15, no new valuation → value 6.120,00 (carriedForward), gain 120,00; PARTIAL_DISPOSAL 2.000,00 on 2026-05-01 → value 4.120,00, netInvested 4.000,00, gain 120,00, return 120/6.000 = 2,00%; valuation 4.300,00 on 2026-06-30 → gain 300,00; FULL_DISPOSAL 4.350,00 on 2026-07-10 → value 0, closed, gain 350,00. Same-day valuation includes same-day flows. Snapshot before 2026-01-10 → null. `valuationRows` keep earlier rows unchanged after later records. USD asset: INITIAL US$ 1.000,00 on 2026-02-02 (rate 5,0000), valuation US$ 1.100,00 on 2026-11-12 (rate 5,6143) → gain US$ 100,00; in BRL contributed 5.000,00, value 6.175,73, gain 1.175,73. Period gain 3M = (V_end − V_start) − net flows. Allocation of 6.000 / 3.000 / 1.000 → 0,6 / 0,3 / 0,1. Series 1Y with first record 2026-01-10 starts at 2026-01-31, ends at today.
+- [x] Implement. Commit `feat(portfolio): add valuation, gain, allocation and series calculations`.
 
 ### Task 4.3: Assets: repository, editor and detail
 
@@ -320,15 +320,15 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 
 **Produces:** `PortfolioRepository`: `data: Flow<PortfolioData>`, `createAsset(draft: AssetDraft, initial: Money /* may be 0 */, initialValue: Money?): Long` (writes the INITIAL flow on the acquisition date and, if `initialValue` is given and differs from `initial`, a valuation dated today), `updateAsset(id, draft)` (currency cannot change), `addFlow(assetId, kind, date, amount, quantityDelta, note, newValue: Money?)` (refused after a FULL_DISPOSAL; at most one FULL_DISPOSAL), `addValuation(assetId, date, value, note): ValuationResult (ADDED | REPLACED)`, `deleteFlow(id)`, `deleteValuation(id)`, `deleteAsset(id)`; `data class AssetDraft(name, categoryId, currency, description, institution, acquisitionDate, quantity: BigDecimal?, notes, imageUri: String?)`. `ImageStore` ported (dir `images/assets`).
 
-- [ ] Tests: creating an asset writes exactly one INITIAL flow (amount 0 allowed); a FULL_DISPOSAL makes the asset closed and blocks later flows until deleted; changing currency in `updateAsset` throws; same-day valuation → REPLACED; deleting an asset removes flows/valuations/image; flow test "Create an asset" and "Update asset valuation"; quantity optional and accepts `0.00012345`.
-- [ ] Detail: header numbers (asset currency + display currency when different, method note), invested-vs-value line chart, valuation history rows (`valuationRows`), flows list, actions Update value / Contribute / Withdraw / Close position. Commit `feat(portfolio): add asset editor and detail`.
+- [x] Tests: creating an asset writes exactly one INITIAL flow (amount 0 allowed); a FULL_DISPOSAL makes the asset closed and blocks later flows until deleted; changing currency in `updateAsset` throws; same-day valuation → REPLACED; deleting an asset removes flows/valuations/image; flow test "Create an asset" and "Update asset valuation"; quantity optional and accepts `0.00012345`.
+- [x] Detail: header numbers (asset currency + display currency when different, method note), invested-vs-value line chart, valuation history rows (`valuationRows`), flows list, actions Update value / Contribute / Withdraw / Close position. Commit `feat(portfolio): add asset editor and detail`.
 
 ### Task 4.4: Flows and valuations editors
 
 **Files:** `…/ui/feature/asset/{FlowEditorScreen,ValuationEditorScreen,FlowEditorViewModel,ValuationEditorViewModel}.kt`, Test: `…/ui/feature/asset/{FlowEditorViewModelTest,ValuationEditorViewModelTest}.kt`
 
-- [ ] Flow editor: kind (Contribution / Withdrawal / Partial disposal / Close position), date, amount, optional quantity change, note, optional "Update estimated value" amount. Valuation editor: date (≤ today), value, note, warning when a valuation exists that day.
-- [ ] Tests: a withdrawal larger than the current value suggests "Close position" and, if kept, saves with a confirmation (the value then reads 0); value ≥ 0; future dates rejected; editors refuse dates after a FULL_DISPOSAL. Commit `feat(portfolio): record contributions, withdrawals and valuations`.
+- [x] Flow editor: kind (Contribution / Withdrawal / Partial disposal / Close position), date, amount, optional quantity change, note, optional "Update estimated value" amount. Valuation editor: date (≤ today), value, note, warning when a valuation exists that day.
+- [x] Tests: a withdrawal larger than the current value suggests "Close position" and, if kept, saves with a confirmation (the value then reads 0); value ≥ 0; future dates rejected; editors refuse dates after a FULL_DISPOSAL. Commit `feat(portfolio): record contributions, withdrawals and valuations`.
 
 ### Task 4.5: Portfolio dashboard with donut
 
@@ -336,15 +336,15 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 
 **Produces:** `@Composable fun DonutChart(slices: List<DonutSlice(key: Long, share: Float, color: Color, label: String)>, selected: Long?, onSelect: (Long?) -> Unit, centerTitle: String, centerValue: String, modifier)` — Canvas arcs with 1.5° gaps starting at 12 o'clock clockwise, selected slice in accent and thicker, semantics list of "label share"; `internal fun hitSlice(slices: List<DonutSlice>, angleDegrees: Float): Long?` (0° = 12 o'clock, clockwise).
 
-- [ ] Tests: `hitSlice(angle)` maps to the right key; VM: group chips filter totals and allocation; selecting a category filters the list; empty state.
-- [ ] Screen: donut (total centre), legend with %, chips All/Investments/Personal assets, totals (value, invested, gain, return, last valuation), assets grouped by category, "+ Asset", rate footer. Commit `feat(portfolio): add portfolio dashboard with allocation donut`.
+- [x] Tests: `hitSlice(angle)` maps to the right key; VM: group chips filter totals and allocation; selecting a category filters the list; empty state.
+- [x] Screen: donut (total centre), legend with %, chips All/Investments/Personal assets, totals (value, invested, gain, return, last valuation), assets grouped by category, "+ Asset", rate footer. Commit `feat(portfolio): add portfolio dashboard with allocation donut`.
 
 ### Task 4.6: Portfolio charts by period
 
 **Files:** `…/ui/feature/portfolio/{PortfolioChartsScreen,PortfolioChartsViewModel}.kt`, Test: `…/ui/feature/portfolio/PortfolioChartsViewModelTest.kt`
 
-- [ ] Period chips 1M/3M/6M/1Y/All; charts: net worth evolution (needs 5.1's calculator → this task renders portfolio value; net worth line added in 5.1), invested vs value, cumulative gain, allocation; period gain figure (absolute). Tests: series built from `Series.portfolio` only; no points before first record.
-- [ ] Stage 4 verification + push. Commit `feat(portfolio): add portfolio charts by period`.
+- [x] Period chips 1M/3M/6M/1Y/All; charts: net worth evolution (needs 5.1's calculator → this task renders portfolio value; net worth line added in 5.1), invested vs value, cumulative gain, allocation; period gain figure (absolute). Tests: series built from `Series.portfolio` only; no points before first record.
+- [x] Stage 4 verification + push. Commit `feat(portfolio): add portfolio charts by period`.
 
 ---
 
