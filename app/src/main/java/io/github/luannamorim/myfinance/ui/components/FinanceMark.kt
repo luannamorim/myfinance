@@ -9,10 +9,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -26,17 +25,20 @@ import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import io.github.luannamorim.myfinance.ui.theme.Geist
 
 /**
- * Geometry of the MyFinance mark on a 24x24 grid: an "F" whose arms rise in parallel like a progress
- * line. One continuous stroke (stem → top arm) plus the middle arm; the top arm ends at a detached
- * accent dot (the latest data point), 1 unit away, as in MyFit. Ink is centred on (12, 12).
+ * Geometry of the MyFinance mark on a 24x24 grid: the portfolio's allocation ring, almost closed and
+ * completed by the accent dot (the latest data point). One stroke, as in MyFit: an arc of radius 7.4
+ * around (12, 12) that leaves a gap at the top right; the dot sits in the gap, on the circle, with a
+ * 1-unit gap to each end of the stroke. Ink is centred on (12, 12).
  * Shared with the launcher, monochrome, splash and notification vectors (see docs/BRAND.md).
  */
 internal object MarkGeometry {
-    val strokes = listOf(
-        listOf(Offset(5.4f, 20.2f), Offset(5.4f, 10.2f), Offset(13.4f, 6.7f)),
-        listOf(Offset(5.4f, 15.2f), Offset(10.9f, 12.8f)),
-    )
-    val dot = Offset(17.61f, 4.86f)
+    val center = Offset(12f, 12f)
+    const val RADIUS = 7.4f
+
+    /** Degrees, clockwise from 3 o'clock (the Compose and SVG convention). */
+    const val START_ANGLE = -8.784f
+    const val SWEEP_ANGLE = 287.568f
+    val dot = Offset(17.233f, 6.767f)
     const val DOT_RADIUS = 2.3f
     const val STROKE = 2.6f
 }
@@ -50,13 +52,16 @@ fun FinanceMark(
 ) {
     Canvas(modifier.size(size).semantics { contentDescription = "MyFinance" }) {
         val s = this.size.minDimension / 24f
-        val stroke = Stroke(width = MarkGeometry.STROKE * s, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        MarkGeometry.strokes.forEach { points ->
-            val path = Path().apply {
-                points.forEachIndexed { i, p -> if (i == 0) moveTo(p.x * s, p.y * s) else lineTo(p.x * s, p.y * s) }
-            }
-            drawPath(path = path, color = lineColor, style = stroke)
-        }
+        val r = MarkGeometry.RADIUS * s
+        drawArc(
+            color = lineColor,
+            startAngle = MarkGeometry.START_ANGLE,
+            sweepAngle = MarkGeometry.SWEEP_ANGLE,
+            useCenter = false,
+            topLeft = Offset(MarkGeometry.center.x * s - r, MarkGeometry.center.y * s - r),
+            size = Size(r * 2, r * 2),
+            style = Stroke(width = MarkGeometry.STROKE * s, cap = StrokeCap.Round),
+        )
         drawCircle(dotColor, radius = MarkGeometry.DOT_RADIUS * s, center = MarkGeometry.dot * s)
     }
 }

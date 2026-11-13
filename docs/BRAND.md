@@ -2,24 +2,23 @@
 
 ## Concept
 
-MyFinance is MyFit's sibling. MyFit's symbol is an "M" drawn as a single progress line ending in a green dot. MyFinance uses the same grammar for an **"F" whose top arm rises like a progress line** and ends in a **green data point**, the latest value on a chart. It reads as an initial and as growth, without dollar signs, coins, banks, wallets or stock-market clichés.
+MyFinance is MyFit's sibling. MyFit's symbol is an "M" drawn as a single progress line ending in a green dot. MyFinance uses the same grammar for the **portfolio's allocation ring**: a donut almost closed, completed by the **green data point**, the latest value. It reads as a whole being built up (net worth, allocation, progress) without dollar signs, coins, banks, wallets or stock-market clichés.
 
 The interface follows the same principle as MyFit: graphite neutrals, firm typography and **a single accent colour**, used only where it carries meaning.
 
 ## Symbol and wordmark
 
 - 24-unit grid, same metrics as MyFit: 2.6 stroke with round caps and joins; dot radius 2.3, centred on the extension of the last segment with a 1-unit gap between stroke and dot.
-- An "F" has three free ends, so it cannot be drawn as one line without retracing. The symbol is one continuous stroke (stem → top arm) plus the middle arm attached to the stem; **both arms rise in parallel** (slope ≈ 23.6°), so the letter reads as growth, and the top arm ends in the green dot.
+- One stroke, as in MyFit: an arc of radius 7.4 around (12, 12) that leaves a gap at the top right (centred at −45°). The green dot sits in the gap, on the circle, with a 1-unit gap to each end of the stroke (half-gap angle 2·asin(4.6 / 14.8) ≈ 36.2°).
 - Geometry (ink centred on (12, 12)):
-  - Stroke 1: `M5.4,20.2 L5.4,10.2 L13.4,6.7`
-  - Stroke 2: `M5.4,15.2 L10.9,12.8`
-  - Dot: centre `(17.61, 4.86)`, radius 2.3
+  - Arc: `M19.313,10.870 A7.4,7.4 0 1,1 13.130,4.687` (start −8.784°, sweep 287.568° clockwise from 3 o'clock)
+  - Dot: centre `(17.233, 6.767)`, radius 2.3
 - Single source of the geometry: `ui/components/FinanceMark.kt` (`MarkGeometry`). The launcher foreground, monochrome, splash and notification vectors use the same numbers.
 - Wordmark: `myfinance` in lowercase, Geist SemiBold, −0.04 em letter spacing, to the right of the symbol (symbol height = 1.25 × font size).
-- App icon: `#0B0B0C` background, `#F5F5F4` line, `#47F55E` dot; the 24-unit mark is scaled 2.25× and centred in the 108 dp adaptive icon (ink ≈ 36 × 43 dp, inside the 66 dp safe zone). Monochrome version for themed icons (Android 13+). Splash: the same foreground on `#0B0B0C` (`core-splashscreen`).
+- App icon: `#0B0B0C` background, `#F5F5F4` line, `#47F55E` dot; the 24-unit mark is scaled 2.25× and centred in the 108 dp adaptive icon (ink ≈ 39 × 39 dp, inside the 66 dp safe zone). Monochrome version for themed icons (Android 13+). Splash: the same foreground on `#0B0B0C` (`core-splashscreen`).
 - Minimum symbol size: 16 dp.
 
-Chosen in Stage 2 from four rendered variants (rising top arm only; both arms rising; straight F with a dot; steep top arm), compared at 16–96 dp, in circle and squircle masks, next to the MyFit mark. "Both arms rising" kept the clearest "F" at 16 dp and shares the MyFit mark's diagonal energy.
+Version 1.0.0 shipped an "F" whose arms rose in parallel. It was replaced after release: six marks in the same grammar (ring, rising bars, compound-growth curve, lowercase f, dollar S, stairs) were compared at 16–64 dp, as launcher icons (circle, squircle, themed) and as notification icons, next to the MyFit mark. The ring was chosen: a closed, simple shape that stays firm at 16 dp, ties the brand to the Portfolio donut, and keeps MyFit's line-and-dot vocabulary.
 
 ## Colours
 

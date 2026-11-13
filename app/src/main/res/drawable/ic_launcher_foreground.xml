@@ -5,8 +5,8 @@
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
     <group android:translateX="27" android:translateY="27" android:scaleX="2.25" android:scaleY="2.25">
-        <path android:pathData="M5.4,20.2 L5.4,10.2 L13.4,6.7 M5.4,15.2 L10.9,12.8" android:strokeColor="#FFF5F5F4" android:strokeWidth="2.6"
-            android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
-        <path android:pathData="M15.31,4.86 a2.3,2.3 0 1,0 4.6,0 a2.3,2.3 0 1,0 -4.6,0" android:fillColor="#FF47F55E" />
+        <path android:pathData="M19.313,10.870 A7.4,7.4 0 1,1 13.130,4.687" android:strokeColor="#FFF5F5F4" android:strokeWidth="2.6"
+            android:strokeLineCap="round" android:fillColor="#00000000" />
+        <path android:pathData="M14.933,6.767 a2.3,2.3 0 1,0 4.6,0 a2.3,2.3 0 1,0 -4.6,0" android:fillColor="#FF47F55E" />
     </group>
 </vector>
