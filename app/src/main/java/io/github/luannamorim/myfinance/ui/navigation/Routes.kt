@@ -2,7 +2,6 @@ package io.github.luannamorim.myfinance.ui.navigation
 
 import androidx.annotation.Keep
 import io.github.luannamorim.myfinance.domain.model.EntryKind
-import io.github.luannamorim.myfinance.domain.model.FlowKind
 import kotlinx.serialization.Serializable
 
 // Top-level tabs
@@ -27,8 +26,6 @@ enum class CategoryScope { INCOME, EXPENSE, ASSET }
 // Portfolio
 @Serializable data class AssetEditorRoute(val assetId: Long = 0)
 @Serializable data class AssetDetailRoute(val assetId: Long)
-@Serializable data class FlowEditorRoute(val assetId: Long, val kind: FlowKind)
-@Serializable data class ValuationEditorRoute(val assetId: Long)
 @Serializable data object PortfolioChartsRoute
 
 // Settings

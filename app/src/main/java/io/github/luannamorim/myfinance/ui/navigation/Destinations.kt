@@ -3,6 +3,8 @@ package io.github.luannamorim.myfinance.ui.navigation
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
+import io.github.luannamorim.myfinance.ui.feature.asset.AssetDetailScreen
+import io.github.luannamorim.myfinance.ui.feature.asset.AssetEditorScreen
 import io.github.luannamorim.myfinance.ui.feature.cashflow.CashFlowActions
 import io.github.luannamorim.myfinance.ui.feature.cashflow.CashFlowChartsScreen
 import io.github.luannamorim.myfinance.ui.feature.cashflow.CashFlowScreen
@@ -71,6 +73,17 @@ internal fun NavGraphBuilder.cashDestinations(navController: NavHostController) 
             onBack = { navController.popBackStack() },
             onOpen = { navController.navigate(TransactionEditorRoute(templateId = it)) },
             onAdd = { navController.navigate(TransactionEditorRoute()) },
+        )
+    }
+}
+
+/** Portfolio: asset editor and detail. */
+internal fun NavGraphBuilder.portfolioDestinations(navController: NavHostController) {
+    composable<AssetEditorRoute> { AssetEditorScreen(onClose = { navController.popBackStack() }) }
+    composable<AssetDetailRoute> {
+        AssetDetailScreen(
+            onBack = { navController.popBackStack() },
+            onEdit = { navController.navigate(AssetEditorRoute(assetId = it)) },
         )
     }
 }

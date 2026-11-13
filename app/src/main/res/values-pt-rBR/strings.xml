@@ -333,4 +333,71 @@
     <string name="currency_manual_hint">Uma cotação manual vale mais que a PTAX da mesma data.</string>
     <string name="rate_source_bcb">PTAX</string>
     <string name="rate_source_manual">Manual</string>
+
+    <!-- Asset editor -->
+    <string name="asset_new">Novo ativo</string>
+    <string name="asset_edit">Editar ativo</string>
+    <string name="asset_name">Nome</string>
+    <string name="asset_name_hint">ex.: Tesouro Selic, VOO, Carro</string>
+    <string name="asset_category">Categoria</string>
+    <string name="asset_currency">Moeda</string>
+    <string name="asset_currency_locked">A moeda não pode mudar depois que o ativo é criado.</string>
+    <string name="asset_institution">Instituição ou empresa (opcional)</string>
+    <string name="asset_acquired">Adquirido em</string>
+    <string name="asset_invested">Valor investido inicial</string>
+    <string name="asset_invested_hint">Use 0 para algo que você recebeu (herança, participação concedida).</string>
+    <string name="asset_current_value">Valor estimado atual (opcional)</string>
+    <string name="asset_quantity">Quantidade (opcional)</string>
+    <string name="asset_quantity_invalid">Informe um número como 10 ou 0,0125</string>
+    <string name="asset_description">Descrição (opcional)</string>
+    <string name="asset_notes">Observações (opcional)</string>
+    <string name="asset_photo">Foto</string>
+    <string name="asset_photo_add">Adicionar foto</string>
+    <string name="asset_photo_remove">Remover foto</string>
+
+    <!-- Asset detail -->
+    <string name="asset_value">Valor estimado</string>
+    <string name="asset_invested_net">Investido</string>
+    <string name="asset_gain">Ganho/perda</string>
+    <string name="asset_return">Retorno simples</string>
+    <string name="asset_contributed">Aportado</string>
+    <string name="asset_withdrawn">Resgatado</string>
+    <string name="asset_last_valuation">Última avaliação %1$s</string>
+    <string name="asset_no_valuation">Ainda sem avaliação: o valor é o investido líquido.</string>
+    <string name="asset_carried">Inclui aportes e resgates registrados depois da última avaliação.</string>
+    <string name="asset_method">Retorno simples = ganho ÷ total aportado. Ganho = valor − (aportado − resgatado), então resgates contam primeiro como devolução de capital. Não é um retorno ponderado pelo tempo.</string>
+    <string name="asset_in_display">Em %1$s (com o efeito do câmbio)</string>
+    <string name="asset_closed">Posição encerrada</string>
+    <string name="asset_closed_hint">Exclua o encerramento para registrar mais valores ou movimentações.</string>
+    <string name="asset_valuations">Histórico de avaliações</string>
+    <string name="asset_flows">Aportes e resgates</string>
+    <string name="asset_chart">Investido x valor</string>
+    <string name="asset_chart_summary">Valor investido e valor estimado ao longo do tempo.</string>
+    <string name="asset_update_value">Atualizar valor</string>
+    <string name="asset_contribute">Aportar</string>
+    <string name="asset_withdraw">Resgatar</string>
+    <string name="asset_delete_title">Excluir ativo?</string>
+    <string name="asset_delete_message">Aportes, resgates, avaliações e foto serão excluídos. Para manter o histórico, encerre a posição.</string>
+    <string name="asset_valuation_row">Investido %1$s</string>
+    <string name="flow_initial">Investimento inicial</string>
+    <string name="flow_contribution">Aporte</string>
+    <string name="flow_withdrawal">Resgate</string>
+    <string name="flow_partial">Venda parcial</string>
+    <string name="flow_full">Encerrar posição</string>
+    <string name="flow_full_done">Posição encerrada</string>
+
+    <!-- Flow and valuation sheets -->
+    <string name="valuation_title">Atualizar valor</string>
+    <string name="valuation_value">Valor estimado</string>
+    <string name="valuation_date">Avaliado em</string>
+    <string name="valuation_replace">Já existe uma avaliação nesta data e ela será substituída.</string>
+    <string name="flow_title_contribute">Novo aporte</string>
+    <string name="flow_title_withdraw">Resgate ou venda</string>
+    <string name="flow_amount">Valor</string>
+    <string name="flow_date">Data</string>
+    <string name="flow_quantity">Variação de quantidade (opcional)</string>
+    <string name="flow_new_value">Novo valor estimado (opcional)</string>
+    <string name="flow_new_value_hint">Deixe vazio para somar este valor à última avaliação.</string>
+    <string name="flow_more_than_value">Isto é mais que o valor estimado atual. Encerre a posição se vendeu tudo.</string>
+    <string name="flow_full_hint">Use o valor que você recebeu pela posição inteira.</string>
 </resources>

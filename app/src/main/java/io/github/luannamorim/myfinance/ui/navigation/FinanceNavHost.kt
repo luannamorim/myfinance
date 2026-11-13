@@ -116,4 +116,5 @@ internal fun NavGraphBuilder.financeGraph(navController: NavHostController) {
     tabDestinations(navController)
     settingsDestinations(navController)
     cashDestinations(navController)
+    portfolioDestinations(navController)
 }
