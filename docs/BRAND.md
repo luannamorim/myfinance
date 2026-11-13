@@ -9,13 +9,17 @@ The interface follows the same principle as MyFit: graphite neutrals, firm typog
 ## Symbol and wordmark
 
 - 24-unit grid, same metrics as MyFit: 2.6 stroke with round caps and joins; dot radius 2.3, centred on the extension of the last segment with a 1-unit gap between stroke and dot.
-- An "F" has three free ends, so it cannot be drawn as one line without retracing. The symbol is one continuous stroke (stem → rising top arm) plus a short middle arm attached to the stem; it reads as a single glyph.
-- Single source of the geometry: `ui/components/FinanceMark.kt` (`MarkGeometry`). The launcher foreground, monochrome and notification vectors use the same numbers.
-- Wordmark: `myfinance` in lowercase, Geist SemiBold, −0.04 em letter spacing, to the right of the symbol.
-- App icon: `#0B0B0C` background, `#F5F5F4` line, `#47F55E` dot; monochrome version for themed icons (Android 13+). Splash: the same symbol on `#0B0B0C`.
+- An "F" has three free ends, so it cannot be drawn as one line without retracing. The symbol is one continuous stroke (stem → top arm) plus the middle arm attached to the stem; **both arms rise in parallel** (slope ≈ 23.6°), so the letter reads as growth, and the top arm ends in the green dot.
+- Geometry (ink centred on (12, 12)):
+  - Stroke 1: `M5.4,20.2 L5.4,10.2 L13.4,6.7`
+  - Stroke 2: `M5.4,15.2 L10.9,12.8`
+  - Dot: centre `(17.61, 4.86)`, radius 2.3
+- Single source of the geometry: `ui/components/FinanceMark.kt` (`MarkGeometry`). The launcher foreground, monochrome, splash and notification vectors use the same numbers.
+- Wordmark: `myfinance` in lowercase, Geist SemiBold, −0.04 em letter spacing, to the right of the symbol (symbol height = 1.25 × font size).
+- App icon: `#0B0B0C` background, `#F5F5F4` line, `#47F55E` dot; the 24-unit mark is scaled 2.25× and centred in the 108 dp adaptive icon (ink ≈ 36 × 43 dp, inside the 66 dp safe zone). Monochrome version for themed icons (Android 13+). Splash: the same foreground on `#0B0B0C` (`core-splashscreen`).
 - Minimum symbol size: 16 dp.
 
-The final geometry is chosen in Stage 2 from three rendered variants (rising top arm; both arms rising; straight F with the dot after the top arm), at 16, 24, 48 and 108 dp with circle and squircle masks, next to the MyFit mark. This section is updated with the chosen numbers.
+Chosen in Stage 2 from four rendered variants (rising top arm only; both arms rising; straight F with a dot; steep top arm), compared at 16–96 dp, in circle and squircle masks, next to the MyFit mark. "Both arms rising" kept the clearest "F" at 16 dp and shares the MyFit mark's diagonal energy.
 
 ## Colours
 

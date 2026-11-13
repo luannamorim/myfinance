@@ -1,3 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Ações comuns -->
+    <string name="action_save">Salvar</string>
+    <string name="action_cancel">Cancelar</string>
+
+    <!-- Acessibilidade -->
+    <string name="a11y_back">Voltar</string>
+    <string name="a11y_decrease">Diminuir %1$s</string>
+    <string name="a11y_increase">Aumentar %1$s</string>
+    <string name="a11y_previous_month">Mês anterior</string>
+    <string name="a11y_next_month">Próximo mês</string>
+    <string name="a11y_minus">menos %1$s</string>
 </resources>

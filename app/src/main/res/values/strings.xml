@@ -2,4 +2,16 @@
 <!-- Default (English) strings. Brazilian Portuguese lives in values-pt-rBR. -->
 <resources>
     <string name="app_name" translatable="false">MyFinance</string>
+
+    <!-- Common actions -->
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+
+    <!-- Accessibility -->
+    <string name="a11y_back">Back</string>
+    <string name="a11y_decrease">Decrease %1$s</string>
+    <string name="a11y_increase">Increase %1$s</string>
+    <string name="a11y_previous_month">Previous month</string>
+    <string name="a11y_next_month">Next month</string>
+    <string name="a11y_minus">minus %1$s</string>
 </resources>
