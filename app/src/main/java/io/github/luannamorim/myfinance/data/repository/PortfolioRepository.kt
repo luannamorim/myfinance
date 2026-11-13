@@ -17,7 +17,8 @@ import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.domain.model.OccurrenceState
 import io.github.luannamorim.myfinance.domain.portfolio.PortfolioData
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.map
 import java.math.BigDecimal
 import java.time.LocalDate
 import javax.inject.Inject
@@ -55,20 +56,18 @@ class PortfolioRepository @Inject constructor(
     private val dao = db.portfolioDao()
     private val cashDao = db.cashDao()
 
-    val data: Flow<PortfolioData> = combine(
-        dao.observeAssets(),
-        dao.observeFlows(),
-        dao.observeValuations(),
-        db.categoryDao().observeAssetCategories(includeArchived = true),
-    ) { assets, flows, valuations, categories ->
-        val domainAssets = assets.map { it.toDomain() }
-        val currency = domainAssets.associate { it.id to it.currency }
-        PortfolioData(
-            assets = domainAssets,
-            flows = flows.groupBy { it.assetId }.mapValues { (id, list) -> list.map { it.toDomain(currency.getValue(id)) } },
-            valuations = valuations.groupBy { it.assetId }.mapValues { (id, list) -> list.map { it.toDomain(currency.getValue(id)) } },
-            categories = categories.map { it.toDomain() },
-        )
+    /**
+     * The whole portfolio, re-read as one snapshot (a single transaction) whenever any of its tables changes.
+     * Separate per-table streams would update one at a time: right after a deletion the assets could arrive
+     * without the deleted one while its flows were still there, which crashed every screen observing this.
+     */
+    val data: Flow<PortfolioData> = db.invalidationTracker
+        .createFlow("asset", "asset_flow", "asset_valuation", "asset_category")
+        .conflate()
+        .map { snapshot() }
+
+    private suspend fun snapshot(): PortfolioData = db.withTransaction {
+        portfolioData(dao.listAssets(), dao.listFlows(), dao.listValuations(), db.categoryDao().listAssetCategories(includeArchived = true))
     }
 
     suspend fun asset(id: Long): Asset? = dao.getAsset(id)?.toDomain()

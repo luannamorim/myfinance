@@ -21,6 +21,7 @@ import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.domain.model.Occurrence
 import io.github.luannamorim.myfinance.domain.model.TransactionTemplate
 import io.github.luannamorim.myfinance.domain.model.Valuation
+import io.github.luannamorim.myfinance.domain.portfolio.PortfolioData
 import java.math.BigDecimal
 import java.time.LocalDate
 
@@ -85,3 +86,23 @@ internal fun AssetFlowEntity.toDomain(currency: Currency) =
 internal fun AssetValuationEntity.toDomain(currency: Currency) = Valuation(id, assetId, date.toDate(), Money(value, currency), note)
 
 internal fun ExchangeRateEntity.toDomain() = ExchangeRate(date.toDate(), BigDecimal.valueOf(rateMicros, 6), source)
+
+/**
+ * Builds [PortfolioData] from rows. Flows and valuations whose asset isn't among [assets] are left out
+ * rather than failing: they can only belong to an asset being deleted or created.
+ */
+internal fun portfolioData(
+    assets: List<AssetEntity>,
+    flows: List<AssetFlowEntity>,
+    valuations: List<AssetValuationEntity>,
+    categories: List<AssetCategoryEntity>,
+): PortfolioData {
+    val domainAssets = assets.map { it.toDomain() }
+    val currency = domainAssets.associate { it.id to it.currency }
+    return PortfolioData(
+        assets = domainAssets,
+        flows = flows.filter { it.assetId in currency }.groupBy { it.assetId }.mapValues { (id, list) -> list.map { it.toDomain(currency.getValue(id)) } },
+        valuations = valuations.filter { it.assetId in currency }.groupBy { it.assetId }.mapValues { (id, list) -> list.map { it.toDomain(currency.getValue(id)) } },
+        categories = categories.map { it.toDomain() },
+    )
+}

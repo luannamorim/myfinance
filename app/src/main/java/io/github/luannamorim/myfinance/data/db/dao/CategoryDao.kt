@@ -51,6 +51,9 @@ interface CategoryDao {
     @Query("SELECT * FROM asset_category WHERE (:includeArchived OR archived = 0) ORDER BY assetGroup, position, id")
     fun observeAssetCategories(includeArchived: Boolean): Flow<List<AssetCategoryEntity>>
 
+    @Query("SELECT * FROM asset_category WHERE (:includeArchived OR archived = 0) ORDER BY assetGroup, position, id")
+    suspend fun listAssetCategories(includeArchived: Boolean): List<AssetCategoryEntity>
+
     @Query("SELECT * FROM asset_category WHERE id = :id")
     suspend fun getAssetCategory(id: Long): AssetCategoryEntity?
 

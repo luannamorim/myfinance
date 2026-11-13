@@ -7,19 +7,19 @@ import androidx.room.Update
 import io.github.luannamorim.myfinance.data.db.entity.AssetEntity
 import io.github.luannamorim.myfinance.data.db.entity.AssetFlowEntity
 import io.github.luannamorim.myfinance.data.db.entity.AssetValuationEntity
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PortfolioDao {
 
+    // The portfolio is read as one snapshot (PortfolioRepository.data): these run inside a transaction.
     @Query("SELECT * FROM asset ORDER BY name COLLATE NOCASE, id")
-    fun observeAssets(): Flow<List<AssetEntity>>
+    suspend fun listAssets(): List<AssetEntity>
 
     @Query("SELECT * FROM asset_flow ORDER BY date, id")
-    fun observeFlows(): Flow<List<AssetFlowEntity>>
+    suspend fun listFlows(): List<AssetFlowEntity>
 
     @Query("SELECT * FROM asset_valuation ORDER BY date, id")
-    fun observeValuations(): Flow<List<AssetValuationEntity>>
+    suspend fun listValuations(): List<AssetValuationEntity>
 
     @Query("SELECT * FROM asset WHERE id = :id")
     suspend fun getAsset(id: Long): AssetEntity?
