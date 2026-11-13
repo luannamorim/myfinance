@@ -31,8 +31,6 @@
     <string name="portfolio_empty_message">Add investments and personal assets to track their value over time.</string>
     <string name="history_empty_title">No history yet</string>
     <string name="history_empty_message">Confirmed and planned transactions will appear here, month by month.</string>
-    <string name="settings_empty_title">Settings</string>
-    <string name="settings_empty_message">Currency, formats, categories and backups live here.</string>
 
     <!-- Predefined categories (keys frozen in seed-keys.txt) -->
     <string name="seed_income_salary">Salary</string>
@@ -74,8 +72,6 @@
     <string name="action_delete">Delete</string>
     <string name="action_archive">Archive</string>
     <string name="action_unarchive">Unarchive</string>
-    <string name="action_edit">Edit</string>
-    <string name="action_add">Add</string>
     <string name="action_confirm">Confirm</string>
     <string name="error_name_required">Enter a name</string>
     <string name="error_amount_required">Enter an amount greater than zero</string>
@@ -312,5 +308,4 @@
     <string name="history_any_date">Any date</string>
     <string name="history_apply">Apply</string>
     <string name="history_no_results">No transactions match these filters.</string>
-    <string name="history_all_currencies">All</string>
 </resources>

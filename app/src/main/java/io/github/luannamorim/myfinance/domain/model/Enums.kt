@@ -1,6 +1,9 @@
 package io.github.luannamorim.myfinance.domain.model
 
-/** Income or expense. Fixed for a category once created. */
+import androidx.annotation.Keep
+
+/** Income or expense. Fixed for a category once created. Kept by R8: navigation routes serialize it by name. */
+@Keep
 enum class EntryKind { INCOME, EXPENSE }
 
 /** Unit of a recurrence rule. */
@@ -15,7 +18,8 @@ enum class AdjustmentKind { OPENING, ADJUSTMENT }
 /** Investments vs. personal assets (business, equity, real estate, vehicles…). */
 enum class AssetGroup { INVESTMENT, PERSONAL }
 
-/** Asset cash flows. Amounts are always positive; [inflow] says whether money goes into the asset. */
+/** Asset cash flows. Amounts are always positive; [inflow] says whether money goes into the asset. Kept for routes. */
+@Keep
 enum class FlowKind(val inflow: Boolean) {
     INITIAL(true),
     CONTRIBUTION(true),

@@ -28,8 +28,6 @@
     <string name="portfolio_empty_message">Adicione investimentos e bens para acompanhar o valor deles ao longo do tempo.</string>
     <string name="history_empty_title">Nenhum histórico ainda</string>
     <string name="history_empty_message">Transações confirmadas e previstas aparecem aqui, mês a mês.</string>
-    <string name="settings_empty_title">Ajustes</string>
-    <string name="settings_empty_message">Moeda, formatos, categorias e backups ficam aqui.</string>
 
     <!-- Categorias predefinidas -->
     <string name="seed_income_salary">Salário</string>
@@ -71,8 +69,6 @@
     <string name="action_delete">Excluir</string>
     <string name="action_archive">Arquivar</string>
     <string name="action_unarchive">Desarquivar</string>
-    <string name="action_edit">Editar</string>
-    <string name="action_add">Adicionar</string>
     <string name="action_confirm">Confirmar</string>
     <string name="error_name_required">Informe um nome</string>
     <string name="error_amount_required">Informe um valor maior que zero</string>
@@ -315,5 +311,4 @@
     <string name="history_any_date">Qualquer data</string>
     <string name="history_apply">Aplicar</string>
     <string name="history_no_results">Nenhuma transação corresponde a estes filtros.</string>
-    <string name="history_all_currencies">Todas</string>
 </resources>

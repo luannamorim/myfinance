@@ -185,8 +185,8 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 
 **Produces:** `data class RecurrenceRule(val unit: RecurrenceUnit, val interval: Int)` (`init { require(interval in 1..99) }`) with `companion` presets `DAILY, WEEKLY, BIWEEKLY, MONTHLY, BIMONTHLY, QUARTERLY, SEMIANNUAL, ANNUAL` and `presetOrNull()`; `object Recurrence { const val HORIZON_MONTHS = 12; fun dateAt(anchor: LocalDate, rule: RecurrenceRule, n: Int): LocalDate; fun datesBetween(anchor: LocalDate, rule: RecurrenceRule, from: LocalDate, to: LocalDate, endDate: LocalDate?): List<LocalDate>; fun firstOnOrAfter(anchor: LocalDate, rule: RecurrenceRule, date: LocalDate): LocalDate; fun horizonEnd(today: LocalDate): LocalDate }`.
 
-- [ ] Tests (hand tables): monthly from 2026-01-31 → 01-31, 02-28, 03-31, 04-30, 05-31; from 2028-01-31 → 2028-02-29; yearly from 2024-02-29 → 2025-02-28, 2026-02-28, 2027-02-28, 2028-02-29; weekly from 2026-11-12 (Thu) → 11-19, 11-26; biweekly → 11-26, 12-10; quarterly from 2026-11-30 → 2027-02-28, 2027-05-30; semiannual from 2026-08-31 → 2027-02-28, 2027-08-31; daily across month end; custom every 3 weeks; `datesBetween` respects `from`, `to` and `endDate` (inclusive) and returns nothing when `from > endDate`; `horizonEnd(2026-11-12)` = 2027-11-30; `interval = 0` throws; `firstOnOrAfter(anchor 2026-01-31 monthly, 2026-03-01)` = 2026-03-31.
-- [ ] Implement (always from the anchor; `datesBetween` estimates the first index from the unit distance then walks forward). Commit `feat(cash): add recurrence engine`.
+- [x] Tests (hand tables): monthly from 2026-01-31 → 01-31, 02-28, 03-31, 04-30, 05-31; from 2028-01-31 → 2028-02-29; yearly from 2024-02-29 → 2025-02-28, 2026-02-28, 2027-02-28, 2028-02-29; weekly from 2026-11-12 (Thu) → 11-19, 11-26; biweekly → 11-26, 12-10; quarterly from 2026-11-30 → 2027-02-28, 2027-05-30; semiannual from 2026-08-31 → 2027-02-28, 2027-08-31; daily across month end; custom every 3 weeks; `datesBetween` respects `from`, `to` and `endDate` (inclusive) and returns nothing when `from > endDate`; `horizonEnd(2026-11-12)` = 2027-11-30; `interval = 0` throws; `firstOnOrAfter(anchor 2026-01-31 monthly, 2026-03-01)` = 2026-03-31.
+- [x] Implement (always from the anchor; `datesBetween` estimates the first index from the unit distance then walks forward). Commit `feat(cash): add recurrence engine`.
 
 ### Task 3.2: Occurrence generation and template edits
 
@@ -202,7 +202,7 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
   - `suspend fun confirm(id, actual: Money, date: LocalDate, note: String?)`, `unconfirm(id)`, `cancel(id)`, `restore(id)`, `editOccurrence(id, name, amount: Money, dueDate)` (sets `customized`), `updateStandalone(id, draft)`, `deleteOccurrence(id)` (standalone only)
   - `suspend fun setOpening(amount: Money, date)` (refused when later than an existing adjustment), `addAdjustment(target: Money /*desired balance*/, date, note)` (delta = target − balance(date); date in [opening, today]), `deleteAdjustment(id)`
 
-- [ ] Tests (in-memory Room + FakeTimeSource):
+- [x] Tests (in-memory Room + FakeTimeSource):
   - Today 2026-11-12, monthly R$ 2.500 with first due 2026-11-05 → 2026-11-05 … 2027-11-05 (13 rows); `ensureGenerated()` twice → still 13; first due 2026-09-05 → generation starts 2026-11-05 (no Sep/Oct backfill).
   - Template "Rent" anchored 2026-10-05 created with today = 2026-10-01; advance to 2026-11-12; confirm Nov-05 with R$ 2.500; Oct-05 left unpaid (overdue). Edit amount to R$ 2.600: Oct (overdue) and Nov (confirmed) unchanged, Dec-05 onward = 2.600.
   - Same template with Dec-05 moved to Dec-07 (customized): an amount-only edit keeps Dec-07 at its value; a structural edit (next due 2026-12-10) replaces it and generates Dec-10, Jan-10…; only one December row exists.
@@ -213,7 +213,7 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
   - `confirm` rejects `date > today` and keeps `expectedAmount`; `unconfirm` clears actual fields; one-time `alreadySettled` is CONFIRMED with actual = expected; `deleteOccurrence` on a generated row throws.
   - Second `setOpening(BRL)` replaces the first; `addAdjustment(target R$ 9.000)` dated today with balance R$ 10.000 stores −1.000; adjustment before the opening date or in the future is rejected; moving the opening after an adjustment is refused.
   - Every write calls `BackupTrigger.onDataChanged()`.
-- [ ] Implement. Commit `feat(cash): generate occurrences idempotently and apply template edits`.
+- [x] Implement. Commit `feat(cash): generate occurrences idempotently and apply template edits`.
 
 ### Task 3.3: Statuses and cash calculations (pure)
 
@@ -226,8 +226,8 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 - `object CashCalculator`: `balance(c: Currency, at: LocalDate, ledger: CashLedger): Money`; `available(ledger, today): Map<Currency, Money>`; `projected(ledger, today, through: LocalDate): Map<Currency, Money>`; `monthSummary(ledger, month: YearMonth, today, to: Currency, converter): MonthSummary`; `balanceHistory(ledger, months: List<YearMonth>, to, converter): List<Pair<YearMonth, Total>>`; `byCategory(ledger, month, kind, to, converter): List<Pair<Long, Total>>`.
 - `data class MonthSummary(expectedIncome: Total, receivedIncome: Total, expectedExpenses: Total, paidExpenses: Total, overdueEarlier: Total, overdueEarlierCount: Int)`; `overdueEarlier` = PENDING expenses with `dueDate < min(month.start, today)`.
 
-- [ ] Tests: statuses at 2026-11-12 for due 11-11 (OVERDUE), 11-12 and 11-19 (PENDING), 11-20 (UPCOMING); confirmed income RECEIVED, expense PAID; `FakeTimeSource` at 2026-11-13T02:30Z with zone São Paulo → today = 2026-11-12 (and = 11-13 with UTC). Balance fixture (hand-computed, BRL): opening 10.000,00 on 11-01; salary confirmed 9.000,00 on 11-05; rent expected 2.500,00 confirmed 2.550,00 on 11-10; groceries 312,40 confirmed on 11-12; electricity pending 250,00 due 11-20; internet overdue 120,00 due 10-25; old expense confirmed 10-30 (before opening, ignored) → `balance(today)` = 16.137,60; `projected(through 11-30)` = 15.767,60; Nov summary: expected income 9.000,00, received 9.000,00, expected expenses 3.112,40 (2.550,00 + 312,40 + 250,00), paid 2.862,40, overdue earlier 120,00 (1); cancelled rows count nowhere. Converter: US$ 100,00 on Saturday 2026-11-14 with BCB rates Fri 5,6143 → R$ 561,43; BRL→USD R$ 561,43 → US$ 100,00; manual 5,7000 on Fri wins; date before first rate → null and `Total.incomplete = true`.
-- [ ] Implement. Commit `feat(cash): add statuses, balances, projections and month summaries`.
+- [x] Tests: statuses at 2026-11-12 for due 11-11 (OVERDUE), 11-12 and 11-19 (PENDING), 11-20 (UPCOMING); confirmed income RECEIVED, expense PAID; `FakeTimeSource` at 2026-11-13T02:30Z with zone São Paulo → today = 2026-11-12 (and = 11-13 with UTC). Balance fixture (hand-computed, BRL): opening 10.000,00 on 11-01; salary confirmed 9.000,00 on 11-05; rent expected 2.500,00 confirmed 2.550,00 on 11-10; groceries 312,40 confirmed on 11-12; electricity pending 250,00 due 11-20; internet overdue 120,00 due 10-25; old expense confirmed 10-30 (before opening, ignored) → `balance(today)` = 16.137,60; `projected(through 11-30)` = 15.767,60; Nov summary: expected income 9.000,00, received 9.000,00, expected expenses 3.112,40 (2.550,00 + 312,40 + 250,00), paid 2.862,40, overdue earlier 120,00 (1); cancelled rows count nowhere. Converter: US$ 100,00 on Saturday 2026-11-14 with BCB rates Fri 5,6143 → R$ 561,43; BRL→USD R$ 561,43 → US$ 100,00; manual 5,7000 on Fri wins; date before first rate → null and `Total.incomplete = true`.
+- [x] Implement. Commit `feat(cash): add statuses, balances, projections and month summaries`.
 
 ### Task 3.4: Category management
 
@@ -235,8 +235,8 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 
 **Produces:** `CategoryRepository`: `observe(kind: EntryKind, includeArchived: Boolean = false): Flow<List<Category>>`, `observeAll()`, `observeAssetCategories()`, `create(kind|group, name, icon)`, `rename(id, name)`, `setIcon(id, icon)`, `setArchived(id, archived)`, `delete(id): DeleteResult` (`enum DeleteResult { DELETED, IN_USE }`) and asset-category equivalents; `@Composable fun Category.displayName(): String` (seed string or user name); `object CategoryIcons { val all: Map<String, ImageVector> }` (~40 Material Rounded icons).
 
-- [ ] Tests: delete unused custom → DELETED; delete used → IN_USE and row intact; archived hidden from `observe(kind, includeArchived = false)`; seeded name null → `displayName` = localized string (en and pt-BR).
-- [ ] Screen: segmented Income/Expense/Assets, list with icon + name, add/edit sheet (name + icon grid), archive/delete with `ConfirmDialog`. Screenshots both themes. Commit `feat(cash): add category management`.
+- [x] Tests: delete unused custom → DELETED; delete used → IN_USE and row intact; archived hidden from `observe(kind, includeArchived = false)`; seeded name null → `displayName` = localized string (en and pt-BR).
+- [x] Screen: segmented Income/Expense/Assets, list with icon + name, add/edit sheet (name + icon grid), archive/delete with `ConfirmDialog`. Screenshots both themes. Commit `feat(cash): add category management`.
 
 ### Task 3.5: Transaction editor and recurring list
 
@@ -244,8 +244,8 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 
 **Produces:** `TransactionEditorUiState(loading, kind, name, digits, currency, categoryId, date, repeat: RepeatChoice, customInterval, customUnit, endDate, description, alreadySettled, isRecurring, editingTemplate, nameError, amountError, categoryError, done)`; `sealed interface RepeatChoice { Never; Preset(rule); Custom }`; `fun save(): Boolean`.
 
-- [ ] Tests: blank name / zero amount / no category → errors, nothing saved; one-time expense today with "Already paid" creates a CONFIRMED occurrence; the toggle is hidden for recurring entries; monthly income creates a template and 13 occurrences; editing a template shows "Next due date" = first replaceable occurrence (due ≥ today), rejects a past date, passes `nextDueDate` only when changed; editing a standalone occurrence calls `updateStandalone`; flow test "Create an expense" and "Create an income transaction" through the UI by text.
-- [ ] Recurring list: active/inactive sections, next due date, amount, toggle active, open editor. Screenshots. Commit `feat(cash): add transaction editor and recurring list`.
+- [x] Tests: blank name / zero amount / no category → errors, nothing saved; one-time expense today with "Already paid" creates a CONFIRMED occurrence; the toggle is hidden for recurring entries; monthly income creates a template and 13 occurrences; editing a template shows "Next due date" = first replaceable occurrence (due ≥ today), rejects a past date, passes `nextDueDate` only when changed; editing a standalone occurrence calls `updateStandalone`; flow test "Create an expense" and "Create an income transaction" through the UI by text.
+- [x] Recurring list: active/inactive sections, next due date, amount, toggle active, open editor. Screenshots. Commit `feat(cash): add transaction editor and recurring list`.
 
 ### Task 3.6: Confirm, detail, cancel and undo
 
@@ -253,15 +253,15 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 
 **Produces:** `@Composable fun ConfirmSheet(occurrence: Occurrence, today: LocalDate, onConfirm: (Money, LocalDate, String?) -> Unit, onDismiss: () -> Unit)` — title "Confirm payment" (expense) / "Confirm receipt" (income), amount prefilled with expected, currency toggle, date (max today), note.
 
-- [ ] Tests: confirm with a different amount stores actual separately (expected unchanged); currency switch stores `actualCurrency`; "Mark as unpaid" requires dialog and resets; cancel/restore; edit single occurrence sets `customized`; delete only for one-time; flow tests "Confirm payment" and "Confirm receipt".
-- [ ] Commit `feat(cash): confirm payments and receipts, edit, cancel and undo occurrences`.
+- [x] Tests: confirm with a different amount stores actual separately (expected unchanged); currency switch stores `actualCurrency`; "Mark as unpaid" requires dialog and resets; cancel/restore; edit single occurrence sets `customized`; delete only for one-time; flow tests "Confirm payment" and "Confirm receipt".
+- [x] Commit `feat(cash): confirm payments and receipts, edit, cancel and undo occurrences`.
 
 ### Task 3.7: Opening balances and balance adjustment
 
 **Files:** `…/ui/feature/settings/{OpeningBalancesScreen,AdjustBalanceScreen,BalanceViewModel}.kt`, Test: `…/ui/feature/settings/BalanceViewModelTest.kt`
 
-- [ ] Opening balance per currency (amount with sign toggle, date). Adjust balance: shows current balance per currency, user types the real balance, preview of the difference, note; history list of adjustments with delete (dialog).
-- [ ] Tests: opening replaced not duplicated; adjustment = target − balance(at its date); dates before the opening or in the future rejected; negative balances allowed. Commit `feat(cash): add opening balances and balance adjustments`.
+- [x] Opening balance per currency (amount with sign toggle, date). Adjust balance: shows current balance per currency, user types the real balance, preview of the difference, note; history list of adjustments with delete (dialog).
+- [x] Tests: opening replaced not duplicated; adjustment = target − balance(at its date); dates before the opening or in the future rejected; negative balances allowed. Commit `feat(cash): add opening balances and balance adjustments`.
 
 ### Task 3.8: Cash Flow dashboard and charts
 
@@ -269,8 +269,8 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 
 **Produces:** `data class OccurrenceRow(id: Long, name: String, categoryId: Long, kind: EntryKind, amount: Money /* actual if confirmed, else expected */, date: LocalDate /* actual or due */, status: DisplayStatus)` in `ui/common`; `CashFlowUiState(loading, month, summary: MonthSummary, available: Total, projected: Total, overdue, pending, upcomingIncome: List<OccurrenceRow>, nextMonth: MonthSummary, nextMonthProjected: Total /* projected through end of next month */, display: Currency, rateDate: LocalDate?, empty)`; charts: income vs expenses (last 6 months, columns), balance evolution (12 month ends + current), expenses and income by category for the month (bars, top 6 + Other).
 
-- [ ] Tests: VM state equals `CashCalculator` results for the 3.3 fixture; month switch changes the lists; empty state when no data; chart models built from domain outputs only.
-- [ ] Screenshots (data + empty, both themes). Commit `feat(cash): add cash flow dashboard and charts`.
+- [x] Tests: VM state equals `CashCalculator` results for the 3.3 fixture; month switch changes the lists; empty state when no data; chart models built from domain outputs only.
+- [x] Screenshots (data + empty, both themes). Commit `feat(cash): add cash flow dashboard and charts`.
 
 ### Task 3.9: History
 
@@ -278,8 +278,8 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 
 **Produces:** `data class HistoryFilter(query: String = "", kinds: Set<EntryKind>, statuses: Set<DisplayStatus>, categoryIds: Set<Long>, currencies: Set<Currency>, from: LocalDate?, to: LocalDate?)`; `fun filterOccurrences(list, filter, today, names: Map<Long,String>): List<Occurrence>` (pure, in `domain/cash`); grouping by month of `actualDate ?: dueDate`, newest first; adjustments shown as "Balance adjustment" rows.
 
-- [ ] Tests: accent-insensitive search ("eletrica" finds "Elétrica"); each filter alone and combined; grouping and order; future occurrences beyond 60 days hidden unless a date filter includes them.
-- [ ] Stage 3 verification + push. Commit `feat(history): add searchable, filterable transaction history`.
+- [x] Tests: accent-insensitive search ("eletrica" finds "Elétrica"); each filter alone and combined; grouping and order; future occurrences beyond 60 days hidden unless a date filter includes them.
+- [x] Stage 3 verification + push. Commit `feat(history): add searchable, filterable transaction history`.
 
 ---
 

@@ -1,5 +1,6 @@
 package io.github.luannamorim.myfinance.ui.navigation
 
+import androidx.annotation.Keep
 import io.github.luannamorim.myfinance.domain.model.EntryKind
 import io.github.luannamorim.myfinance.domain.model.FlowKind
 import kotlinx.serialization.Serializable
@@ -19,6 +20,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object CashFlowChartsRoute
 
 // Categories
+@Keep
 enum class CategoryScope { INCOME, EXPENSE, ASSET }
 @Serializable data class CategoriesRoute(val scope: CategoryScope = CategoryScope.EXPENSE)
 
