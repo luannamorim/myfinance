@@ -7,6 +7,9 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 - Cash Flow shows the month's result below income and expenses: expected income − expected expenses (green or red), and what it is so far (received − paid). Transfers don't count.
 
+### Changed
+- Cash Flow lists income to receive first, before overdue and pending bills.
+
 ## [1.1.1] - 2026-11-13
 
 ### Fixed

@@ -108,9 +108,10 @@ fun CashFlowContent(state: CashFlowUiState, actions: CashFlowActions, modifier: 
                 )
             }
         }
+        // Income to receive first (user request), then what is owed.
+        Section(stringResource(R.string.cashflow_upcoming_income), state.upcomingIncome, actions.onOpen)
         Section(stringResource(R.string.cashflow_overdue), state.overdue, actions.onOpen)
         Section(stringResource(R.string.cashflow_pending_bills), state.pendingBills, actions.onOpen)
-        Section(stringResource(R.string.cashflow_upcoming_income), state.upcomingIncome, actions.onOpen)
         Section(stringResource(R.string.cashflow_pending_transfers), state.pendingTransfers, actions.onOpen)
         if (state.overdue.isEmpty() && state.pendingBills.isEmpty() && state.upcomingIncome.isEmpty() && state.pendingTransfers.isEmpty()) {
             Text(stringResource(R.string.cashflow_nothing_pending), style = FinanceTheme.type.body, color = c.textSecondary)
