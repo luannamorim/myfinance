@@ -63,13 +63,13 @@ class MoneyFormatter(val style: NumberFormatStyle) {
     /** An exchange rate with four decimals: `5,6143`. */
     fun formatRate(rate: BigDecimal): String = decimalFormat(4).format(rate)
 
-    /** Short axis label: `950`, `12,4k`, `1,2M` (sign kept). */
+    /** Short axis label: `950`, `8k`, `12,4k`, `1,2M` (sign kept). */
     fun formatShort(minor: Long, currency: Currency): String {
         val major = BigDecimal.valueOf(minor, currency.fractionDigits)
         val abs = major.abs()
         val (value, suffix) = when {
             abs >= BigDecimal(1_000_000) -> major.movePointLeft(6) to "M"
-            abs >= BigDecimal(10_000) -> major.movePointLeft(3) to "k"
+            abs >= BigDecimal(1_000) -> major.movePointLeft(3) to "k"
             else -> major to ""
         }
         val digits = if (suffix.isEmpty()) 0 else 1

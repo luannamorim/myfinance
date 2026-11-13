@@ -263,4 +263,45 @@
     <string name="adjust_delete_message">O saldo volta a ser o que as transações indicam.</string>
     <string name="adjust_needs_opening">Defina primeiro um saldo inicial para esta moeda.</string>
     <string name="balance_adjustment">Ajuste de saldo</string>
+
+    <!-- Cash flow dashboard -->
+    <string name="cashflow_add">Adicionar transação</string>
+    <string name="cashflow_available">Disponível</string>
+    <string name="cashflow_balance_end">Saldo em %1$s</string>
+    <string name="cashflow_projected">Previsto · %1$s</string>
+    <string name="cashflow_income">Receitas</string>
+    <string name="cashflow_expenses">Despesas</string>
+    <string name="cashflow_received_of">recebido de %1$s previsto</string>
+    <string name="cashflow_paid_of">pago de %1$s previsto</string>
+    <string name="cashflow_overdue">Atrasadas</string>
+    <string name="cashflow_pending_bills">Contas a pagar</string>
+    <string name="cashflow_upcoming_income">Receitas a receber</string>
+    <string name="cashflow_nothing_pending">Nada pendente neste mês.</string>
+    <string name="cashflow_next_month">Próximo mês</string>
+    <string name="cashflow_next_projected">Previsto no fim de %1$s</string>
+    <string name="cashflow_charts">Gráficos</string>
+    <string name="cashflow_charts_hint">Receitas x despesas, saldo e categorias</string>
+    <plurals name="cashflow_overdue_earlier">
+        <item quantity="one">%2$s em atraso de %1$d conta anterior</item>
+        <item quantity="many">%2$s em atraso de %1$d contas anteriores</item>
+        <item quantity="other">%2$s em atraso de %1$d contas anteriores</item>
+    </plurals>
+
+    <!-- Exchange rate footer -->
+    <string name="rate_footer">US$ 1 = R$ %1$s · PTAX %2$s</string>
+    <string name="rate_footer_manual">US$ 1 = R$ %1$s · manual %2$s</string>
+    <string name="rate_missing">Ainda sem cotação do dólar: valores em US$ não podem ser convertidos.</string>
+    <string name="rate_update">Atualizar</string>
+    <string name="rate_incomplete">≈ Alguns valores não puderam ser convertidos. Adicione uma cotação.</string>
+
+    <!-- Cash flow charts -->
+    <string name="charts_title">Gráficos do fluxo de caixa</string>
+    <string name="charts_income_vs_expenses">Receitas x despesas</string>
+    <string name="charts_balance">Saldo no fim do mês</string>
+    <string name="charts_expenses_by_category">Despesas por categoria</string>
+    <string name="charts_income_by_category">Receitas por categoria</string>
+    <string name="charts_other">Outras</string>
+    <string name="charts_empty">Ainda não há dados suficientes.</string>
+    <string name="charts_summary_bars">Receitas e despesas nos últimos seis meses.</string>
+    <string name="charts_summary_balance">Saldo de caixa no fim de cada mês.</string>
 </resources>

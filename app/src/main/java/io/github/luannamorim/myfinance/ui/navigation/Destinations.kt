@@ -3,6 +3,8 @@ package io.github.luannamorim.myfinance.ui.navigation
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
+import io.github.luannamorim.myfinance.ui.feature.cashflow.CashFlowActions
+import io.github.luannamorim.myfinance.ui.feature.cashflow.CashFlowChartsScreen
 import io.github.luannamorim.myfinance.ui.feature.cashflow.CashFlowScreen
 import io.github.luannamorim.myfinance.ui.feature.cashflow.RecurringListScreen
 import io.github.luannamorim.myfinance.ui.feature.transaction.OccurrenceDetailScreen
@@ -19,7 +21,16 @@ import io.github.luannamorim.myfinance.ui.feature.settings.SettingsScreen
 /** The five tab roots. */
 internal fun NavGraphBuilder.tabDestinations(navController: NavHostController) {
     composable<OverviewRoute> { OverviewScreen() }
-    composable<CashFlowRoute> { CashFlowScreen() }
+    composable<CashFlowRoute> {
+        CashFlowScreen(
+            CashFlowActions(
+                onAdd = { navController.navigate(TransactionEditorRoute()) },
+                onOpen = { navController.navigate(OccurrenceDetailRoute(it)) },
+                onRecurring = { navController.navigate(RecurringListRoute) },
+                onCharts = { navController.navigate(CashFlowChartsRoute) },
+            ),
+        )
+    }
     composable<PortfolioRoute> { PortfolioScreen() }
     composable<HistoryRoute> { HistoryScreen() }
     composable<SettingsRoute> {
@@ -51,6 +62,7 @@ internal fun NavGraphBuilder.cashDestinations(navController: NavHostController) 
             onEditRecurring = { navController.navigate(TransactionEditorRoute(templateId = it)) },
         )
     }
+    composable<CashFlowChartsRoute> { CashFlowChartsScreen(onBack = { navController.popBackStack() }) }
     composable<RecurringListRoute> {
         RecurringListScreen(
             onBack = { navController.popBackStack() },

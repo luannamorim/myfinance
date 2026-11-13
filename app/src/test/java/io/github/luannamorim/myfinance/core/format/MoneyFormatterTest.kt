@@ -52,6 +52,7 @@ class MoneyFormatterTest {
     @Test
     fun formatShort_axisLabels() {
         assertEquals("950", comma.formatShort(95_000, Currency.BRL))
+        assertEquals("8k", comma.formatShort(800_000, Currency.BRL))
         assertEquals("12,4k", comma.formatShort(1_243_015, Currency.BRL))
         assertEquals("1,2M", comma.formatShort(123_000_000, Currency.BRL))
         assertEquals("${minus}12k", comma.formatShort(-1_200_000, Currency.BRL))

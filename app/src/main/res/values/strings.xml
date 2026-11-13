@@ -261,4 +261,44 @@
     <string name="adjust_delete_message">The balance goes back to what the transactions say.</string>
     <string name="adjust_needs_opening">Set an opening balance for this currency first.</string>
     <string name="balance_adjustment">Balance adjustment</string>
+
+    <!-- Cash flow dashboard -->
+    <string name="cashflow_add">Add transaction</string>
+    <string name="cashflow_available">Available cash</string>
+    <string name="cashflow_balance_end">Balance on %1$s</string>
+    <string name="cashflow_projected">Projected · %1$s</string>
+    <string name="cashflow_income">Income</string>
+    <string name="cashflow_expenses">Expenses</string>
+    <string name="cashflow_received_of">received of %1$s expected</string>
+    <string name="cashflow_paid_of">paid of %1$s expected</string>
+    <string name="cashflow_overdue">Overdue</string>
+    <string name="cashflow_pending_bills">Bills to pay</string>
+    <string name="cashflow_upcoming_income">Income to receive</string>
+    <string name="cashflow_nothing_pending">Nothing pending this month.</string>
+    <string name="cashflow_next_month">Next month</string>
+    <string name="cashflow_next_projected">Projected at the end of %1$s</string>
+    <string name="cashflow_charts">Charts</string>
+    <string name="cashflow_charts_hint">Income vs expenses, balance and categories</string>
+    <plurals name="cashflow_overdue_earlier">
+        <item quantity="one">%2$s overdue from %1$d earlier bill</item>
+        <item quantity="other">%2$s overdue from %1$d earlier bills</item>
+    </plurals>
+
+    <!-- Exchange rate footer -->
+    <string name="rate_footer">US$ 1 = R$ %1$s · PTAX %2$s</string>
+    <string name="rate_footer_manual">US$ 1 = R$ %1$s · manual %2$s</string>
+    <string name="rate_missing">No USD rate yet: dollar amounts can\'t be converted.</string>
+    <string name="rate_update">Update</string>
+    <string name="rate_incomplete">≈ Some amounts couldn\'t be converted. Add an exchange rate.</string>
+
+    <!-- Cash flow charts -->
+    <string name="charts_title">Cash flow charts</string>
+    <string name="charts_income_vs_expenses">Income vs expenses</string>
+    <string name="charts_balance">Balance at month end</string>
+    <string name="charts_expenses_by_category">Expenses by category</string>
+    <string name="charts_income_by_category">Income by category</string>
+    <string name="charts_other">Other</string>
+    <string name="charts_empty">Not enough data yet.</string>
+    <string name="charts_summary_bars">Income and expenses over the last six months.</string>
+    <string name="charts_summary_balance">Cash balance at the end of each month.</string>
 </resources>
