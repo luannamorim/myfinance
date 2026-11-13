@@ -14,4 +14,23 @@
     <string name="a11y_previous_month">Previous month</string>
     <string name="a11y_next_month">Next month</string>
     <string name="a11y_minus">minus %1$s</string>
+
+    <!-- Navigation -->
+    <string name="nav_overview">Overview</string>
+    <string name="nav_cash_flow">Cash Flow</string>
+    <string name="nav_portfolio">Portfolio</string>
+    <string name="nav_history">History</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Empty states -->
+    <string name="overview_empty_title">Your finances at a glance</string>
+    <string name="overview_empty_message">Set your opening balance and add your first transaction to see your month.</string>
+    <string name="cashflow_empty_title">No transactions this month</string>
+    <string name="cashflow_empty_message">Add income and expenses, one-time or recurring, to plan your month.</string>
+    <string name="portfolio_empty_title">No assets yet</string>
+    <string name="portfolio_empty_message">Add investments and personal assets to track their value over time.</string>
+    <string name="history_empty_title">No history yet</string>
+    <string name="history_empty_message">Confirmed and planned transactions will appear here, month by month.</string>
+    <string name="settings_empty_title">Settings</string>
+    <string name="settings_empty_message">Currency, formats, categories and backups live here.</string>
 </resources>

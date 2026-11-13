@@ -1,6 +1,6 @@
 # MyFinance — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: superpowers:executing-plans (native execution in this session), delegating self-contained tasks to subagents when useful. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: superpowers:executing-plans (native execution in this session), delegating self-contained tasks to subagents when useful. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** a native, private, offline-first Android app for cash flow (recurring income and expenses with confirmation and projection), a manually valued portfolio of investments and personal assets, and net worth, in BRL and USD, with encrypted backups to a user-chosen folder.
 
@@ -79,10 +79,10 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 
 **Files:** `SPEC.md`, `IMPLEMENTATION_PLAN.md`, `docs/{ARCHITECTURE,BRAND,SECURITY,TESTING,BACKUP}.md`, `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `LICENSE`, `.gitignore`, `.gitattributes`, `docs/licenses/GEIST_OFL.txt`
 
-- [ ] Write the documents (English). README skeleton: name, one-liner, "in development", links.
-- [ ] Fresh-eyes review by a subagent of SPEC + ARCHITECTURE + this plan for contradictions (rules, names, signatures); fix findings.
-- [ ] Commit `docs: add spec, architecture, security, backup and testing docs` and `docs: add implementation plan`.
-- [ ] `gh repo view luannamorim/myfinance` → not found; `gh repo create myfinance --public --source . --remote origin --push` inside `~/my/myfinance`. Verify `git remote -v` = `git@github.com:luannamorim/myfinance.git`, visibility `PUBLIC`.
+- [x] Write the documents (English). README skeleton: name, one-liner, "in development", links.
+- [x] Fresh-eyes review by a subagent of SPEC + ARCHITECTURE + this plan for contradictions (rules, names, signatures); fix findings.
+- [x] Commit `docs: add spec, architecture, security, backup and testing docs` and `docs: add implementation plan`.
+- [x] `gh repo view luannamorim/myfinance` → not found; `gh repo create myfinance --public --source . --remote origin --push` inside `~/my/myfinance`. Verify `git remote -v` = `git@github.com:luannamorim/myfinance.git`, visibility `PUBLIC`.
 
 ---
 
@@ -94,13 +94,13 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 
 **Produces:** `MyFinanceApp : Application, Configuration.Provider` (`@HiltAndroidApp`, `HiltWorkerFactory`); `MainActivity : ComponentActivity` (`@AndroidEntryPoint`).
 
-- [ ] Copy MyFit's catalog/build files, rename, drop `reorderable`, `lifecycle-service`, `coil`; add `androidx.core:core-splashscreen`. Signing reads `MYFINANCE_STORE_FILE/_STORE_PASSWORD/_KEY_ALIAS/_KEY_PASSWORD`. `androidResources { generateLocaleConfig = true }` with `resources.properties` `unqualifiedResLocale=en`.
-- [ ] Proguard: `-assumenosideeffects class android.util.Log` with `public static *** v(...);` and the same for `d`, `i`, `w`, `e`, `wtf`, `println`.
-- [ ] Manifest: declares only `INTERNET` and `POST_NOTIFICATIONS`; `allowBackup=false`, extraction rules excluding everything, `networkSecurityConfig` (cleartext off); WorkManager initializer removed. Expected merged list (checked at release): those two + `ACCESS_NETWORK_STATE`, `WAKE_LOCK`, `RECEIVE_BOOT_COMPLETED`, `FOREGROUND_SERVICE` (WorkManager) + `<appId>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` (AndroidX).
-- [ ] `robolectric.properties`: `application=android.app.Application`, `qualifiers=en`.
-- [ ] `AppLaunchTest` (Hilt + Robolectric): `ActivityScenario.launch(MainActivity)` reaches RESUMED.
-- [ ] CI: `actions/checkout@v4`, `actions/setup-java@v4` (temurin 21), `android-actions/setup-android@v3` + `sdkmanager "platforms;android-37" "build-tools;37.0.0"`, `gradle/actions/setup-gradle@v4`; run `./gradlew testDebugUnitTest lintDebug assembleDebug`; upload `app/build/reports` on failure.
-- [ ] `./gradlew assembleDebug testDebugUnitTest` → BUILD SUCCESSFUL. Commit `build: scaffold android project with compose, hilt, room and ci`.
+- [x] Copy MyFit's catalog/build files, rename, drop `reorderable`, `lifecycle-service`, `coil`; add `androidx.core:core-splashscreen`. Signing reads `MYFINANCE_STORE_FILE/_STORE_PASSWORD/_KEY_ALIAS/_KEY_PASSWORD`. `androidResources { generateLocaleConfig = true }` with `resources.properties` `unqualifiedResLocale=en`.
+- [x] Proguard: `-assumenosideeffects class android.util.Log` with `public static *** v(...);` and the same for `d`, `i`, `w`, `e`, `wtf`, `println`.
+- [x] Manifest: declares only `INTERNET` and `POST_NOTIFICATIONS`; `allowBackup=false`, extraction rules excluding everything, `networkSecurityConfig` (cleartext off); WorkManager initializer removed. Expected merged list (checked at release): those two + `ACCESS_NETWORK_STATE`, `WAKE_LOCK`, `RECEIVE_BOOT_COMPLETED`, `FOREGROUND_SERVICE` (WorkManager) + `<appId>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` (AndroidX).
+- [x] `robolectric.properties`: `application=android.app.Application`, `qualifiers=en`.
+- [x] `AppLaunchTest` (Hilt + Robolectric): `ActivityScenario.launch(MainActivity)` reaches RESUMED.
+- [x] CI: `actions/checkout@v4`, `actions/setup-java@v4` (temurin 21), `android-actions/setup-android@v3` + `sdkmanager "platforms;android-37" "build-tools;37.0.0"`, `gradle/actions/setup-gradle@v4`; run `./gradlew testDebugUnitTest lintDebug assembleDebug`; upload `app/build/reports` on failure.
+- [x] `./gradlew assembleDebug testDebugUnitTest` → BUILD SUCCESSFUL. Commit `build: scaffold android project with compose, hilt, room and ci`.
 
 ### Task 2.2: Theme
 
@@ -108,8 +108,8 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 
 **Produces:** `@Immutable data class FinanceColors(background, surface, surfaceRaised, outline, outlineStrong, textPrimary, textSecondary, textTertiary, accent, onAccent, accentMuted, danger, warning, isDark)` with `positive`/`negative` getters and `chart: List<Color>` (6 neutrals); `DarkColors`, `LightColors`, `LocalFinanceColors`; `FinanceType` (MyFit styles; `numericHero` = 40sp SemiBold tnum); `object FinanceTheme { colors; type }`; `@Composable fun FinanceTheme(mode: ThemeMode = ThemeMode.DARK, content)`; `FinanceShapes`, `Spacing` (MyFit values).
 
-- [ ] Port MyFit's theme files and fonts; `ColorContrastTest` with MyFit thresholds plus `danger` vs background ≥ 3.0 and each `chart` colour vs surface ≥ 3.0.
-- [ ] `ThemeScreenshotTest` (both themes). Run tests + `recordRoborazziDebug`; review. Commit `feat(ui): add theme with color, type and shape tokens`.
+- [x] Port MyFit's theme files and fonts; `ColorContrastTest` with MyFit thresholds plus `danger` vs background ≥ 3.0 and each `chart` colour vs surface ≥ 3.0.
+- [x] `ThemeScreenshotTest` (both themes). Run tests + `recordRoborazziDebug`; review. Commit `feat(ui): add theme with color, type and shape tokens`.
 
 ### Task 2.3: Money and formatting
 
@@ -125,8 +125,8 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 - `data class Formats(val money: MoneyFormatter, val dates: DateFormats)`; `val LocalFormats = staticCompositionLocalOf { Formats(MoneyFormatter(COMMA_DECIMAL), DateFormats(DMY, Locale.US)) }`.
 - `fun String.normalizedForSearch(): String` (port).
 
-- [ ] Tests (hand values): `format(Money(123456, BRL))` = `"R$ 1.234,56"` (COMMA) and `"R$ 1,234.56"` (DOT); `Money(-50, USD)` → `"−US$ 0,50"`; signed `+R$ 10,00`; `Money(0,BRL)` → `"R$ 0,00"`; `formatPercent(BigDecimal("0.024"))` → `"2,40%"`; `formatRate(5.6143)` → `"5,6143"`; `minorOf("")` = 0, `minorOf("31240")` = 31240, 14 digits rejected; `Money.of(BigDecimal("1.005"), BRL).minor` = 100 (HALF_EVEN) and `"1.015"` → 102; `plus` across currencies throws; `DateFormats(DMY).date(2026-11-12)` = `"12/11/2026"`, MDY = `"11/12/2026"`.
-- [ ] Implement; tests pass. Commit `feat(core): add money type, currency formatting and amount input`.
+- [x] Tests (hand values): `format(Money(123456, BRL))` = `"R$ 1.234,56"` (COMMA) and `"R$ 1,234.56"` (DOT); `Money(-50, USD)` → `"−US$ 0,50"`; signed `+R$ 10,00`; `Money(0,BRL)` → `"R$ 0,00"`; `formatPercent(BigDecimal("0.024"))` → `"2,40%"`; `formatRate(5.6143)` → `"5,6143"`; `minorOf("")` = 0, `minorOf("31240")` = 31240, 14 digits rejected; `Money.of(BigDecimal("1.005"), BRL).minor` = 100 (HALF_EVEN) and `"1.015"` → 102; `plus` across currencies throws; `DateFormats(DMY).date(2026-11-12)` = `"12/11/2026"`, MDY = `"11/12/2026"`.
+- [x] Implement; tests pass. Commit `feat(core): add money type, currency formatting and amount input`.
 
 ### Task 2.4: Brand mark, icons, splash and components
 
@@ -139,11 +139,11 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 - `@Composable fun CurrencyInput(digits: String, currency: Currency, onDigits: (String) -> Unit, label: String, modifier, onCurrency: ((Currency) -> Unit)? = null, isError = false)` — numeric keyboard, cash-register entry via `AmountInput`, optional R$/US$ toggle.
 - `@Composable fun MonthSwitcher(month: YearMonth, onMonth: (YearMonth) -> Unit, modifier)` — ‹ month › with 48 dp targets.
 
-- [ ] `MarkVariantsScreenshotTest`: variants A (stem (6,20)→(6,9.5)→(14,6), middle (6,14.5)→(11.5,14.5)), B (both arms rising in parallel), C (straight F, dot after top arm) at 16/24/48/108 dp, circle + squircle, both themes, next to MyFit's mark geometry. Choose by legibility at 16 dp; keep the chosen numbers in `MarkGeometry`, update `BRAND.md` (Symbol section) with the final coordinates; delete the variants test.
-- [ ] Launcher vectors: 108 viewport, group scale 2.25 centred on the ink bounds (as MyFit), background `#0B0B0C`, line `#F5F5F4`, dot `#47F55E`; monochrome all white; `ic_stat_myfinance` 24 dp.
-- [ ] Splash: `Theme.MyFinance.Starting` (parent `Theme.SplashScreen`), `windowSplashScreenBackground #0B0B0C`, `windowSplashScreenAnimatedIcon @drawable/ic_splash`, `postSplashScreenTheme @style/Theme.MyFinance`; `installSplashScreen()` in `MainActivity`.
-- [ ] `ComponentCatalogScreenshotTest`: every component in both themes + launcher icon preview (circle/squircle) + splash composition.
-- [ ] Run tests + `recordRoborazziDebug`; review the PNGs (mark legible at 24 dp). Commit `feat(ui): add brand mark, launcher icon, splash and base components`.
+- [x] `MarkVariantsScreenshotTest`: variants A (stem (6,20)→(6,9.5)→(14,6), middle (6,14.5)→(11.5,14.5)), B (both arms rising in parallel), C (straight F, dot after top arm) at 16/24/48/108 dp, circle + squircle, both themes, next to MyFit's mark geometry. Choose by legibility at 16 dp; keep the chosen numbers in `MarkGeometry`, update `BRAND.md` (Symbol section) with the final coordinates; delete the variants test.
+- [x] Launcher vectors: 108 viewport, group scale 2.25 centred on the ink bounds (as MyFit), background `#0B0B0C`, line `#F5F5F4`, dot `#47F55E`; monochrome all white; `ic_stat_myfinance` 24 dp.
+- [x] Splash: `Theme.MyFinance.Starting` (parent `Theme.SplashScreen`), `windowSplashScreenBackground #0B0B0C`, `windowSplashScreenAnimatedIcon @drawable/ic_splash`, `postSplashScreenTheme @style/Theme.MyFinance`; `installSplashScreen()` in `MainActivity`.
+- [x] `ComponentCatalogScreenshotTest`: every component in both themes + launcher icon preview (circle/squircle) + splash composition.
+- [x] Run tests + `recordRoborazziDebug`; review the PNGs (mark legible at 24 dp). Commit `feat(ui): add brand mark, launcher icon, splash and base components`.
 
 ### Task 2.5: Database v1, seeds and DI
 
@@ -158,8 +158,8 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 - `CategorySeed`: `items` (21 cash + 12 asset categories with `seedKey` like `expense.rent`, `asset.etfs`, icon key), `Callback : RoomDatabase.Callback` inserting on create; `defaultName(seedKey): String` (English).
 - DAOs: CRUD + `Flow` observers + `getAll*()` for snapshot; `CashDao.insertOccurrencesIgnore(list): List<Long>`; `CashDao.deleteReplaceable(templateId, fromEpochDay)` (PENDING, not customized, dueDate ≥ from); `RateDao.insertIgnore`, `upsertManual`, `latestBcbDate()`; `CategoryDao.usageCount(id)`; `BackupDao.clear*/insert*`.
 
-- [ ] Tests: seeds insert 21 categories and 12 asset categories with keys equal to `seed-keys.txt`; deleting a category used by an occurrence fails (RESTRICT); deleting an asset cascades flows and valuations; deleting a template sets `templateId` NULL; inserting two occurrences with the same (templateId, scheduledDate) keeps one; two standalone occurrences (NULL templateId) both stay; a BCB and a MANUAL rate coexist on the same date and `insertIgnore` of the same BCB date keeps the first.
-- [ ] Implement; schema exported. Commit `feat(data): add room schema v1, category seeds and di`.
+- [x] Tests: seeds insert 21 categories and 12 asset categories with keys equal to `seed-keys.txt`; deleting a category used by an occurrence fails (RESTRICT); deleting an asset cascades flows and valuations; deleting a template sets `templateId` NULL; inserting two occurrences with the same (templateId, scheduledDate) keeps one; two standalone occurrences (NULL templateId) both stay; a BCB and a MANUAL rate coexist on the same date and `insertIgnore` of the same BCB date keeps the first.
+- [x] Implement; schema exported. Commit `feat(data): add room schema v1, category seeds and di`.
 
 ### Task 2.6: Settings and navigation shell
 
@@ -172,8 +172,8 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 - `FinanceNavHost` (port of MyFit's: `NavigationSuiteScaffold`, hidden off top-level, 200 ms fades, `navigateToTopLevel`); `MainActivity` provides `LocalFormats` from settings and applies the theme.
 - Tab roots render real empty states (replaced by their features in later stages).
 
-- [ ] Tests: settings round trip and defaults (`COMMA_DECIMAL`, `DMY`, BRL/BRL, DARK, autoFetchRates true); NavigationTest: each tab shows its heading; back from Portfolio returns to Overview; rail on `w840dp`.
-- [ ] Stage 2 verification + push. Commit `feat(ui): add settings repository and adaptive navigation shell`.
+- [x] Tests: settings round trip and defaults (`COMMA_DECIMAL`, `DMY`, BRL/BRL, DARK, autoFetchRates true); NavigationTest: each tab shows its heading; back from Portfolio returns to Overview; rail on `w840dp`.
+- [x] Stage 2 verification + push. Commit `feat(ui): add settings repository and adaptive navigation shell`.
 
 ---
 

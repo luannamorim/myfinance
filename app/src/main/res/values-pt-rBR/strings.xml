@@ -11,4 +11,23 @@
     <string name="a11y_previous_month">Mês anterior</string>
     <string name="a11y_next_month">Próximo mês</string>
     <string name="a11y_minus">menos %1$s</string>
+
+    <!-- Navegação -->
+    <string name="nav_overview">Resumo</string>
+    <string name="nav_cash_flow">Fluxo de caixa</string>
+    <string name="nav_portfolio">Carteira</string>
+    <string name="nav_history">Histórico</string>
+    <string name="nav_settings">Ajustes</string>
+
+    <!-- Estados vazios -->
+    <string name="overview_empty_title">Suas finanças num relance</string>
+    <string name="overview_empty_message">Defina seu saldo inicial e adicione sua primeira transação para ver o mês.</string>
+    <string name="cashflow_empty_title">Nenhuma transação neste mês</string>
+    <string name="cashflow_empty_message">Adicione receitas e despesas, únicas ou recorrentes, para planejar o mês.</string>
+    <string name="portfolio_empty_title">Nenhum ativo ainda</string>
+    <string name="portfolio_empty_message">Adicione investimentos e bens para acompanhar o valor deles ao longo do tempo.</string>
+    <string name="history_empty_title">Nenhum histórico ainda</string>
+    <string name="history_empty_message">Transações confirmadas e previstas aparecem aqui, mês a mês.</string>
+    <string name="settings_empty_title">Ajustes</string>
+    <string name="settings_empty_message">Moeda, formatos, categorias e backups ficam aqui.</string>
 </resources>
