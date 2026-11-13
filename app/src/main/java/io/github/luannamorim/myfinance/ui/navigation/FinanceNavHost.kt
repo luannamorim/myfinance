@@ -115,4 +115,5 @@ fun NavHostController.navigateToTopLevel(top: TopLevelDestination) {
 internal fun NavGraphBuilder.financeGraph(navController: NavHostController) {
     tabDestinations(navController)
     settingsDestinations(navController)
+    cashDestinations(navController)
 }

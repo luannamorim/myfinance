@@ -111,4 +111,96 @@
     <string name="settings_date_mdy">MM/DD/AAAA</string>
     <string name="settings_language">Idioma</string>
     <string name="settings_language_hint">Segue o celular; mude só para o MyFinance</string>
+
+    <!-- Recurrence -->
+    <string name="repeat_never">Não repete</string>
+    <string name="repeat_daily">Diária</string>
+    <string name="repeat_weekly">Semanal</string>
+    <string name="repeat_biweekly">Quinzenal</string>
+    <string name="repeat_monthly">Mensal</string>
+    <string name="repeat_bimonthly">Bimestral</string>
+    <string name="repeat_quarterly">Trimestral</string>
+    <string name="repeat_semiannual">Semestral</string>
+    <string name="repeat_annual">Anual</string>
+    <string name="repeat_custom">Personalizada</string>
+    <plurals name="repeat_every_days">
+        <item quantity="one">A cada %d dia</item>
+        <item quantity="many">A cada %d dias</item>
+        <item quantity="other">A cada %d dias</item>
+    </plurals>
+    <plurals name="repeat_every_weeks">
+        <item quantity="one">A cada %d semana</item>
+        <item quantity="many">A cada %d semanas</item>
+        <item quantity="other">A cada %d semanas</item>
+    </plurals>
+    <plurals name="repeat_every_months">
+        <item quantity="one">A cada %d mês</item>
+        <item quantity="many">A cada %d meses</item>
+        <item quantity="other">A cada %d meses</item>
+    </plurals>
+    <plurals name="repeat_every_years">
+        <item quantity="one">A cada %d ano</item>
+        <item quantity="many">A cada %d anos</item>
+        <item quantity="other">A cada %d anos</item>
+    </plurals>
+    <string name="unit_days">Dias</string>
+    <string name="unit_weeks">Semanas</string>
+    <string name="unit_months">Meses</string>
+    <string name="unit_years">Anos</string>
+
+    <!-- Statuses -->
+    <string name="status_upcoming">Próxima</string>
+    <string name="status_pending">Pendente</string>
+    <string name="status_overdue">Atrasada</string>
+    <string name="status_paid">Paga</string>
+    <string name="status_received">Recebida</string>
+    <string name="status_cancelled">Cancelada</string>
+
+    <!-- Transaction editor -->
+    <string name="kind_expense">Despesa</string>
+    <string name="kind_income">Receita</string>
+    <string name="editor_new_title">Nova transação</string>
+    <string name="editor_edit_title">Editar transação</string>
+    <string name="editor_edit_recurring_title">Editar recorrente</string>
+    <string name="editor_edit_occurrence_title">Editar esta ocorrência</string>
+    <string name="editor_amount">Valor</string>
+    <string name="editor_expected_amount">Valor previsto</string>
+    <string name="editor_name">Nome</string>
+    <string name="editor_name_hint">ex.: Aluguel, Salário</string>
+    <string name="editor_category">Categoria</string>
+    <string name="editor_date">Data</string>
+    <string name="editor_first_due">Primeiro vencimento</string>
+    <string name="editor_next_due">Próximo vencimento</string>
+    <string name="editor_due_date">Vencimento</string>
+    <string name="editor_repeat">Repetir</string>
+    <string name="editor_every">A cada</string>
+    <string name="editor_ends">Termina</string>
+    <string name="editor_ends_never">Nunca</string>
+    <string name="editor_ends_on">Em uma data</string>
+    <string name="editor_end_date">Data final</string>
+    <string name="editor_description">Descrição (opcional)</string>
+    <string name="editor_already_paid">Já paga</string>
+    <string name="editor_already_received">Já recebida</string>
+    <string name="editor_already_hint">Salva como confirmada nesta data.</string>
+    <string name="editor_active">Ativa</string>
+    <string name="editor_active_hint">Transações inativas deixam de gerar novas ocorrências.</string>
+    <string name="editor_template_note">As mudanças valem para as ocorrências pendentes a partir de hoje. Pagas, recebidas, canceladas e atrasadas mantêm seus valores.</string>
+    <plurals name="editor_customized_note">
+        <item quantity="one">%d ocorrência editada individualmente será substituída se você mudar a repetição ou o próximo vencimento.</item>
+        <item quantity="many">%d ocorrências editadas individualmente serão substituídas se você mudar a repetição ou o próximo vencimento.</item>
+        <item quantity="other">%d ocorrências editadas individualmente serão substituídas se você mudar a repetição ou o próximo vencimento.</item>
+    </plurals>
+    <string name="editor_delete_recurring_title">Excluir transação recorrente?</string>
+    <string name="editor_delete_recurring_message">As ocorrências pendentes futuras serão excluídas. As passadas, pagas e recebidas continuam no seu histórico.</string>
+    <string name="editor_delete_title">Excluir transação?</string>
+    <string name="editor_delete_message">Esta transação única será removida.</string>
+
+    <!-- Recurring list -->
+    <string name="recurring_title">Recorrentes</string>
+    <string name="recurring_hint">Contas e receitas que se repetem</string>
+    <string name="recurring_active">Ativas</string>
+    <string name="recurring_inactive">Inativas</string>
+    <string name="recurring_next">próxima %1$s</string>
+    <string name="recurring_empty_title">Nenhuma transação recorrente</string>
+    <string name="recurring_empty_message">Cadastre aluguel, salário ou assinaturas uma vez e o MyFinance planeja todos os meses para você.</string>
 </resources>

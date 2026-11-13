@@ -22,23 +22,39 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 
-/** Full-width "Label: date" button that opens a date picker. Dates after [maxDate] can't be picked. */
+/** Full-width "Label: date" button that opens a date picker. Dates outside [minDate]..[maxDate] can't be picked. */
 @Composable
-fun DateSelector(label: String, date: LocalDate, onDate: (LocalDate) -> Unit, modifier: Modifier = Modifier, maxDate: LocalDate? = null) {
+fun DateSelector(
+    label: String,
+    date: LocalDate,
+    onDate: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier,
+    maxDate: LocalDate? = null,
+    minDate: LocalDate? = null,
+) {
     var open by rememberSaveable { mutableStateOf(false) }
     SecondaryButton("$label: ${LocalFormats.current.dates.date(date)}", onClick = { open = true }, icon = Icons.Rounded.CalendarMonth, modifier = modifier)
-    if (open) FinanceDatePickerDialog(date, onDate = { onDate(it); open = false }, onDismiss = { open = false }, maxDate = maxDate)
+    if (open) FinanceDatePickerDialog(date, onDate = { onDate(it); open = false }, onDismiss = { open = false }, maxDate = maxDate, minDate = minDate)
 }
 
 /** Material date picker in the app's style. The picker works in UTC millis; conversion stays here. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FinanceDatePickerDialog(date: LocalDate, onDate: (LocalDate) -> Unit, onDismiss: () -> Unit, maxDate: LocalDate? = null) {
+fun FinanceDatePickerDialog(
+    date: LocalDate,
+    onDate: (LocalDate) -> Unit,
+    onDismiss: () -> Unit,
+    maxDate: LocalDate? = null,
+    minDate: LocalDate? = null,
+) {
     val c = FinanceTheme.colors
-    val selectable = remember(maxDate) {
+    val selectable = remember(maxDate, minDate) {
         object : SelectableDates {
-            override fun isSelectableDate(utcTimeMillis: Long) = maxDate == null || !utcTimeMillis.toLocalDate().isAfter(maxDate)
-            override fun isSelectableYear(year: Int) = maxDate == null || year <= maxDate.year
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                val day = utcTimeMillis.toLocalDate()
+                return (maxDate == null || !day.isAfter(maxDate)) && (minDate == null || !day.isBefore(minDate))
+            }
+            override fun isSelectableYear(year: Int) = (maxDate == null || year <= maxDate.year) && (minDate == null || year >= minDate.year)
         }
     }
     val state = rememberDatePickerState(

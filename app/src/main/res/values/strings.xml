@@ -114,4 +114,91 @@
     <string name="settings_date_mdy">MM/DD/YYYY</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_hint">Follows the phone; change it for MyFinance only</string>
+
+    <!-- Recurrence -->
+    <string name="repeat_never">Never</string>
+    <string name="repeat_daily">Daily</string>
+    <string name="repeat_weekly">Weekly</string>
+    <string name="repeat_biweekly">Every 2 weeks</string>
+    <string name="repeat_monthly">Monthly</string>
+    <string name="repeat_bimonthly">Every 2 months</string>
+    <string name="repeat_quarterly">Quarterly</string>
+    <string name="repeat_semiannual">Every 6 months</string>
+    <string name="repeat_annual">Yearly</string>
+    <string name="repeat_custom">Custom</string>
+    <plurals name="repeat_every_days">
+        <item quantity="one">Every %d day</item>
+        <item quantity="other">Every %d days</item>
+    </plurals>
+    <plurals name="repeat_every_weeks">
+        <item quantity="one">Every %d week</item>
+        <item quantity="other">Every %d weeks</item>
+    </plurals>
+    <plurals name="repeat_every_months">
+        <item quantity="one">Every %d month</item>
+        <item quantity="other">Every %d months</item>
+    </plurals>
+    <plurals name="repeat_every_years">
+        <item quantity="one">Every %d year</item>
+        <item quantity="other">Every %d years</item>
+    </plurals>
+    <string name="unit_days">Days</string>
+    <string name="unit_weeks">Weeks</string>
+    <string name="unit_months">Months</string>
+    <string name="unit_years">Years</string>
+
+    <!-- Statuses -->
+    <string name="status_upcoming">Upcoming</string>
+    <string name="status_pending">Pending</string>
+    <string name="status_overdue">Overdue</string>
+    <string name="status_paid">Paid</string>
+    <string name="status_received">Received</string>
+    <string name="status_cancelled">Cancelled</string>
+
+    <!-- Transaction editor -->
+    <string name="kind_expense">Expense</string>
+    <string name="kind_income">Income</string>
+    <string name="editor_new_title">New transaction</string>
+    <string name="editor_edit_title">Edit transaction</string>
+    <string name="editor_edit_recurring_title">Edit recurring</string>
+    <string name="editor_edit_occurrence_title">Edit this occurrence</string>
+    <string name="editor_amount">Amount</string>
+    <string name="editor_expected_amount">Expected amount</string>
+    <string name="editor_name">Name</string>
+    <string name="editor_name_hint">e.g. Rent, Salary</string>
+    <string name="editor_category">Category</string>
+    <string name="editor_date">Date</string>
+    <string name="editor_first_due">First due date</string>
+    <string name="editor_next_due">Next due date</string>
+    <string name="editor_due_date">Due date</string>
+    <string name="editor_repeat">Repeat</string>
+    <string name="editor_every">Every</string>
+    <string name="editor_ends">Ends</string>
+    <string name="editor_ends_never">Never</string>
+    <string name="editor_ends_on">On a date</string>
+    <string name="editor_end_date">End date</string>
+    <string name="editor_description">Description (optional)</string>
+    <string name="editor_already_paid">Already paid</string>
+    <string name="editor_already_received">Already received</string>
+    <string name="editor_already_hint">Saves it as confirmed on this date.</string>
+    <string name="editor_active">Active</string>
+    <string name="editor_active_hint">Inactive transactions stop creating new occurrences.</string>
+    <string name="editor_template_note">Changes apply to pending occurrences from today on. Paid, received, cancelled and overdue ones keep their values.</string>
+    <plurals name="editor_customized_note">
+        <item quantity="one">%d individually edited occurrence will be replaced if you change the repetition or the next due date.</item>
+        <item quantity="other">%d individually edited occurrences will be replaced if you change the repetition or the next due date.</item>
+    </plurals>
+    <string name="editor_delete_recurring_title">Delete recurring transaction?</string>
+    <string name="editor_delete_recurring_message">Future pending occurrences are deleted. Past, paid and received ones stay in your history.</string>
+    <string name="editor_delete_title">Delete transaction?</string>
+    <string name="editor_delete_message">This one-time transaction will be removed.</string>
+
+    <!-- Recurring list -->
+    <string name="recurring_title">Recurring</string>
+    <string name="recurring_hint">Bills and income that repeat</string>
+    <string name="recurring_active">Active</string>
+    <string name="recurring_inactive">Inactive</string>
+    <string name="recurring_next">next %1$s</string>
+    <string name="recurring_empty_title">No recurring transactions</string>
+    <string name="recurring_empty_message">Add rent, salary or subscriptions once and MyFinance plans every month for you.</string>
 </resources>
