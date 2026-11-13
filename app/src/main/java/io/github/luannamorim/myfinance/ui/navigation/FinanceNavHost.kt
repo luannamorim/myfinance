@@ -114,4 +114,5 @@ fun NavHostController.navigateToTopLevel(top: TopLevelDestination) {
 /** Every destination of the app. Kept apart from the scaffold so features add their screens here. */
 internal fun NavGraphBuilder.financeGraph(navController: NavHostController) {
     tabDestinations(navController)
+    settingsDestinations(navController)
 }

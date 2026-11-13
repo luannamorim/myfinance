@@ -33,4 +33,85 @@
     <string name="history_empty_message">Confirmed and planned transactions will appear here, month by month.</string>
     <string name="settings_empty_title">Settings</string>
     <string name="settings_empty_message">Currency, formats, categories and backups live here.</string>
+
+    <!-- Predefined categories (keys frozen in seed-keys.txt) -->
+    <string name="seed_income_salary">Salary</string>
+    <string name="seed_income_freelance">Freelance</string>
+    <string name="seed_income_side_income">Side Income</string>
+    <string name="seed_income_dividends">Dividends</string>
+    <string name="seed_income_business_income">Business Income</string>
+    <string name="seed_income_other_income">Other Income</string>
+    <string name="seed_expense_housing">Housing</string>
+    <string name="seed_expense_rent">Rent</string>
+    <string name="seed_expense_electricity">Electricity</string>
+    <string name="seed_expense_water">Water</string>
+    <string name="seed_expense_internet">Internet</string>
+    <string name="seed_expense_phone">Phone</string>
+    <string name="seed_expense_groceries">Groceries</string>
+    <string name="seed_expense_transportation">Transportation</string>
+    <string name="seed_expense_healthcare">Healthcare</string>
+    <string name="seed_expense_gym">Gym</string>
+    <string name="seed_expense_subscriptions">Subscriptions</string>
+    <string name="seed_expense_entertainment">Entertainment</string>
+    <string name="seed_expense_education">Education</string>
+    <string name="seed_expense_shopping">Shopping</string>
+    <string name="seed_expense_other_expenses">Other Expenses</string>
+    <string name="seed_asset_fixed_income">Fixed Income</string>
+    <string name="seed_asset_stocks">Stocks</string>
+    <string name="seed_asset_etfs">ETFs</string>
+    <string name="seed_asset_reits">REITs</string>
+    <string name="seed_asset_investment_funds">Investment Funds</string>
+    <string name="seed_asset_cryptocurrencies">Cryptocurrencies</string>
+    <string name="seed_asset_other_investments">Other Investments</string>
+    <string name="seed_asset_business_ownership">Business Ownership</string>
+    <string name="seed_asset_startup_equity">Startup Equity</string>
+    <string name="seed_asset_real_estate">Real Estate</string>
+    <string name="seed_asset_vehicles">Vehicles</string>
+    <string name="seed_asset_other_assets">Other Assets</string>
+
+    <!-- Common -->
+    <string name="action_ok">OK</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_archive">Archive</string>
+    <string name="action_unarchive">Unarchive</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_add">Add</string>
+    <string name="action_confirm">Confirm</string>
+    <string name="error_name_required">Enter a name</string>
+    <string name="error_amount_required">Enter an amount greater than zero</string>
+    <string name="error_category_required">Choose a category</string>
+
+    <!-- Categories -->
+    <string name="categories_title">Categories</string>
+    <string name="categories_hint">Income, expense and asset categories</string>
+    <string name="categories_expense">Expenses</string>
+    <string name="categories_income">Income</string>
+    <string name="categories_assets">Assets</string>
+    <string name="categories_archived">Archived</string>
+    <string name="categories_add">New category</string>
+    <string name="categories_edit">Edit category</string>
+    <string name="category_name">Name</string>
+    <string name="category_icon">Icon</string>
+    <string name="category_group">Group</string>
+    <string name="category_archive_hint">Archived categories disappear from pickers but stay in your history.</string>
+    <string name="category_in_use_title">Category in use</string>
+    <string name="category_in_use_message">Transactions or assets use this category, so it can\'t be deleted. Archive it instead to hide it from pickers.</string>
+    <string name="group_investment">Investments</string>
+    <string name="group_personal">Personal assets</string>
+
+    <!-- Settings -->
+    <string name="settings_cash">Cash</string>
+    <string name="settings_display">Display</string>
+    <string name="settings_data">Data</string>
+    <string name="settings_about_section">About</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_number_format">Number format</string>
+    <string name="settings_date_format">Date format</string>
+    <string name="settings_date_dmy">DD/MM/YYYY</string>
+    <string name="settings_date_mdy">MM/DD/YYYY</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_hint">Follows the phone; change it for MyFinance only</string>
 </resources>

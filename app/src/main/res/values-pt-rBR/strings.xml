@@ -30,4 +30,85 @@
     <string name="history_empty_message">Transações confirmadas e previstas aparecem aqui, mês a mês.</string>
     <string name="settings_empty_title">Ajustes</string>
     <string name="settings_empty_message">Moeda, formatos, categorias e backups ficam aqui.</string>
+
+    <!-- Categorias predefinidas -->
+    <string name="seed_income_salary">Salário</string>
+    <string name="seed_income_freelance">Freelance</string>
+    <string name="seed_income_side_income">Renda extra</string>
+    <string name="seed_income_dividends">Dividendos</string>
+    <string name="seed_income_business_income">Renda de negócio</string>
+    <string name="seed_income_other_income">Outras receitas</string>
+    <string name="seed_expense_housing">Moradia</string>
+    <string name="seed_expense_rent">Aluguel</string>
+    <string name="seed_expense_electricity">Energia elétrica</string>
+    <string name="seed_expense_water">Água</string>
+    <string name="seed_expense_internet">Internet</string>
+    <string name="seed_expense_phone">Celular</string>
+    <string name="seed_expense_groceries">Mercado</string>
+    <string name="seed_expense_transportation">Transporte</string>
+    <string name="seed_expense_healthcare">Saúde</string>
+    <string name="seed_expense_gym">Academia</string>
+    <string name="seed_expense_subscriptions">Assinaturas</string>
+    <string name="seed_expense_entertainment">Lazer</string>
+    <string name="seed_expense_education">Educação</string>
+    <string name="seed_expense_shopping">Compras</string>
+    <string name="seed_expense_other_expenses">Outras despesas</string>
+    <string name="seed_asset_fixed_income">Renda fixa</string>
+    <string name="seed_asset_stocks">Ações</string>
+    <string name="seed_asset_etfs">ETFs</string>
+    <string name="seed_asset_reits">Fundos imobiliários</string>
+    <string name="seed_asset_investment_funds">Fundos de investimento</string>
+    <string name="seed_asset_cryptocurrencies">Criptomoedas</string>
+    <string name="seed_asset_other_investments">Outros investimentos</string>
+    <string name="seed_asset_business_ownership">Participação em empresa</string>
+    <string name="seed_asset_startup_equity">Participação em startup</string>
+    <string name="seed_asset_real_estate">Imóveis</string>
+    <string name="seed_asset_vehicles">Veículos</string>
+    <string name="seed_asset_other_assets">Outros bens</string>
+
+    <!-- Common -->
+    <string name="action_ok">OK</string>
+    <string name="action_delete">Excluir</string>
+    <string name="action_archive">Arquivar</string>
+    <string name="action_unarchive">Desarquivar</string>
+    <string name="action_edit">Editar</string>
+    <string name="action_add">Adicionar</string>
+    <string name="action_confirm">Confirmar</string>
+    <string name="error_name_required">Informe um nome</string>
+    <string name="error_amount_required">Informe um valor maior que zero</string>
+    <string name="error_category_required">Escolha uma categoria</string>
+
+    <!-- Categories -->
+    <string name="categories_title">Categorias</string>
+    <string name="categories_hint">Categorias de receita, despesa e ativos</string>
+    <string name="categories_expense">Despesas</string>
+    <string name="categories_income">Receitas</string>
+    <string name="categories_assets">Ativos</string>
+    <string name="categories_archived">Arquivadas</string>
+    <string name="categories_add">Nova categoria</string>
+    <string name="categories_edit">Editar categoria</string>
+    <string name="category_name">Nome</string>
+    <string name="category_icon">Ícone</string>
+    <string name="category_group">Grupo</string>
+    <string name="category_archive_hint">Categorias arquivadas somem das listas de escolha, mas continuam no seu histórico.</string>
+    <string name="category_in_use_title">Categoria em uso</string>
+    <string name="category_in_use_message">Há transações ou ativos usando esta categoria, então ela não pode ser excluída. Arquive-a para escondê-la das listas de escolha.</string>
+    <string name="group_investment">Investimentos</string>
+    <string name="group_personal">Bens</string>
+
+    <!-- Settings -->
+    <string name="settings_cash">Caixa</string>
+    <string name="settings_display">Exibição</string>
+    <string name="settings_data">Dados</string>
+    <string name="settings_about_section">Sobre</string>
+    <string name="settings_theme">Tema</string>
+    <string name="settings_theme_dark">Escuro</string>
+    <string name="settings_theme_light">Claro</string>
+    <string name="settings_theme_system">Sistema</string>
+    <string name="settings_number_format">Formato de número</string>
+    <string name="settings_date_format">Formato de data</string>
+    <string name="settings_date_dmy">DD/MM/AAAA</string>
+    <string name="settings_date_mdy">MM/DD/AAAA</string>
+    <string name="settings_language">Idioma</string>
+    <string name="settings_language_hint">Segue o celular; mude só para o MyFinance</string>
 </resources>
