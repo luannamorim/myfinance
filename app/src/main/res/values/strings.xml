@@ -449,7 +449,6 @@
     <string name="overview_start_asset">Add an investment or asset</string>
     <string name="overview_start_asset_hint">Fixed income, stocks, ETFs, real estate, vehicles</string>
     <string name="overview_composition_note">Cash and portfolio are kept apart: moving money into an investment doesn\'t change cash until you adjust the balance.</string>
-    <string name="overview_display_currency">Show in</string>
 
     <!-- Backup -->
     <string name="backup_title">Backup</string>
@@ -509,4 +508,36 @@
     <string name="backup_msg_error">Could not finish. Try again.</string>
     <string name="backup_today_at">today at %1$s</string>
     <string name="backup_date_at">%1$s at %2$s</string>
+
+    <!-- Export -->
+    <string name="export_title">Export CSV</string>
+    <string name="export_hint">Transactions, portfolio and rates for spreadsheets</string>
+    <string name="export_warning_title">Export unencrypted data?</string>
+    <string name="export_warning_message">The CSV files are not encrypted: anyone with the file can read your transactions, balances and assets. To restore the app, use the encrypted backup.</string>
+    <string name="export_confirm">Export</string>
+    <string name="export_done">Exported</string>
+    <string name="export_error">Couldn\'t write the file</string>
+
+    <!-- Privacy -->
+    <string name="privacy_title">Privacy</string>
+    <string name="privacy_hint">What MyFinance stores and sends</string>
+    <string name="privacy_storage_title">Your data stays on this phone</string>
+    <string name="privacy_storage">Transactions, balances, assets, valuations, rates and settings are stored only in MyFinance\'s private storage, protected by Android\'s app sandbox and file encryption. There is no account and no server.</string>
+    <string name="privacy_network_title">One network request</string>
+    <string name="privacy_network">To convert dollars, MyFinance asks the Banco Central do Brasil (api.bcb.gov.br) for the public PTAX rate of a range of dates, over HTTPS. Nothing about you or your money is sent. You can turn automatic fetching off in Currency and exchange rate.</string>
+    <string name="privacy_backup_title">Encrypted backups</string>
+    <string name="privacy_backup">Backups are encrypted with AES-256 and a key derived from your recovery password before they leave the app. The password is never stored. CSV exports are not encrypted.</string>
+    <string name="privacy_tracking_title">No tracking</string>
+    <string name="privacy_tracking">No ads, no analytics, no crash reporting. Amounts, names and notes are never written to logs.</string>
+
+    <!-- About -->
+    <string name="about_title">About</string>
+    <string name="about_hint">Version, licenses and data sources</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_made_by">Developed by luannamorim · MIT License</string>
+    <string name="about_source">Source code: github.com/luannamorim/myfinance</string>
+    <string name="about_licenses">Licenses and data</string>
+    <string name="about_geist">Geist font by Vercel, SIL Open Font License 1.1.</string>
+    <string name="about_bcb">Exchange rates: Banco Central do Brasil, SGS series 1 (US dollar, sell, PTAX).</string>
+    <string name="about_sibling">MyFit\'s sibling: same design, same care.</string>
 </resources>

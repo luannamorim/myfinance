@@ -66,11 +66,11 @@ If the app dies at any point, the database is either the old one or the new one,
 
 ## CSV export
 
-*Settings → Export CSV* writes a zip with `transactions.csv`, `assets.csv`, `asset_flows.csv`, `valuations.csv` and `exchange_rates.csv`:
+*Settings → Export CSV* writes a zip with `transactions.csv`, `cash_adjustments.csv` (opening balances and adjustments), `assets.csv`, `asset_flows.csv`, `valuations.csv` and `exchange_rates.csv`:
 
 - UTF-8, comma separated, header row, RFC 4180 quoting.
 - Dates in ISO-8601 (`2026-11-12`), amounts as plain decimals with a dot (`2500.00`) and currency columns (`transactions.csv` has `currency` for the expected amount and `actual_currency` for the actual one).
-- Text cells starting with `=`, `+`, `-` or `@` are prefixed with `'` to prevent formula injection in spreadsheets.
+- Text cells starting with `=`, `+`, `-`, `@`, a tab or a carriage return are prefixed with `'` to prevent formula injection in spreadsheets. Predefined categories that were never renamed are written with their English name.
 - **The export is not encrypted**; the app warns before writing it.
 
 CSV is for reading the data elsewhere. Restoring the app always uses the encrypted backup.

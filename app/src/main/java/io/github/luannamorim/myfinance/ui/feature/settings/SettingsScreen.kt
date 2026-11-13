@@ -1,6 +1,17 @@
 package io.github.luannamorim.myfinance.ui.feature.settings
 
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Shield
+import androidx.compose.material.icons.rounded.TableChart
+import androidx.compose.material3.Text
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import io.github.luannamorim.myfinance.ui.components.ConfirmDialog
+import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -43,6 +54,10 @@ data class SettingsActions(
     val onOpenRecurring: () -> Unit = {},
     val onOpenCurrency: () -> Unit = {},
     val onOpenBackup: () -> Unit = {},
+    val onExport: () -> Unit = {},
+    val onDismissExport: () -> Unit = {},
+    val onOpenPrivacy: () -> Unit = {},
+    val onOpenAbout: () -> Unit = {},
     val onOpenLanguage: (() -> Unit)? = null,
 )
 
@@ -59,12 +74,25 @@ fun SettingsScreen(actions: SettingsActions, viewModel: SettingsViewModel = hilt
     } else {
         null
     }
-    SettingsContent(state, actions.copy(onUpdate = viewModel::update, onOpenLanguage = openLanguage))
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        uri?.let(viewModel::exportTo)
+    }
+    val fileName = "myfinance-export-" + java.time.LocalDate.now().toString().replace("-", "") + ".zip"
+    SettingsContent(
+        state,
+        actions.copy(
+            onUpdate = viewModel::update,
+            onOpenLanguage = openLanguage,
+            onExport = { exportLauncher.launch(fileName) },
+            onDismissExport = viewModel::dismissExportMessage,
+        ),
+    )
 }
 
 @Composable
 fun SettingsContent(state: SettingsUiState, actions: SettingsActions, modifier: Modifier = Modifier) {
     val s = state.settings
+    var exportWarning by rememberSaveable { mutableStateOf(false) }
     TabScreen(title = stringResource(R.string.nav_settings), modifier = modifier) {
         SectionHeader(stringResource(R.string.settings_cash))
         NavRow(Icons.Rounded.AccountBalanceWallet, stringResource(R.string.opening_title), stringResource(R.string.opening_hint), actions.onOpenOpening)
@@ -106,5 +134,26 @@ fun SettingsContent(state: SettingsUiState, actions: SettingsActions, modifier: 
 
         SectionHeader(stringResource(R.string.settings_data), Modifier.padding(top = Spacing.s))
         NavRow(Icons.Rounded.CloudUpload, stringResource(R.string.backup_title), stringResource(R.string.backup_settings_hint), actions.onOpenBackup)
+        NavRow(Icons.Rounded.TableChart, stringResource(R.string.export_title), stringResource(R.string.export_hint), { exportWarning = true })
+        state.exportMessage?.let { message ->
+            Text(
+                stringResource(if (message == ExportMessage.DONE) R.string.export_done else R.string.export_error),
+                style = FinanceTheme.type.caption,
+                color = if (message == ExportMessage.DONE) FinanceTheme.colors.positive else FinanceTheme.colors.danger,
+            )
+        }
+
+        SectionHeader(stringResource(R.string.settings_about_section), Modifier.padding(top = Spacing.s))
+        NavRow(Icons.Rounded.Shield, stringResource(R.string.privacy_title), stringResource(R.string.privacy_hint), actions.onOpenPrivacy)
+        NavRow(Icons.Rounded.Info, stringResource(R.string.about_title), stringResource(R.string.about_hint), actions.onOpenAbout)
+    }
+    if (exportWarning) {
+        ConfirmDialog(
+            title = stringResource(R.string.export_warning_title),
+            message = stringResource(R.string.export_warning_message),
+            confirmText = stringResource(R.string.export_confirm),
+            onConfirm = { exportWarning = false; actions.onExport() },
+            onDismiss = { exportWarning = false },
+        )
     }
 }

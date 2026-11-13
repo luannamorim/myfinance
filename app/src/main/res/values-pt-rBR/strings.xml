@@ -452,7 +452,6 @@
     <string name="overview_start_asset">Adicione um investimento ou bem</string>
     <string name="overview_start_asset_hint">Renda fixa, ações, ETFs, imóveis, veículos</string>
     <string name="overview_composition_note">Caixa e carteira ficam separados: aplicar dinheiro num investimento não muda o caixa até você ajustar o saldo.</string>
-    <string name="overview_display_currency">Mostrar em</string>
 
     <!-- Backup -->
     <string name="backup_title">Backup</string>
@@ -512,4 +511,36 @@
     <string name="backup_msg_error">Não foi possível concluir. Tente de novo.</string>
     <string name="backup_today_at">hoje às %1$s</string>
     <string name="backup_date_at">%1$s às %2$s</string>
+
+    <!-- Export -->
+    <string name="export_title">Exportar CSV</string>
+    <string name="export_hint">Transações, carteira e cotações para planilhas</string>
+    <string name="export_warning_title">Exportar dados sem criptografia?</string>
+    <string name="export_warning_message">Os arquivos CSV não são criptografados: qualquer pessoa com o arquivo pode ler suas transações, saldos e ativos. Para restaurar o app, use o backup criptografado.</string>
+    <string name="export_confirm">Exportar</string>
+    <string name="export_done">Exportado</string>
+    <string name="export_error">Não foi possível gravar o arquivo</string>
+
+    <!-- Privacy -->
+    <string name="privacy_title">Privacidade</string>
+    <string name="privacy_hint">O que o MyFinance guarda e envia</string>
+    <string name="privacy_storage_title">Seus dados ficam neste celular</string>
+    <string name="privacy_storage">Transações, saldos, ativos, avaliações, cotações e configurações ficam só no armazenamento privado do MyFinance, protegidos pelo isolamento de apps e pela criptografia de arquivos do Android. Não há conta nem servidor.</string>
+    <string name="privacy_network_title">Uma única requisição de rede</string>
+    <string name="privacy_network">Para converter dólares, o MyFinance pede ao Banco Central do Brasil (api.bcb.gov.br) a PTAX pública de um intervalo de datas, por HTTPS. Nada sobre você ou seu dinheiro é enviado. Você pode desligar a busca automática em Moeda e cotação.</string>
+    <string name="privacy_backup_title">Backups criptografados</string>
+    <string name="privacy_backup">Os backups são criptografados com AES-256 e uma chave derivada da sua senha de recuperação antes de saírem do app. A senha nunca é guardada. Exportações CSV não são criptografadas.</string>
+    <string name="privacy_tracking_title">Sem rastreamento</string>
+    <string name="privacy_tracking">Sem anúncios, sem analytics, sem relatório de falhas. Valores, nomes e observações nunca vão para logs.</string>
+
+    <!-- About -->
+    <string name="about_title">Sobre</string>
+    <string name="about_hint">Versão, licenças e fontes de dados</string>
+    <string name="about_version">Versão %1$s</string>
+    <string name="about_made_by">Desenvolvido por luannamorim · Licença MIT</string>
+    <string name="about_source">Código-fonte: github.com/luannamorim/myfinance</string>
+    <string name="about_licenses">Licenças e dados</string>
+    <string name="about_geist">Fonte Geist, da Vercel, SIL Open Font License 1.1.</string>
+    <string name="about_bcb">Cotações: Banco Central do Brasil, série SGS 1 (dólar americano, venda, PTAX).</string>
+    <string name="about_sibling">Irmão do MyFit: mesmo design, mesmo cuidado.</string>
 </resources>

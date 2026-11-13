@@ -368,25 +368,25 @@ docs/                             ARCHITECTURE, BRAND, SECURITY, TESTING, BACKUP
 
 **Files:** `…/domain/backup/{BackupDataV1,BackupCrypto,BackupArchive,Retention}.kt`, `…/data/backup/SnapshotMapper.kt`, Test: `…/domain/backup/{BackupCryptoTest,BackupArchiveTest,RetentionTest}.kt`, `…/data/backup/SnapshotMapperTest.kt`
 
-- [ ] Port from MyFit with `MAGIC = "MYFINBAK"`, KCV info `myfinance-kcv`, `EXTENSION = ".myfinance"`, `NAME_REGEX = ^myfinance-backup-(\d{8}-\d{6})\.myfinance$`; DTOs for the 9 tables (money as `amount: Long` + `currency: String` where the table has one; dates as epoch-day `Long`; instants epoch ms; `rateMicros: Long`; quantities as strings; nullable category names kept); `counts()` keys per table; `referencedImages()`.
-- [ ] Tests: MyFit's crypto/archive/retention cases adapted; snapshot round trip of a fully populated DB equals the original (all tables, NULL names, MANUAL rates). Commit `feat(backup): add encrypted backup format`.
+- [x] Port from MyFit with `MAGIC = "MYFINBAK"`, KCV info `myfinance-kcv`, `EXTENSION = ".myfinance"`, `NAME_REGEX = ^myfinance-backup-(\d{8}-\d{6})\.myfinance$`; DTOs for the 9 tables (money as `amount: Long` + `currency: String` where the table has one; dates as epoch-day `Long`; instants epoch ms; `rateMicros: Long`; quantities as strings; nullable category names kept); `counts()` keys per table; `referencedImages()`.
+- [x] Tests: MyFit's crypto/archive/retention cases adapted; snapshot round trip of a fully populated DB equals the original (all tables, NULL names, MANUAL rates). Commit `feat(backup): add encrypted backup format`.
 
 ### Task 6.2: Key store, manager, folder and scheduling (port)
 
 **Files:** `…/data/backup/{BackupKeyStore,BackupManager,BackupDestination,FolderBackupWriter}.kt`, `…/data/prefs/BackupStateStore.kt`, `…/platform/backup/BackupWork.kt`, Test: `…/data/backup/{BackupKeyStoreTest,BackupManagerTest,FolderBackupWriterTest}.kt`, `…/platform/backup/BackupWorkerTest.kt`, `…/testutil/FakeKeyWrapper.kt`
 
-- [ ] Port with alias `myfinance_backup_wrap`; restore without the "session active" check; after restore call `CashRepository.ensureGenerated()`; add `suspend fun BackupManager.verify(input: () -> InputStream, sizeBytes: Long): Boolean` (device key, full decrypt + `BackupArchive.read` into a temp dir, then delete it); `FolderBackupWriter` calls it on the new file before pruning to 7. Bind `BackupTrigger` to `BackupScheduler` (replacing the no-op). `BackupNotifier`: channel `backup_status`, request `POST_NOTIFICATIONS` (API 33+) when the user chooses a folder. Unconfigured (no folder or no password) automatic runs exit silently.
-- [ ] Tests: MyFit's manager cases (round trip, wrong password untouched, corrupted untouched, weak KDF not adopted, interrupted restore cleanup) + "verification failure keeps older backups". Commit `feat(backup): add key store, manager, folder writer and scheduling`.
+- [x] Port with alias `myfinance_backup_wrap`; restore without the "session active" check; after restore call `CashRepository.ensureGenerated()`; add `suspend fun BackupManager.verify(input: () -> InputStream, sizeBytes: Long): Boolean` (device key, full decrypt + `BackupArchive.read` into a temp dir, then delete it); `FolderBackupWriter` calls it on the new file before pruning to 7. Bind `BackupTrigger` to `BackupScheduler` (replacing the no-op). `BackupNotifier`: channel `backup_status`, request `POST_NOTIFICATIONS` (API 33+) when the user chooses a folder. Unconfigured (no folder or no password) automatic runs exit silently.
+- [x] Tests: MyFit's manager cases (round trip, wrong password untouched, corrupted untouched, weak KDF not adopted, interrupted restore cleanup) + "verification failure keeps older backups". Commit `feat(backup): add key store, manager, folder writer and scheduling`.
 
 ### Task 6.3: Backup screen and CSV export
 
 **Files:** `…/ui/feature/backup/{BackupScreen,BackupViewModel}.kt`, `…/data/repository/ExportRepository.kt`, `…/domain/export/Csv.kt`, `…/ui/feature/settings/{SettingsScreen,SettingsViewModel,PrivacyScreen,AboutScreen}.kt`, Test: `…/ui/feature/backup/{BackupViewModelTest,BackupFlowTest}.kt`, `…/domain/export/CsvTest.kt`, `…/data/repository/ExportRepositoryTest.kt`, `…/ui/feature/settings/{SettingsScreenshotTest,SettingsFlowTest}.kt`
 
-**Produces:** `object Csv { fun row(cells: List<String?>): String; fun safeText(s: String): String }` in `domain/export`; `ExportRepository.export(out: OutputStream)` (zip of 5 CSVs; `transactions.csv` has `currency` and `actual_currency`).
+**Produces:** `object Csv { fun row(cells: List<String?>): String; fun safeText(s: String): String }` in `domain/export`; `ExportRepository.export(out: OutputStream)` (zip of 6 CSVs, adjustments included; `transactions.csv` has `currency` and `actual_currency`).
 
-- [ ] Tests: quoting of `,` `"` newline; `=SUM(1)` → `'=SUM(1)`; amounts `2500.00` and ISO dates; zip has exactly the 5 files with headers; Backup flow test (set password → back up to a temp folder → restore → data equal); Settings flow test (change number format → amounts reformat).
-- [ ] Settings screen complete (sections from SPEC §26), Privacy (what is stored, network use, encryption — mirrors SECURITY.md), About (version, Geist OFL, BCB data source, MIT). Finalize `SECURITY.md` and `BACKUP.md`.
-- [ ] Stage 6 verification + push. Commit `feat(settings): add backup screen, csv export, privacy and about`.
+- [x] Tests: quoting of `,` `"` newline; `=SUM(1)` → `'=SUM(1)`; amounts `2500.00` and ISO dates; zip has exactly the 5 files with headers; Backup flow test (set password → back up to a temp folder → restore → data equal); Settings flow test (change number format → amounts reformat).
+- [x] Settings screen complete (sections from SPEC §26), Privacy (what is stored, network use, encryption — mirrors SECURITY.md), About (version, Geist OFL, BCB data source, MIT). Finalize `SECURITY.md` and `BACKUP.md`.
+- [x] Stage 6 verification + push. Commit `feat(settings): add backup screen, csv export, privacy and about`.
 
 ---
 
