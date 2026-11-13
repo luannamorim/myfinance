@@ -13,6 +13,7 @@ import io.github.luannamorim.myfinance.ui.feature.transaction.OccurrenceDetailSc
 import io.github.luannamorim.myfinance.ui.feature.transaction.TransactionEditorScreen
 import io.github.luannamorim.myfinance.ui.feature.history.HistoryScreen
 import io.github.luannamorim.myfinance.ui.feature.overview.OverviewScreen
+import io.github.luannamorim.myfinance.ui.feature.portfolio.PortfolioActions
 import io.github.luannamorim.myfinance.ui.feature.portfolio.PortfolioScreen
 import io.github.luannamorim.myfinance.ui.feature.settings.AdjustBalanceScreen
 import io.github.luannamorim.myfinance.ui.feature.settings.CategoriesScreen
@@ -34,7 +35,15 @@ internal fun NavGraphBuilder.tabDestinations(navController: NavHostController) {
             ),
         )
     }
-    composable<PortfolioRoute> { PortfolioScreen() }
+    composable<PortfolioRoute> {
+        PortfolioScreen(
+            PortfolioActions(
+                onAdd = { navController.navigate(AssetEditorRoute()) },
+                onOpen = { navController.navigate(AssetDetailRoute(it)) },
+                onCharts = { navController.navigate(PortfolioChartsRoute) },
+            ),
+        )
+    }
     composable<HistoryRoute> { HistoryScreen(onOpen = { navController.navigate(OccurrenceDetailRoute(it)) }) }
     composable<SettingsRoute> {
         SettingsScreen(

@@ -397,4 +397,20 @@
     <string name="flow_new_value_hint">Leave empty to add this amount to the last valuation.</string>
     <string name="flow_more_than_value">This is more than the current estimated value. Close the position if you sold everything.</string>
     <string name="flow_full_hint">Use the amount you received for the whole position.</string>
+
+    <!-- Portfolio dashboard -->
+    <string name="portfolio_add">New asset</string>
+    <string name="portfolio_all">All</string>
+    <string name="portfolio_total">Total</string>
+    <string name="portfolio_value">Value</string>
+    <string name="portfolio_invested">Invested</string>
+    <string name="portfolio_gain">Gain/loss</string>
+    <string name="portfolio_return">Simple return</string>
+    <string name="portfolio_last_valuation">Last valuation %1$s</string>
+    <string name="portfolio_realized">Realized from closed positions</string>
+    <string name="portfolio_closed">Closed positions</string>
+    <string name="portfolio_charts">Charts</string>
+    <string name="portfolio_charts_hint">Net worth, value vs invested, performance</string>
+    <string name="portfolio_show_all">Show all categories</string>
+    <string name="portfolio_asset_gain">%1$s · %2$s</string>
 </resources>

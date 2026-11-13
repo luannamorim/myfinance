@@ -163,6 +163,9 @@ object PortfolioCalculator {
         var value = Total.zero(to)
         var invested = Total.zero(to)
         var contributed = Total.zero(to)
+        // Return only over assets that received money: a granted or inherited asset (nothing contributed) has a
+        // gain but no return, and would otherwise inflate the percentage.
+        var gainWithContributions = Total.zero(to)
         var realized = Total.zero(to)
         var lastValuation: LocalDate? = null
         var open = 0
@@ -178,7 +181,10 @@ object PortfolioCalculator {
                 open++
                 value += converted.value
                 invested += converted.contributed - converted.withdrawn
-                contributed += converted.contributed
+                if (s.contributed.minor > 0) {
+                    contributed += converted.contributed
+                    gainWithContributions += converted.gain
+                }
                 s.lastValuationDate?.let { d -> if (lastValuation == null || d.isAfter(lastValuation)) lastValuation = d }
             }
         }
@@ -187,7 +193,7 @@ object PortfolioCalculator {
             value = value,
             invested = invested,
             gain = gain,
-            simpleReturn = if (gain.incomplete) null else ratio(gain.money.minor, contributed.money.minor),
+            simpleReturn = if (gainWithContributions.incomplete) null else ratio(gainWithContributions.money.minor, contributed.money.minor),
             lastValuationDate = lastValuation,
             realizedClosed = realized,
             openCount = open,

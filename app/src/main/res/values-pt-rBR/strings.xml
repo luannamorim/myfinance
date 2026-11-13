@@ -400,4 +400,20 @@
     <string name="flow_new_value_hint">Deixe vazio para somar este valor à última avaliação.</string>
     <string name="flow_more_than_value">Isto é mais que o valor estimado atual. Encerre a posição se vendeu tudo.</string>
     <string name="flow_full_hint">Use o valor que você recebeu pela posição inteira.</string>
+
+    <!-- Portfolio dashboard -->
+    <string name="portfolio_add">Novo ativo</string>
+    <string name="portfolio_all">Tudo</string>
+    <string name="portfolio_total">Total</string>
+    <string name="portfolio_value">Valor</string>
+    <string name="portfolio_invested">Investido</string>
+    <string name="portfolio_gain">Ganho/perda</string>
+    <string name="portfolio_return">Retorno simples</string>
+    <string name="portfolio_last_valuation">Última avaliação %1$s</string>
+    <string name="portfolio_realized">Realizado em posições encerradas</string>
+    <string name="portfolio_closed">Posições encerradas</string>
+    <string name="portfolio_charts">Gráficos</string>
+    <string name="portfolio_charts_hint">Patrimônio, valor x investido, desempenho</string>
+    <string name="portfolio_show_all">Mostrar todas as categorias</string>
+    <string name="portfolio_asset_gain">%1$s · %2$s</string>
 </resources>
