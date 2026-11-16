@@ -449,6 +449,7 @@
     <string name="overview_start_asset">Adicione um investimento ou bem</string>
     <string name="overview_start_asset_hint">Renda fixa, ações, ETFs, imóveis, veículos</string>
     <string name="overview_composition_note">Moveu dinheiro entre o caixa e um investimento? Lance como transferência: caixa e ativo mudam juntos, sem contar como receita ou despesa.</string>
+    <string name="overview_add">Adicionar</string>
 
     <!-- Backup -->
     <string name="backup_title">Backup</string>

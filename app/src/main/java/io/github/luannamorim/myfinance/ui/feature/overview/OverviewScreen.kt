@@ -14,13 +14,22 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.DonutLarge
+import androidx.compose.material.icons.rounded.SwapVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -50,6 +59,7 @@ import io.github.luannamorim.myfinance.ui.components.SectionHeader
 import io.github.luannamorim.myfinance.ui.components.TabScreen
 import io.github.luannamorim.myfinance.ui.components.TextAction
 import io.github.luannamorim.myfinance.ui.components.shrinkToFit
+import io.github.luannamorim.myfinance.ui.theme.FinanceShapes
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import io.github.luannamorim.myfinance.ui.theme.Spacing
 import java.time.LocalDate
@@ -93,9 +103,10 @@ fun OverviewContent(state: OverviewUiState, actions: OverviewActions, modifier: 
         title = stringResource(R.string.nav_overview),
         modifier = modifier,
         actions = {
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
                 Currency.entries.forEach { cur -> FinanceChip(cur.symbol, selected = state.display == cur, onClick = { actions.onDisplay(cur) }) }
             }
+            AddMenu(actions.onAddTransaction, actions.onAddAsset)
         },
     ) {
         if (state.loading) return@TabScreen
@@ -147,6 +158,30 @@ fun OverviewContent(state: OverviewUiState, actions: OverviewActions, modifier: 
         )
     }
     ActionErrorDialog(state.error, actions.onDismissError)
+}
+
+/** A quiet "+" in the header: a transaction (Cash Flow) or an asset (Portfolio), with the icons of their tabs. */
+@Composable
+private fun AddMenu(onAddTransaction: () -> Unit, onAddAsset: () -> Unit) {
+    val c = FinanceTheme.colors
+    var open by rememberSaveable { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) { Icon(Icons.Rounded.Add, stringResource(R.string.overview_add), tint = c.textSecondary) }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, shape = FinanceShapes.medium, containerColor = c.surfaceRaised) {
+            AddMenuItem(Icons.Rounded.SwapVert, stringResource(R.string.cashflow_add)) { open = false; onAddTransaction() }
+            AddMenuItem(Icons.Rounded.DonutLarge, stringResource(R.string.portfolio_add)) { open = false; onAddAsset() }
+        }
+    }
+}
+
+@Composable
+private fun AddMenuItem(icon: ImageVector, label: String, onClick: () -> Unit) {
+    val c = FinanceTheme.colors
+    DropdownMenuItem(
+        text = { Text(label, style = FinanceTheme.type.body, color = c.textPrimary) },
+        leadingIcon = { Icon(icon, contentDescription = null, tint = c.textSecondary) },
+        onClick = onClick,
+    )
 }
 
 @Composable

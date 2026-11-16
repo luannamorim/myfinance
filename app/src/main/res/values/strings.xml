@@ -446,6 +446,7 @@
     <string name="overview_start_asset">Add an investment or asset</string>
     <string name="overview_start_asset_hint">Fixed income, stocks, ETFs, real estate, vehicles</string>
     <string name="overview_composition_note">Moving money between cash and an investment? Record it as a transfer: cash and the asset change together, and it isn\'t income or an expense.</string>
+    <string name="overview_add">Add</string>
 
     <!-- Backup -->
     <string name="backup_title">Backup</string>

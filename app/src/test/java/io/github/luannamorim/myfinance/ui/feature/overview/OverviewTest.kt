@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
@@ -117,6 +118,20 @@ class OverviewTest {
     fun screenshot_empty_showsOnboarding() {
         compose.snapBothThemes("overview_empty") { OverviewContent(overviewState(CashLedger(), PortfolioData(), categories, rates, Currency.BRL, today), OverviewActions()) }
         compose.onNodeWithText("Set your opening balance").assertIsDisplayed()
+    }
+
+    @Test
+    fun addMenu_opensTheTransactionOrAssetEditor() {
+        val opened = mutableListOf<String>()
+        val actions = OverviewActions(onAddTransaction = { opened += "transaction" }, onAddAsset = { opened += "asset" })
+        compose.setContent { FinanceTheme { OverviewContent(overviewState(cash, portfolio, categories, rates, Currency.BRL, today), actions) } }
+        compose.onNodeWithContentDescription("Add").performClick()
+        compose.onNodeWithText("Add transaction").performClick()
+        compose.onNodeWithContentDescription("Add").performClick()
+        compose.onNodeWithText("New asset").performClick()
+        assertEquals(listOf("transaction", "asset"), opened)
+        // The menu closes after a choice.
+        compose.onNodeWithText("New asset").assertDoesNotExist()
     }
 
     @Test
