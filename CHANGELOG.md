@@ -8,6 +8,9 @@ All notable changes to this project are documented here. The format follows [Kee
 - Overview: a "+" in the header adds a transaction (Cash Flow) or an asset (Portfolio).
 - History: a Month filter. It starts at the current month and the arrows move it; it combines with the other filters.
 
+### Changed
+- Cash Flow: the month result's caption no longer says that transfers don't count (they still don't).
+
 ## [1.1.2] - 2026-11-13
 
 ### Added
