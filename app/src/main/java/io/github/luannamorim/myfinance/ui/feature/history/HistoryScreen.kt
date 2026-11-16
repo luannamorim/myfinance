@@ -55,6 +55,7 @@ import io.github.luannamorim.myfinance.ui.components.EmptyState
 import io.github.luannamorim.myfinance.ui.components.FinanceCard
 import io.github.luannamorim.myfinance.ui.components.FinanceChip
 import io.github.luannamorim.myfinance.ui.components.FinanceTextField
+import io.github.luannamorim.myfinance.ui.components.MonthSwitcher
 import io.github.luannamorim.myfinance.ui.components.PrimaryButton
 import io.github.luannamorim.myfinance.ui.components.SecondaryButton
 import io.github.luannamorim.myfinance.ui.components.SectionHeader
@@ -62,6 +63,7 @@ import io.github.luannamorim.myfinance.ui.components.TabHeader
 import io.github.luannamorim.myfinance.ui.components.TextAction
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import io.github.luannamorim.myfinance.ui.theme.Spacing
+import java.time.YearMonth
 
 @Composable
 fun HistoryScreen(onOpen: (Long) -> Unit, viewModel: HistoryViewModel = hiltViewModel()) {
@@ -104,6 +106,12 @@ fun HistoryContent(
             }
             item {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    // Starts at the current month; the switcher below the filters moves it.
+                    FinanceChip(
+                        stringResource(R.string.history_month),
+                        selected = f.month != null,
+                        onClick = { onFilter { it.copy(month = if (it.month == null) YearMonth.from(state.today) else null) } },
+                    )
                     FinanceChip(stringResource(R.string.kind_income), selected = EntryKind.INCOME in f.kinds, onClick = { onFilter { it.copy(kinds = it.kinds.toggle(EntryKind.INCOME)) } })
                     FinanceChip(stringResource(R.string.kind_expense), selected = EntryKind.EXPENSE in f.kinds, onClick = { onFilter { it.copy(kinds = it.kinds.toggle(EntryKind.EXPENSE)) } })
                     // One chip for both directions of transfers.
@@ -132,11 +140,15 @@ fun HistoryContent(
                     if (!f.isEmpty) TextAction(stringResource(R.string.history_clear), onClick = onClear, color = c.textSecondary)
                 }
             }
+            f.month?.let { month ->
+                item(key = "month-filter") { MonthSwitcher(month, { m -> onFilter { it.copy(month = m) } }) }
+            }
             if (state.months.isEmpty()) {
                 item { Text(stringResource(R.string.history_no_results), style = FinanceTheme.type.body, color = c.textSecondary, modifier = Modifier.padding(top = Spacing.l)) }
             }
             state.months.forEach { (month, items) ->
-                item(key = "m-$month") { SectionHeader(formats.dates.monthYear(month), Modifier.padding(top = Spacing.m)) }
+                // With the month filter on, the switcher above already names the month.
+                if (f.month == null) item(key = "m-$month") { SectionHeader(formats.dates.monthYear(month), Modifier.padding(top = Spacing.m)) }
                 items(items, key = { item -> if (item is HistoryItem.Transaction) "t-${item.row.id}" else "a-${(item as HistoryItem.Adjustment).entry.adjustment.id}" }) { item ->
                     when (item) {
                         is HistoryItem.Transaction -> OccurrenceRowItem(item.row, onClick = { onOpen(item.row.id) })

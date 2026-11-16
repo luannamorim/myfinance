@@ -67,6 +67,23 @@ class HistoryFilterTest {
     }
 
     @Test
+    fun monthFilter_keepsOnlyThatMonth_andAdjustments() {
+        assertEquals(listOf("Internet", "Rent"), run(HistoryFilter(month = YearMonth.of(2026, 10))))
+        assertEquals(listOf("Cloud", "Energia elétrica", "Gym", "adjustment", "Salary"), run(HistoryFilter(month = YearMonth.of(2026, 11))))
+        // A month further than 60 days ahead still shows what is planned there.
+        assertEquals(listOf("Rent"), run(HistoryFilter(month = YearMonth.of(2027, 5))))
+        assertEquals(emptyList<String>(), run(HistoryFilter(month = YearMonth.of(2026, 9))))
+    }
+
+    @Test
+    fun monthFilter_intersectsTheDateRange() {
+        assertEquals(listOf("Cloud", "Energia elétrica", "Gym"), run(HistoryFilter(month = YearMonth.of(2026, 11), from = d("2026-11-15"))))
+        assertEquals(listOf("Salary"), run(HistoryFilter(month = YearMonth.of(2026, 11), to = d("2026-11-10"))))
+        // No overlap: nothing.
+        assertEquals(emptyList<String>(), run(HistoryFilter(month = YearMonth.of(2026, 10), from = d("2026-11-01"))))
+    }
+
+    @Test
     fun confirmedIsListedOnItsActualDate_andGroupedByMonth() {
         val groups = History.byMonth(History.filter(all, emptyList(), HistoryFilter(), today) { it.name })
         assertEquals(listOf(YearMonth.of(2026, 11), YearMonth.of(2026, 10)), groups.map { it.first })

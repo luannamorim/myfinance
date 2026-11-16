@@ -306,6 +306,7 @@
     <string name="history_any_date">Qualquer data</string>
     <string name="history_apply">Aplicar</string>
     <string name="history_no_results">Nenhuma transação corresponde a estes filtros.</string>
+    <string name="history_month">Mês</string>
 
     <!-- Currency settings -->
     <string name="currency_title">Moeda e cotação</string>

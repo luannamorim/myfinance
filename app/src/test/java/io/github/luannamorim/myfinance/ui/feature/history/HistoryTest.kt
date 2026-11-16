@@ -1,8 +1,13 @@
 package io.github.luannamorim.myfinance.ui.feature.history
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.luannamorim.myfinance.domain.cash.CashLedger
 import io.github.luannamorim.myfinance.domain.cash.HistoryFilter
@@ -18,6 +23,7 @@ import io.github.luannamorim.myfinance.testutil.pending
 import io.github.luannamorim.myfinance.testutil.snapBothThemes
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -60,6 +66,35 @@ class HistoryTest {
     fun screenshot_grouped() {
         val state = historyState(ledger, categories, HistoryFilter(), emptyMap(), today)
         compose.snapBothThemes("history") { HistoryContent(state, {}, {}, {}) }
+    }
+
+    @Test
+    fun monthChip_startsAtTheCurrentMonth_andTheSwitcherMovesIt() {
+        var filter by mutableStateOf(HistoryFilter())
+        compose.setContent {
+            FinanceTheme { HistoryContent(historyState(ledger, categories, filter, emptyMap(), today), {}, { t -> filter = t(filter) }, {}) }
+        }
+        compose.onNodeWithText("Month").performClick()
+        assertEquals(YearMonth.of(2026, 11), filter.month)
+        compose.onNodeWithText("November 2026").assertIsDisplayed()
+        // The switcher names the month, so the section header is not repeated.
+        compose.onNodeWithText("November 2026".uppercase()).assertDoesNotExist()
+        compose.onNodeWithText("Groceries").assertIsDisplayed()
+
+        compose.onNodeWithContentDescription("Previous month").performClick()
+        assertEquals(YearMonth.of(2026, 10), filter.month)
+        compose.onNodeWithText("Groceries").assertDoesNotExist()
+        compose.onNodeWithText("Rent").assertIsDisplayed()
+
+        compose.onNodeWithText("Month").performClick()
+        assertNull(filter.month)
+        compose.onNodeWithText("Groceries").assertIsDisplayed()
+    }
+
+    @Test
+    fun screenshot_monthFilter() {
+        val state = historyState(ledger, categories, HistoryFilter(month = YearMonth.of(2026, 11)), emptyMap(), today)
+        compose.snapBothThemes("history_month") { HistoryContent(state, {}, {}, {}) }
     }
 
     @Test

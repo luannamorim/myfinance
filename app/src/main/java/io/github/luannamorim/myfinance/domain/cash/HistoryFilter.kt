@@ -9,7 +9,10 @@ import io.github.luannamorim.myfinance.domain.model.OccurrenceState
 import java.time.LocalDate
 import java.time.YearMonth
 
-/** History filters. An empty set means "no filter" on that dimension. */
+/**
+ * History filters. An empty set means "no filter" on that dimension. [month] narrows to one month; with [from] or
+ * [to] set too, only the dates inside both are listed.
+ */
 data class HistoryFilter(
     val query: String = "",
     val kinds: Set<EntryKind> = emptySet(),
@@ -18,6 +21,7 @@ data class HistoryFilter(
     val currencies: Set<Currency> = emptySet(),
     val from: LocalDate? = null,
     val to: LocalDate? = null,
+    val month: YearMonth? = null,
 ) {
     /** Filters that only make sense for transactions (adjustments are hidden while any is set). */
     val transactionOnly: Boolean get() = query.isNotBlank() || kinds.isNotEmpty() || statuses.isNotEmpty() || categoryIds.isNotEmpty()
@@ -56,8 +60,9 @@ object History {
         today: LocalDate,
         searchText: (Occurrence) -> String,
     ): List<HistoryEntry> {
-        val limit = filter.to ?: today.plusDays(FUTURE_DAYS)
-        fun inRange(date: LocalDate) = !date.isAfter(limit) && (filter.from == null || !date.isBefore(filter.from))
+        val limit = listOfNotNull(filter.to, filter.month?.atEndOfMonth()).minOrNull() ?: today.plusDays(FUTURE_DAYS)
+        val start = listOfNotNull(filter.from, filter.month?.atDay(1)).maxOrNull()
+        fun inRange(date: LocalDate) = !date.isAfter(limit) && (start == null || !date.isBefore(start))
         val transactions = occurrences.asSequence()
             .filter { inRange(dateOf(it)) }
             .filter { filter.kinds.isEmpty() || it.kind in filter.kinds }

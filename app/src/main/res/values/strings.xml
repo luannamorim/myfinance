@@ -303,6 +303,7 @@
     <string name="history_any_date">Any date</string>
     <string name="history_apply">Apply</string>
     <string name="history_no_results">No transactions match these filters.</string>
+    <string name="history_month">Month</string>
 
     <!-- Currency settings -->
     <string name="currency_title">Currency and exchange rate</string>
