@@ -28,4 +28,10 @@ class DateFormatsTest {
         assertEquals("Nov", DateFormats(DateFormatStyle.DMY, Locale.US).monthShort(nov))
         assertEquals("Nov", DateFormats(DateFormatStyle.DMY, ptBr).monthShort(nov))
     }
+
+    @Test
+    fun longDate_followsLocale() {
+        assertEquals("November 12, 2026", DateFormats(DateFormatStyle.DMY, Locale.US).longDate(day))
+        assertEquals("12 de novembro de 2026", DateFormats(DateFormatStyle.DMY, ptBr).longDate(day))
+    }
 }

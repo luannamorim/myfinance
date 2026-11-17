@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- Overview: today's date below the title (12 de novembro de 2026 / November 12, 2026).
+- Tab headers: the title is centered on the header's buttons instead of sitting slightly below them.
+
 ## [1.2.0] - 2026-11-16
 
 ### Added

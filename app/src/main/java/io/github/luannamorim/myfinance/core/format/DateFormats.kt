@@ -16,6 +16,7 @@ class DateFormats(val style: DateFormatStyle, val locale: Locale) {
     private val monthYear = DateTimeFormatter.ofPattern("LLLL yyyy", locale)
     private val monthShort = DateTimeFormatter.ofPattern("LLL", locale)
     private val monthShortYear = DateTimeFormatter.ofPattern("LLL yy", locale)
+    private val longDate = DateTimeFormatter.ofPattern(if (locale.language == "pt") "d 'de' MMMM 'de' yyyy" else "MMMM d, yyyy", locale)
 
     /** `12/11/2026` or `11/12/2026`. */
     fun date(date: LocalDate): String = full.format(date)
@@ -31,6 +32,9 @@ class DateFormats(val style: DateFormatStyle, val locale: Locale) {
 
     /** `Nov 26` for chart axes spanning years. */
     fun monthShortYear(month: YearMonth): String = monthShortYear.format(month).replace(".", "").capitalized()
+
+    /** `November 12, 2026` / `12 de novembro de 2026`. */
+    fun longDate(date: LocalDate): String = longDate.format(date)
 
     private fun String.capitalized() = replaceFirstChar { if (it.isLowerCase()) it.titlecase(locale) else it.toString() }
 }

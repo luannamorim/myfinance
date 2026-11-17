@@ -30,7 +30,7 @@ import io.github.luannamorim.myfinance.ui.theme.Spacing
 /** Max content width so screens stay readable on tablets / landscape. */
 val ContentMaxWidth = 640.dp
 
-/** Large-title header used by the five top-level screens. */
+/** Large-title header used by the five top-level screens: the title centered on the actions, the subtitle below it. */
 @Composable
 fun TabHeader(
     title: String,
@@ -38,23 +38,23 @@ fun TabHeader(
     subtitle: String? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
-    Row(
-        modifier.fillMaxWidth().padding(top = Spacing.xl, bottom = Spacing.l),
-        verticalAlignment = Alignment.Bottom,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Column(Modifier.weight(1f)) {
-            if (subtitle != null) {
-                Text(subtitle, style = FinanceTheme.type.label, color = FinanceTheme.colors.textSecondary)
-            }
+    Column(modifier.fillMaxWidth().padding(top = Spacing.xl, bottom = Spacing.l)) {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
             Text(
                 title,
                 style = FinanceTheme.type.display,
                 color = FinanceTheme.colors.textPrimary,
-                modifier = Modifier.semantics { heading() },
+                modifier = Modifier.weight(1f).semantics { heading() },
             )
+            Row(verticalAlignment = Alignment.CenterVertically, content = actions)
         }
-        Row(verticalAlignment = Alignment.CenterVertically, content = actions)
+        if (subtitle != null) {
+            Text(subtitle, style = FinanceTheme.type.label, color = FinanceTheme.colors.textSecondary)
+        }
     }
 }
 

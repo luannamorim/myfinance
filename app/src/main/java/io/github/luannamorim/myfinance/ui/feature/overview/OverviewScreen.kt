@@ -102,6 +102,7 @@ fun OverviewContent(state: OverviewUiState, actions: OverviewActions, modifier: 
     TabScreen(
         title = stringResource(R.string.nav_overview),
         modifier = modifier,
+        subtitle = formats.dates.longDate(state.today).takeUnless { state.loading },
         actions = {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
                 Currency.entries.forEach { cur -> FinanceChip(cur.symbol, selected = state.display == cur, onClick = { actions.onDisplay(cur) }) }
