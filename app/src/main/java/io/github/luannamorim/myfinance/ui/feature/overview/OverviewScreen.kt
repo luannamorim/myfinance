@@ -188,7 +188,7 @@ private fun AddMenuItem(icon: ImageVector, label: String, onClick: () -> Unit) {
 @Composable
 private fun NetWorthHero(total: Total, cash: Total, investments: Total, personal: Total) {
     val c = FinanceTheme.colors
-    Column(Modifier.fillMaxWidth().padding(top = Spacing.s), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
         Text(stringResource(R.string.overview_net_worth).uppercase(), style = FinanceTheme.type.overline, color = c.textSecondary, modifier = Modifier.semantics { heading() })
         AmountDisplay(total.money, style = FinanceTheme.type.numericHero, tone = if (total.money.isNegative) AmountTone.NEGATIVE else AmountTone.NEUTRAL, approximate = total.incomplete)
         val parts = listOf(

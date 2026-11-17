@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- Tab headers: less space between the header and the content (8 dp instead of 16 dp).
+- Overview: net worth sits closer to the title, without the extra 8 dp above it.
+
 ## [1.2.2] - 2026-11-16
 
 ### Changed

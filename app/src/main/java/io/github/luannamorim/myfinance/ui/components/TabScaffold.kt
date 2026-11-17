@@ -38,7 +38,7 @@ fun TabHeader(
     subtitle: String? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
-    Column(modifier.fillMaxWidth().padding(top = Spacing.xl, bottom = Spacing.l)) {
+    Column(modifier.fillMaxWidth().padding(top = Spacing.xl, bottom = Spacing.s)) {
         if (subtitle != null) {
             Text(subtitle, style = FinanceTheme.type.label, color = FinanceTheme.colors.textSecondary)
         }
