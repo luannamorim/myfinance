@@ -59,6 +59,7 @@ Development is done without a device. The items below validate what only the dev
 - [ ] In airplane mode the app keeps working with the last rate; a manual rate can be entered and is used.
 - [ ] Turning off *Fetch exchange rates* stops automatic requests.
 - [ ] With the app closed for a day, opening it fetches the new rate (there is no background job).
+- [ ] With US$ shown, a R$ transaction in Overview, Cash Flow and History shows the converted amount and "R$ …" underneath; a transaction before the first known rate keeps its own amount.
 
 ### 5. Portfolio
 - [ ] Create "Tesouro Selic" (Fixed Income, BRL) with R$ 5.000,00 invested; then update its value to R$ 5.120,00: gain R$ 120,00, return 2,40%.
@@ -78,7 +79,8 @@ Development is done without a device. The items below validate what only the dev
 - [ ] Portfolio → All shows "Cash" (slice and card); tapping the card opens Cash Flow; Value/Invested/Gain don't include it.
 
 ### 6. Overview
-- [ ] Net worth = cash + investments + personal assets, with the composition shown; the R$/US$ toggle converts everything and shows the rate date.
+- [ ] Net worth = cash + investments + personal assets, with the composition shown; tapping the flag in the header (right of "+") switches Brazil ⇄ USA, converts everything and shows the rate date.
+- [ ] *Settings → Currency → Currencies in use*: turn US$ off: the flag stays on Brazil and a tap does nothing; the last switch on can't be turned off. Turn US$ back on.
 - [ ] Upcoming commitments (overdue and this month only) can be confirmed from the Overview.
 
 ### 7. Backup
