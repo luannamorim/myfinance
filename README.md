@@ -9,12 +9,12 @@ A private, offline-first Android app to manage cash flow, a portfolio of investm
 ## Features
 
 - **Cash flow:** one-time and recurring income and expenses (daily, weekly, every two weeks, monthly, every two months, quarterly, semiannually, annually or custom), with month-end and leap-year handling and no duplicate occurrences. Confirm each payment or receipt with the real amount, date and a note; the expected amount stays separate and future months are untouched.
-- **Month at a glance:** expected vs. received income, expected vs. paid expenses, the month's result (what is left over or short), available cash, projected end-of-month balance, overdue and pending bills, income to receive, transfers and next month's forecast. Charts for income vs. expenses, balance evolution (3, 6 or 12 months) and spending by category.
+- **Month at a glance:** expected vs. received income, expected vs. paid expenses, the month's P&L (received − paid so far, of what is expected; what is left over or short), available cash, projected end-of-month balance, overdue and pending bills, income to receive, transfers and next month's forecast. Charts for income vs. expenses, balance evolution (3, 6 or 12 months) and spending by category.
 - **Transfers:** move money between cash and an investment (or back) as a transfer: one-time or recurring, confirmed like a bill, recorded on both sides at once and never counted as income or expense. Contributions, withdrawals and sales on an asset can come from or go to cash, including the initial investment.
-- **History:** every transaction grouped by month, with accent-insensitive search and filters by month, type, status, category, currency and date.
+- **History:** one month at a time, like Cash Flow, with accent-insensitive search and two filters: open (overdue, pending, upcoming) and done (paid, received, transferred).
 - **Portfolio:** fixed income, stocks, ETFs, REITs, funds, crypto, business ownership, startup equity, real estate, vehicles, loans receivable and custom categories, with your available cash shown alongside for reference. Contributions, withdrawals, partial sales and closed positions are recorded apart from valuations, which keep their full history. Value, invested, gain/loss and a clearly labelled simple return; an allocation donut you can tap to filter; charts by period (1M, 3M, 6M, 1Y, All) built only from what you recorded.
 - **Net worth:** cash + investments + personal assets, with the composition always visible, in reais or dollars with one tap on the flag. A "+" on the Overview adds a transaction or an asset.
-- **BRL and USD:** every transaction, balance and asset has its currency. Totals and transactions convert to the currency of the flag at the top of the Overview, with the official PTAX rate from the Banco Central do Brasil, fetched when you open the app or with *Update*; manual rates work offline. The rate and its date are always shown, and a total that can't be converted is marked instead of guessed.
+- **BRL and USD:** every transaction, balance and asset has its currency. Totals and transactions convert to the currency of the flag at the top of the Overview, with the official PTAX rate from the Banco Central do Brasil, fetched when you open the app or with *Update now*; manual rates work offline. The rate and its date are in *Settings → Currency and exchange rate*, and a total that can't be converted is marked with "≈" instead of guessed.
 - **Backup:** an encrypted file (AES-256-GCM streaming, key derived from your recovery password) written to a folder you pick and keep in sync with Google Drive (or any cloud) through a sync app. Runs daily and after changes, keeps the last 7, and supports export and restore with integrity checks. CSV export for spreadsheets.
 - **Settings:** opening balances and balance adjustments, categories, default and display currency, currencies in use, number format (1.234,56 or 1,234.56), date format (DD/MM/YYYY or MM/DD/YYYY), dark (default), light or system theme.
 
@@ -47,7 +47,7 @@ Updates are signed with the same key, so `adb install -r` (or installing over) k
 ## Privacy
 
 - Your data stays on the phone: no account, no server, no analytics, no ads.
-- The only network request fetches the public USD/BRL rate from `api.bcb.gov.br` over HTTPS, carrying only a date range. Turn it off in *Settings → Currency and exchange rate*; *Update* then fetches only when you tap it.
+- The only network request fetches the public USD/BRL rate from `api.bcb.gov.br` over HTTPS, carrying only a date range. Turn it off in *Settings → Currency and exchange rate*; *Update now* then fetches only when you tap it.
 - Backups are encrypted before they leave the app. The local database relies on Android's app sandbox and file-based encryption. Details in [`docs/SECURITY.md`](docs/SECURITY.md).
 
 ## Backup to Google Drive (or any cloud)

@@ -37,7 +37,7 @@ Development is done without a device. The items below validate what only the dev
 
 ### 1. Setup
 - [ ] *Settings → Opening balances*: set R$ 10.000,00 for today; Overview shows available cash R$ 10.000,00.
-- [ ] Set a USD opening balance of US$ 500,00; Overview converts it at the PTAX shown at the bottom.
+- [ ] Set a USD opening balance of US$ 500,00; Overview converts it at the PTAX shown in *Settings → Currency and exchange rate* (the screens no longer show the rate at the bottom).
 - [ ] Change number format to `1,234.56` and date format to `MM/DD/YYYY`: every screen follows. Switch back.
 - [ ] With the phone in Portuguese, the app is in Portuguese; *Settings → Language* opens the system per-app language screen (Android 13+).
 
@@ -49,13 +49,15 @@ Development is done without a device. The items below validate what only the dev
 - [ ] Edit the rent amount to R$ 2.600,00 with the next due date next month: past and paid occurrences keep their values.
 - [ ] Cancel an occurrence and restore it; mark a paid one as unpaid.
 - [ ] Add a USD subscription (US$ 20,00) and confirm it paid in BRL (R$ 115,00).
+- [ ] Cash Flow → P&L shows received − paid so far (green or red) with "of … expected" underneath; Overview → This month shows only the expected income, expenses and P&L.
 - [ ] Charts show income vs. expenses, balance evolution and expenses by category; 3M, 6M and 1Y change both; in the first month of use the balance line already shows (opening date → today).
 
 ### 3. History
-- [ ] Search "rent" finds it; filters by type, status, category, currency and date range work; months group correctly.
+- [ ] Opens on the current month and the arrows change it; search "rent" finds it within the month.
+- [ ] *Open* lists what is overdue, pending or upcoming; *Done* what was paid, received or transferred, with balance adjustments; tapping the selected chip again shows the whole month.
 
 ### 4. Exchange rates
-- [ ] With internet, *Update* fetches today's PTAX (or the last business day before ~13:00) and shows its date.
+- [ ] With internet, *Settings → Currency and exchange rate → Update now* fetches today's PTAX (or the last business day before ~13:00) and shows its date.
 - [ ] In airplane mode the app keeps working with the last rate; a manual rate can be entered and is used.
 - [ ] Turning off *Fetch exchange rates* stops automatic requests.
 - [ ] With the app closed for a day, opening it fetches the new rate (there is no background job).
@@ -75,7 +77,7 @@ Development is done without a device. The items below validate what only the dev
 - [ ] On the asset: Withdraw with "Put it in cash": cash goes up; delete that withdrawal: the transfer disappears too (after a confirmation).
 - [ ] New asset with "Take it from cash": cash goes down by the initial investment.
 - [ ] Close a position that has a monthly transfer: the transfer stops; a new transfer to it is refused with a message.
-- [ ] History → Transfer chip lists only transfers; the CSV export has them with the asset name.
+- [ ] Cash Flow → Transfers shows the amount on its title line and "to investment" underneath; History lists the transfer in its month; the CSV export has it with the asset name.
 - [ ] Portfolio → All shows "Cash" (slice and card); tapping the card opens Cash Flow; Value/Invested/Gain don't include it.
 
 ### 6. Overview
