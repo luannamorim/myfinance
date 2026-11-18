@@ -37,6 +37,7 @@ Development is done without a device. The items below validate what only the dev
 
 ### 1. Setup
 - [ ] *Settings → Opening balances*: set R$ 10.000,00 for today; Overview shows available cash R$ 10.000,00.
+- [ ] With the US$ field at 0,00, *Save* is disabled; *Remove* on a saved opening asks first and then shows "Not set"; with a balance adjustment in that currency it is refused with a message.
 - [ ] Set a USD opening balance of US$ 500,00; Overview converts it at the PTAX shown in *Settings → Currency and exchange rate* (the screens no longer show the rate at the bottom).
 - [ ] Change number format to `1,234.56` and date format to `MM/DD/YYYY`: every screen follows. Switch back.
 - [ ] With the phone in Portuguese, the app is in Portuguese; *Settings → Language* opens the system per-app language screen (Android 13+).
@@ -54,7 +55,7 @@ Development is done without a device. The items below validate what only the dev
 
 ### 3. History
 - [ ] Opens on the current month and the arrows change it; search "rent" finds it within the month.
-- [ ] *Open* lists what is overdue, pending or upcoming; *Done* what was paid, received or transferred, with balance adjustments; tapping the selected chip again shows the whole month.
+- [ ] *Open* lists what is overdue, pending or upcoming; *Done* what was paid, received or transferred, with balance adjustments; tapping the selected chip again shows the whole month. Opening balances are not listed, only balance adjustments.
 
 ### 4. Exchange rates
 - [ ] With internet, *Settings → Currency and exchange rate → Update now* fetches today's PTAX (or the last business day before ~13:00) and shows its date.
