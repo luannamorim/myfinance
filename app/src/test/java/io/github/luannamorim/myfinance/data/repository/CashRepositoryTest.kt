@@ -12,6 +12,7 @@ import io.github.luannamorim.myfinance.domain.model.OccurrenceState
 import io.github.luannamorim.myfinance.testutil.brl
 import io.github.luannamorim.myfinance.testutil.d
 import io.github.luannamorim.myfinance.testutil.inMemoryDb
+import io.github.luannamorim.myfinance.testutil.usd
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -230,6 +231,25 @@ class CashRepositoryTest {
         repo.setOpening(brl("10000.00"), d("2026-11-01"))
         repo.addAdjustment(brl("9000.00"), d("2026-11-05"), null)
         repo.setOpening(brl("10000.00"), d("2026-11-06"))
+    }
+
+    @Test
+    fun deleteOpening_removesIt_andNotifiesBackup() = runBlocking {
+        repo.setOpening(usd("0.00"), d("2026-11-12"))
+        repo.setOpening(brl("10000.00"), d("2026-11-01"))
+        val before = changes
+        repo.deleteOpening(Currency.USD)
+        assertNull(CashCalculator.opening(repo.snapshot(), Currency.USD))
+        assertEquals(brl("10000.00"), CashCalculator.opening(repo.snapshot(), Currency.BRL)!!.amount)
+        assertEquals(before + 1, changes)
+    }
+
+    @Test(expected = OpeningHasAdjustmentsException::class)
+    fun deleteOpening_withAdjustmentsInThatCurrency_isRefused() = runBlocking {
+        // The adjustments were computed from this opening; removing it would change what they mean.
+        repo.setOpening(brl("10000.00"), d("2026-11-01"))
+        repo.addAdjustment(brl("9000.00"), d("2026-11-05"), null)
+        repo.deleteOpening(Currency.BRL)
     }
 
     @Test

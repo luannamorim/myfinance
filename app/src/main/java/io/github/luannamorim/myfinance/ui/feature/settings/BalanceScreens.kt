@@ -35,13 +35,14 @@ import io.github.luannamorim.myfinance.ui.components.FinanceTextField
 import io.github.luannamorim.myfinance.ui.components.PrimaryButton
 import io.github.luannamorim.myfinance.ui.components.SectionHeader
 import io.github.luannamorim.myfinance.ui.components.SecondaryButton
+import io.github.luannamorim.myfinance.ui.components.TextAction
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import io.github.luannamorim.myfinance.ui.theme.Spacing
 
 @Composable
 fun OpeningBalancesScreen(onBack: () -> Unit, viewModel: BalanceViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    OpeningBalancesContent(state, onBack, viewModel::editOpening, viewModel::saveOpening)
+    OpeningBalancesContent(state, onBack, viewModel::editOpening, viewModel::saveOpening, viewModel::removeOpening)
 }
 
 @Composable
@@ -50,8 +51,10 @@ fun OpeningBalancesContent(
     onBack: () -> Unit,
     onEdit: (Currency, (OpeningForm) -> OpeningForm) -> Unit,
     onSave: (Currency) -> Unit,
+    onRemove: (Currency) -> Unit,
 ) {
     val c = FinanceTheme.colors
+    var removing by rememberSaveable { mutableStateOf<Currency?>(null) }
     DetailScaffold(title = stringResource(R.string.opening_title), onBack = onBack) {
         Text(stringResource(R.string.opening_intro), style = FinanceTheme.type.body, color = c.textSecondary)
         Currency.entries.forEach { currency ->
@@ -67,9 +70,14 @@ fun OpeningBalancesContent(
                     )
                     FinanceChip(stringResource(R.string.opening_negative), selected = form.negative, onClick = { onEdit(currency) { it.copy(negative = !it.negative) } })
                     DateSelector(stringResource(R.string.opening_date), form.date, { d -> onEdit(currency) { it.copy(date = d) } }, maxDate = state.today)
-                    if (form.error) Text(stringResource(R.string.opening_after_adjustment), style = FinanceTheme.type.caption, color = c.danger)
+                    when (form.error) {
+                        OpeningError.AFTER_ADJUSTMENT -> Text(stringResource(R.string.opening_after_adjustment), style = FinanceTheme.type.caption, color = c.danger)
+                        OpeningError.HAS_ADJUSTMENTS -> Text(stringResource(R.string.opening_has_adjustments), style = FinanceTheme.type.caption, color = c.danger)
+                        null -> Unit
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                        SecondaryButton(stringResource(R.string.action_save), onClick = { onSave(currency) })
+                        // Only with an amount: an untouched field reads 0,00 and must not become an opening dated today.
+                        SecondaryButton(stringResource(R.string.action_save), onClick = { onSave(currency) }, enabled = form.canSave)
                         val current = state.openings[currency]
                         Text(
                             if (form.saved) stringResource(R.string.opening_saved)
@@ -77,11 +85,23 @@ fun OpeningBalancesContent(
                                 ?: stringResource(R.string.opening_not_set),
                             style = FinanceTheme.type.caption,
                             color = if (form.saved) c.positive else c.textSecondary,
+                            modifier = Modifier.weight(1f),
                         )
+                        if (current != null) TextAction(stringResource(R.string.opening_remove), onClick = { removing = currency }, color = c.textSecondary)
                     }
                 }
             }
         }
+    }
+    removing?.let { currency ->
+        ConfirmDialog(
+            title = stringResource(R.string.opening_remove_title, currency.symbol),
+            message = stringResource(R.string.opening_remove_message, currency.symbol),
+            confirmText = stringResource(R.string.opening_remove),
+            onConfirm = { removing = null; onRemove(currency) },
+            onDismiss = { removing = null },
+            destructive = true,
+        )
     }
 }
 

@@ -240,6 +240,10 @@
     <string name="opening_saved">Salvo</string>
     <string name="opening_not_set">Não definido</string>
     <string name="opening_after_adjustment">Existe um ajuste de saldo antes desta data. Exclua-o primeiro ou escolha uma data anterior.</string>
+    <string name="opening_has_adjustments">Esta moeda tem ajustes de saldo feitos a partir deste saldo inicial. Apague-os antes em Ajustar saldo.</string>
+    <string name="opening_remove">Remover</string>
+    <string name="opening_remove_title">Remover o saldo inicial em %1$s?</string>
+    <string name="opening_remove_message">O caixa em %1$s volta a contar todas as transações confirmadas, a partir de zero.</string>
     <string name="adjust_title">Ajustar saldo</string>
     <string name="adjust_hint">Alinhe o app com o saldo do banco</string>
     <string name="adjust_intro">Digite quanto você realmente tem. O MyFinance registra a diferença como um ajuste, que não é receita nem despesa.</string>

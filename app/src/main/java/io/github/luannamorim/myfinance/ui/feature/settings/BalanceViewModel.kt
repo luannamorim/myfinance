@@ -8,6 +8,7 @@ import io.github.luannamorim.myfinance.core.time.TimeSource
 import io.github.luannamorim.myfinance.core.time.today
 import io.github.luannamorim.myfinance.data.repository.CashRepository
 import io.github.luannamorim.myfinance.data.repository.OpeningAfterAdjustmentException
+import io.github.luannamorim.myfinance.data.repository.OpeningHasAdjustmentsException
 import io.github.luannamorim.myfinance.domain.cash.CashCalculator
 import io.github.luannamorim.myfinance.domain.model.AdjustmentKind
 import io.github.luannamorim.myfinance.domain.model.CashAdjustment
@@ -23,8 +24,17 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
 
+/** Why an opening balance couldn't be saved or removed. */
+enum class OpeningError { AFTER_ADJUSTMENT, HAS_ADJUSTMENTS }
+
 /** The opening-balance form of one currency. */
-data class OpeningForm(val digits: String = "", val negative: Boolean = false, val date: LocalDate, val saved: Boolean = false, val error: Boolean = false)
+data class OpeningForm(val digits: String = "", val negative: Boolean = false, val date: LocalDate, val saved: Boolean = false, val error: OpeningError? = null) {
+    /**
+     * An amount was entered. The field can't hold an explicit zero ("0,00" is the empty field), and a zero opening
+     * would only hide the transactions before its date; with none set, cash already starts from zero.
+     */
+    val canSave: Boolean get() = (AmountInput.minorOf(digits) ?: 0) > 0
+}
 
 data class AdjustForm(val currency: Currency = Currency.BRL, val digits: String = "", val negative: Boolean = false, val date: LocalDate, val note: String = "")
 
@@ -84,18 +94,31 @@ class BalanceViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), local.value)
 
     fun editOpening(currency: Currency, transform: (OpeningForm) -> OpeningForm) = local.update { s ->
-        s.copy(openingForms = s.openingForms + (currency to transform(s.openingForms.getValue(currency)).copy(saved = false, error = false)))
+        s.copy(openingForms = s.openingForms + (currency to transform(s.openingForms.getValue(currency)).copy(saved = false, error = null)))
     }
 
     fun saveOpening(currency: Currency) {
         val form = local.value.openingForms.getValue(currency)
-        val minor = AmountInput.minorOf(form.digits) ?: 0
+        if (!form.canSave) return
+        val minor = AmountInput.minorOf(form.digits) ?: return
         viewModelScope.launch {
             try {
                 cash.setOpening(Money(if (form.negative) -minor else minor, currency), form.date)
                 local.update { s -> s.copy(openingForms = s.openingForms + (currency to form.copy(saved = true))) }
             } catch (_: OpeningAfterAdjustmentException) {
-                local.update { s -> s.copy(openingForms = s.openingForms + (currency to form.copy(error = true)), message = BalanceMessage.OPENING_AFTER_ADJUSTMENT) }
+                local.update { s -> s.copy(openingForms = s.openingForms + (currency to form.copy(error = OpeningError.AFTER_ADJUSTMENT)), message = BalanceMessage.OPENING_AFTER_ADJUSTMENT) }
+            }
+        }
+    }
+
+    /** Removes [currency]'s opening balance (e.g. a 0,00 one saved by mistake); refused while it has adjustments. */
+    fun removeOpening(currency: Currency) {
+        viewModelScope.launch {
+            try {
+                cash.deleteOpening(currency)
+                local.update { s -> s.copy(openingForms = s.openingForms + (currency to OpeningForm(date = today))) }
+            } catch (_: OpeningHasAdjustmentsException) {
+                local.update { s -> s.copy(openingForms = s.openingForms + (currency to s.openingForms.getValue(currency).copy(saved = false, error = OpeningError.HAS_ADJUSTMENTS))) }
             }
         }
     }

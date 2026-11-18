@@ -1,6 +1,10 @@
 package io.github.luannamorim.myfinance.ui.feature.settings
 
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.luannamorim.myfinance.core.time.FakeTimeSource
 import io.github.luannamorim.myfinance.data.repository.BackupTrigger
@@ -13,9 +17,14 @@ import io.github.luannamorim.myfinance.testutil.awaitUntil
 import io.github.luannamorim.myfinance.testutil.brl
 import io.github.luannamorim.myfinance.testutil.d
 import io.github.luannamorim.myfinance.testutil.inMemoryDb
+import io.github.luannamorim.myfinance.testutil.opening
+import io.github.luannamorim.myfinance.testutil.usd
+import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import io.github.luannamorim.myfinance.testutil.snapBothThemes
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -48,6 +57,59 @@ class BalanceViewModelTest {
         val s = vm.state.awaitUntil { it.openings[Currency.BRL]?.amount == brl("12000.00") }
         assertEquals(1, cash.snapshot().adjustments.size)
         assertEquals(brl("12000.00"), s.balances[Currency.BRL])
+    }
+
+    @Test
+    fun opening_withoutAnAmount_isNotSaved() = runBlocking {
+        val vm = BalanceViewModel(cash, time)
+        vm.state.awaitUntil { !it.loading }
+        // The US$ form is untouched (it reads 0,00): Save does nothing instead of storing a US$ 0,00 opening dated today.
+        vm.saveOpening(Currency.USD)
+        assertTrue(cash.snapshot().adjustments.isEmpty())
+        assertTrue(!vm.state.value.openingForms.getValue(Currency.USD).canSave)
+    }
+
+    @Test
+    fun opening_canBeRemoved_unlessItsCurrencyHasAdjustments() = runBlocking {
+        cash.setOpening(usd("0.00"), d("2026-11-12"))
+        cash.setOpening(brl("1000.00"), d("2026-11-01"))
+        cash.addAdjustment(brl("900.00"), d("2026-11-10"), null)
+        val vm = BalanceViewModel(cash, time)
+        vm.state.awaitUntil { it.openings[Currency.USD] != null }
+
+        vm.removeOpening(Currency.USD)
+        val removed = vm.state.awaitUntil { it.openings[Currency.USD] == null }
+        assertEquals("", removed.openingForms.getValue(Currency.USD).digits)
+
+        vm.removeOpening(Currency.BRL)
+        val refused = vm.state.awaitUntil { it.openingForms.getValue(Currency.BRL).error == OpeningError.HAS_ADJUSTMENTS }
+        assertNotNull(refused.openings[Currency.BRL])
+    }
+
+    @Test
+    fun openingScreen_saveNeedsAnAmount_andASavedOneCanBeRemoved() {
+        val today = d("2026-11-12")
+        val state = BalanceUiState(
+            loading = false,
+            today = today,
+            openings = mapOf(Currency.BRL to opening(brl("10000.00"), "2026-11-01"), Currency.USD to null),
+            openingForms = mapOf(
+                Currency.BRL to OpeningForm(digits = "1000000", date = d("2026-11-01")),
+                Currency.USD to OpeningForm(date = today),
+            ),
+        )
+        compose.setContent { FinanceTheme { OpeningBalancesContent(state, {}, { _, _ -> }, {}, {}) } }
+        compose.onAllNodesWithText("Save")[0].assertIsEnabled()
+        compose.onAllNodesWithText("Save")[1].assertIsNotEnabled()
+        compose.onAllNodesWithText("Remove").assertCountEquals(1)
+    }
+
+    @Test
+    fun screenshots_opening() {
+        runBlocking { cash.setOpening(brl("10000.00"), d("2026-11-01")) }
+        val vm = BalanceViewModel(cash, time)
+        val state = runBlocking { vm.state.awaitUntil { it.openingForms.getValue(Currency.BRL).digits.isNotEmpty() } }
+        compose.snapBothThemes("opening_balances") { OpeningBalancesContent(state, {}, { _, _ -> }, {}, {}) }
     }
 
     @Test

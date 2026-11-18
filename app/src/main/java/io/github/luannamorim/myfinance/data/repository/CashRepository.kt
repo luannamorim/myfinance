@@ -13,6 +13,7 @@ import io.github.luannamorim.myfinance.domain.cash.Recurrence
 import io.github.luannamorim.myfinance.domain.cash.RecurrenceRule
 import io.github.luannamorim.myfinance.domain.model.AdjustmentKind
 import io.github.luannamorim.myfinance.domain.model.AssetFlow
+import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.EntryKind
 import io.github.luannamorim.myfinance.domain.model.FlowKind
 import io.github.luannamorim.myfinance.domain.model.Money
@@ -49,6 +50,9 @@ class TransferLockedException : IllegalStateException("A confirmed transfer can'
 
 /** The opening balance can't move after an existing adjustment (the adjustment would silently stop counting). */
 class OpeningAfterAdjustmentException : IllegalStateException("Opening balance date is after an existing adjustment")
+
+/** The currency has balance adjustments, which were computed from its opening balance. */
+class OpeningHasAdjustmentsException : IllegalStateException("Delete the balance adjustments of this currency first")
 
 /**
  * Templates, occurrences and cash adjustments. Generation rules live in docs/ARCHITECTURE.md ("Recurrence"):
@@ -317,6 +321,20 @@ class CashRepository @Inject constructor(
             }
         }
         backup.onDataChanged()
+    }
+
+    /**
+     * Removes the opening balance of [currency]: its cash counts every confirmed transaction again, from zero.
+     * Refused while the currency has balance adjustments, since they are differences from that starting point.
+     */
+    suspend fun deleteOpening(currency: Currency) {
+        val deleted = db.withTransaction {
+            if (dao.firstAdjustmentDate(currency) != null) throw OpeningHasAdjustmentsException()
+            val opening = dao.getOpening(currency) ?: return@withTransaction false
+            dao.deleteAdjustment(opening.id)
+            true
+        }
+        if (deleted) backup.onDataChanged()
     }
 
     /**

@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- Settings → Opening balances: *Remove* deletes a saved opening balance (after a confirmation), for one saved by mistake. Refused while that currency has balance adjustments, which were made from it.
+
+### Fixed
+- History listed opening balances as "Balance adjustment"; a US$ or R$ opening saved with an empty field showed as "Balance adjustment · R$ 0,00" on the day it was saved. History now lists only real balance adjustments.
+- Settings → Opening balances: *Save* is disabled while the amount is 0,00, so an untouched field no longer creates a zero opening balance dated today (which also hid that currency's earlier confirmed transactions).
+
 ## [1.4.0] - 2026-11-18
 
 ### Changed
