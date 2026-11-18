@@ -1,6 +1,7 @@
 package io.github.luannamorim.myfinance.ui.feature.cashflow
 
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.luannamorim.myfinance.domain.cash.CashLedger
 import io.github.luannamorim.myfinance.domain.fx.ExchangeRates
@@ -9,6 +10,7 @@ import io.github.luannamorim.myfinance.domain.model.Category
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.EntryKind.EXPENSE
 import io.github.luannamorim.myfinance.domain.model.EntryKind.INCOME
+import io.github.luannamorim.myfinance.domain.model.EntryKind.TRANSFER_OUT
 import io.github.luannamorim.myfinance.testutil.PHONE_TALL
 import io.github.luannamorim.myfinance.testutil.brl
 import io.github.luannamorim.myfinance.testutil.confirmed
@@ -17,7 +19,9 @@ import io.github.luannamorim.myfinance.testutil.opening
 import io.github.luannamorim.myfinance.testutil.pending
 import io.github.luannamorim.myfinance.testutil.rate
 import io.github.luannamorim.myfinance.testutil.snapBothThemes
+import io.github.luannamorim.myfinance.testutil.transfer
 import io.github.luannamorim.myfinance.testutil.usd
+import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -111,6 +115,22 @@ class CashFlowTest {
     @Test
     fun screenshots() {
         compose.snapBothThemes("cashflow") { CashFlowContent(state(), CashFlowActions()) }
+    }
+
+    @Test
+    fun nextMonth_projectedLabel_isShort() {
+        compose.setContent { FinanceTheme { CashFlowContent(state(), CashFlowActions()) } }
+        compose.onNodeWithText("Projected · 31/12").assertExists()
+        compose.onNodeWithText("Projected at the end of December 2026").assertDoesNotExist()
+    }
+
+    @Test
+    fun screenshots_withTransfers() {
+        val withTransfer = ledger.copy(occurrences = ledger.occurrences + transfer(TRANSFER_OUT, brl("2000.00"), "2026-11-15", on = "2026-11-15", name = "Tesouro"))
+        compose.snapBothThemes("cashflow_transfers") {
+            CashFlowContent(cashFlowState(withTransfer, categories, ExchangeRates.EMPTY, Currency.BRL, YearMonth.of(2026, 11), today), CashFlowActions())
+        }
+        compose.onNodeWithText("Transfers this month").assertExists()
     }
 
     @Test

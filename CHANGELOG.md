@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- Overview and Cash Flow: icons next to income (↑), expenses (↓), available cash, projected, transfers and month result (=).
+- Overview: the month result in "This month" (so far of expected).
+
+### Changed
+- Cash Flow: the next month's projection reads "Projected · 31/12" instead of "Projected at the end of December 2026".
+- Settings: About is now a card in Settings (version, author and font license), like MyFit; the separate About screen and the source code link are gone.
+
 ## [1.2.3] - 2026-11-16
 
 ### Changed

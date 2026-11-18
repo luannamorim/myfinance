@@ -115,6 +115,38 @@ class OverviewTest {
     }
 
     @Test
+    fun thisMonth_showsTheResult_soFarOfExpected() {
+        compose.setContent { FinanceTheme { OverviewContent(overviewState(cash, portfolio, categories, rates, Currency.BRL, today), OverviewActions()) } }
+        compose.onNodeWithText("Month result").assertExists()
+        // So far: 9.000,00 − 2.862,40. Expected: 14.614,30 (9.000 + US$ 1.000 at 5,6143) − 3.112,40.
+        compose.onNodeWithText("+R$ 6.137,60 of 11.501,90").assertExists()
+    }
+
+    @Test
+    fun thisMonth_negativeResult_usesTheMinusSign() {
+        val short = CashLedger(
+            occurrences = listOf(
+                confirmed(EntryKind.EXPENSE, brl("100.00"), "2026-11-05", category = 50, name = "Groceries"),
+                pending(EntryKind.EXPENSE, brl("500.00"), "2026-11-20", category = 30, name = "Electricity"),
+            ),
+        )
+        compose.setContent { FinanceTheme { OverviewContent(overviewState(short, PortfolioData(), categories, rates, Currency.BRL, today), OverviewActions()) } }
+        compose.onNodeWithText("−R$ 100,00 of −600,00").assertExists()
+    }
+
+    @Test
+    fun thisMonth_negativeResult_isSpokenWithMinus() {
+        val short = CashLedger(
+            occurrences = listOf(
+                confirmed(EntryKind.EXPENSE, brl("100.00"), "2026-11-05", category = 50, name = "Groceries"),
+                pending(EntryKind.EXPENSE, brl("500.00"), "2026-11-20", category = 30, name = "Electricity"),
+            ),
+        )
+        compose.setContent { FinanceTheme { OverviewContent(overviewState(short, PortfolioData(), categories, rates, Currency.BRL, today), OverviewActions()) } }
+        compose.onNodeWithContentDescription("minus R$ 100,00 of minus 600,00").assertExists()
+    }
+
+    @Test
     fun screenshot_empty_showsOnboarding() {
         compose.snapBothThemes("overview_empty") { OverviewContent(overviewState(CashLedger(), PortfolioData(), categories, rates, Currency.BRL, today), OverviewActions()) }
         compose.onNodeWithText("Set your opening balance").assertIsDisplayed()

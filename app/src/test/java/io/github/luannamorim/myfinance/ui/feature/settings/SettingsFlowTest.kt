@@ -71,7 +71,11 @@ class SettingsFlowTest {
     }
 
     @Test
-    fun screenshot_about() {
-        compose.snapBothThemes("about") { AboutScreen(onBack = {}, versionName = "1.0.0") }
+    fun about_isACardInSettings() {
+        compose.setContent { FinanceTheme { SettingsContent(SettingsUiState(loading = false, versionName = "1.0.0"), SettingsActions()) } }
+        compose.onNodeWithText("Version 1.0.0").assertExists()
+        compose.onNodeWithText("Developed by luannamorim").assertExists()
+        compose.onNodeWithText("Source code", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("Version, licenses and data sources").assertDoesNotExist()
     }
 }

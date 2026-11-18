@@ -270,7 +270,6 @@
     <string name="cashflow_upcoming_income">Receitas a receber</string>
     <string name="cashflow_nothing_pending">Nada pendente neste mês.</string>
     <string name="cashflow_next_month">Próximo mês</string>
-    <string name="cashflow_next_projected">Previsto no fim de %1$s</string>
     <string name="cashflow_charts">Gráficos</string>
     <string name="cashflow_charts_hint">Receitas x despesas, saldo e categorias</string>
     <plurals name="cashflow_overdue_earlier">
@@ -533,15 +532,9 @@
     <string name="privacy_tracking">Sem anúncios, sem analytics, sem relatório de falhas. Valores, nomes e observações nunca vão para logs.</string>
 
     <!-- About -->
-    <string name="about_title">Sobre</string>
-    <string name="about_hint">Versão, licenças e fontes de dados</string>
     <string name="about_version">Versão %1$s</string>
-    <string name="about_made_by">Desenvolvido por luannamorim · Licença MIT</string>
-    <string name="about_source">Código-fonte: github.com/luannamorim/myfinance</string>
-    <string name="about_licenses">Licenças e dados</string>
-    <string name="about_geist">Fonte Geist, da Vercel, SIL Open Font License 1.1.</string>
-    <string name="about_bcb">Cotações: Banco Central do Brasil, série SGS 1 (dólar americano, venda, PTAX).</string>
-    <string name="about_sibling">Irmão do MyFit: mesmo design, mesmo cuidado.</string>
+    <string name="about_made_by">Desenvolvido por luannamorim</string>
+    <string name="about_geist">Fonte Geist — SIL Open Font License 1.1</string>
     <string name="cashflow_title">Fluxo de caixa</string>
     <string name="status_transferred">Transferida</string>
     <!-- Transfers (1.1.0) -->

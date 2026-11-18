@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -27,9 +28,11 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.luannamorim.myfinance.R
 import io.github.luannamorim.myfinance.domain.fx.Total
+import io.github.luannamorim.myfinance.ui.common.IconLabel
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
 import io.github.luannamorim.myfinance.ui.common.OccurrenceRow
 import io.github.luannamorim.myfinance.ui.common.OccurrenceRowItem
+import io.github.luannamorim.myfinance.ui.common.SummaryIcons
 import io.github.luannamorim.myfinance.ui.common.TotalTiles
 import io.github.luannamorim.myfinance.ui.components.AdaptiveRow
 import io.github.luannamorim.myfinance.ui.components.AmountDisplay
@@ -82,20 +85,24 @@ fun CashFlowContent(state: CashFlowUiState, actions: CashFlowActions, modifier: 
         MonthSwitcher(state.month, actions.onMonth)
         TotalTiles(
             if (state.balanceIsToday) stringResource(R.string.cashflow_available) else stringResource(R.string.cashflow_balance_end, formats.dates.dayMonth(state.month.atEndOfMonth())),
+            SummaryIcons.Cash,
             state.balance,
             stringResource(R.string.cashflow_projected, formats.dates.dayMonth(state.month.atEndOfMonth())),
+            SummaryIcons.Projected,
             state.projectedEnd,
         )
         state.summary?.let { s ->
-            ProgressCard(stringResource(R.string.cashflow_income), s.receivedIncome, s.expectedIncome, stringResource(R.string.cashflow_received_of, formats.money.format(s.expectedIncome.money)), c.positive)
-            ProgressCard(stringResource(R.string.cashflow_expenses), s.paidExpenses, s.expectedExpenses, stringResource(R.string.cashflow_paid_of, formats.money.format(s.expectedExpenses.money)), c.negative)
+            ProgressCard(stringResource(R.string.cashflow_income), SummaryIcons.Income, s.receivedIncome, s.expectedIncome, stringResource(R.string.cashflow_received_of, formats.money.format(s.expectedIncome.money)), c.positive)
+            ProgressCard(stringResource(R.string.cashflow_expenses), SummaryIcons.Expenses, s.paidExpenses, s.expectedExpenses, stringResource(R.string.cashflow_paid_of, formats.money.format(s.expectedExpenses.money)), c.negative)
             val result = state.result
             val soFar = state.resultSoFar
             if (result != null && soFar != null) ResultCard(result, soFar)
             if (!s.transfersOut.money.isZero || !s.transfersIn.money.isZero) {
                 // Neither income nor expense: money moved between cash and the portfolio.
                 FinanceCard(Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.cashflow_transfers), style = FinanceTheme.type.bodyStrong, color = c.textPrimary)
+                    IconLabel(SummaryIcons.Transfers, 18.dp) {
+                        Text(stringResource(R.string.cashflow_transfers), style = FinanceTheme.type.bodyStrong, color = c.textPrimary)
+                    }
                     if (!s.transfersOut.money.isZero) SummaryLine(stringResource(R.string.transfer_to_asset), Total(-s.transfersOut.money, s.transfersOut.incomplete), AmountTone.NEUTRAL)
                     if (!s.transfersIn.money.isZero) SummaryLine(stringResource(R.string.transfer_from_asset), s.transfersIn, AmountTone.NEUTRAL)
                 }
@@ -119,13 +126,13 @@ fun CashFlowContent(state: CashFlowUiState, actions: CashFlowActions, modifier: 
         state.nextMonth?.let { next ->
             SectionHeader(stringResource(R.string.cashflow_next_month), Modifier.padding(top = Spacing.s))
             FinanceCard(Modifier.fillMaxWidth()) {
-                SummaryLine(stringResource(R.string.cashflow_income), next.expectedIncome, AmountTone.NEUTRAL)
-                SummaryLine(stringResource(R.string.cashflow_expenses), Total(-next.expectedExpenses.money, next.expectedExpenses.incomplete), AmountTone.NEUTRAL)
+                SummaryLine(stringResource(R.string.cashflow_income), next.expectedIncome, AmountTone.NEUTRAL, SummaryIcons.Income)
+                SummaryLine(stringResource(R.string.cashflow_expenses), Total(-next.expectedExpenses.money, next.expectedExpenses.incomplete), AmountTone.NEUTRAL, SummaryIcons.Expenses)
                 if (!next.transfersOut.money.isZero) SummaryLine(stringResource(R.string.transfer_to_asset), Total(-next.transfersOut.money, next.transfersOut.incomplete), AmountTone.NEUTRAL)
                 if (!next.transfersIn.money.isZero) SummaryLine(stringResource(R.string.transfer_from_asset), next.transfersIn, AmountTone.NEUTRAL)
                 Spacer(Modifier.height(Spacing.s))
                 state.nextMonthProjected?.let {
-                    SummaryLine(stringResource(R.string.cashflow_next_projected, formats.dates.monthYear(state.month.plusMonths(1))), it, AmountTone.AUTO)
+                    SummaryLine(stringResource(R.string.cashflow_projected, formats.dates.dayMonth(state.month.plusMonths(1).atEndOfMonth())), it, AmountTone.AUTO, SummaryIcons.Projected)
                 }
             }
         }
@@ -142,7 +149,7 @@ private fun ResultCard(result: Total, soFar: Total) {
     val formats = LocalFormats.current
     FinanceCard(Modifier.fillMaxWidth()) {
         AdaptiveRow(
-            main = { Text(stringResource(R.string.cashflow_result), style = FinanceTheme.type.bodyStrong, color = c.textPrimary) },
+            main = { IconLabel(SummaryIcons.Result, 18.dp) { Text(stringResource(R.string.cashflow_result), style = FinanceTheme.type.bodyStrong, color = c.textPrimary) } },
             trailing = { AmountDisplay(result.money, signed = true, tone = AmountTone.AUTO, approximate = result.incomplete) },
             modifier = Modifier.fillMaxWidth(),
         )
@@ -157,11 +164,11 @@ private fun ResultCard(result: Total, soFar: Total) {
 }
 
 @Composable
-private fun ProgressCard(title: String, done: Total, expected: Total, caption: String, color: Color) {
+private fun ProgressCard(title: String, icon: ImageVector, done: Total, expected: Total, caption: String, color: Color) {
     val c = FinanceTheme.colors
     FinanceCard(Modifier.fillMaxWidth()) {
         AdaptiveRow(
-            main = { Text(title, style = FinanceTheme.type.bodyStrong, color = c.textPrimary) },
+            main = { IconLabel(icon, 18.dp) { Text(title, style = FinanceTheme.type.bodyStrong, color = c.textPrimary) } },
             trailing = { AmountDisplay(done.money, approximate = done.incomplete) },
             modifier = Modifier.fillMaxWidth(),
         )
@@ -176,9 +183,12 @@ private fun ProgressCard(title: String, done: Total, expected: Total, caption: S
 }
 
 @Composable
-private fun SummaryLine(label: String, total: Total, tone: AmountTone) {
+private fun SummaryLine(label: String, total: Total, tone: AmountTone, icon: ImageVector? = null) {
     AdaptiveRow(
-        main = { Text(label, style = FinanceTheme.type.body, color = FinanceTheme.colors.textSecondary) },
+        main = {
+            val text = @Composable { Text(label, style = FinanceTheme.type.body, color = FinanceTheme.colors.textSecondary) }
+            if (icon != null) IconLabel(icon, 18.dp, label = text) else text()
+        },
         trailing = { AmountDisplay(total.money, tone = tone, approximate = total.incomplete) },
         modifier = Modifier.fillMaxWidth(),
     )

@@ -54,7 +54,7 @@ fun AmountDisplay(
         AmountTone.NEGATIVE -> c.negative
         AmountTone.AUTO -> if (money.isNegative) c.negative else c.positive
     }
-    val spoken = if (text.contains(MINUS)) stringResource(R.string.a11y_minus, text.replace(MINUS.toString(), "")) else text
+    val spoken = spokenAmount(text)
     Text(
         text = text,
         modifier = modifier.semantics { contentDescription = spoken },
@@ -69,3 +69,8 @@ fun AmountDisplay(
 /** Shrinks single-line text to fit its width, from the style's size down to half of it. */
 fun shrinkToFit(style: TextStyle): TextAutoSize? =
     if (style.fontSize.isSp) TextAutoSize.StepBased(minFontSize = (style.fontSize.value / 2).sp, maxFontSize = style.fontSize, stepSize = 0.5.sp) else null
+
+/** An amount as TalkBack reads it: "minus R$ 2,00" instead of the "−" symbol, which some voices skip. */
+@Composable
+fun spokenAmount(text: String): String =
+    if (text.contains(MINUS)) stringResource(R.string.a11y_minus, text.replace(MINUS.toString(), "")) else text

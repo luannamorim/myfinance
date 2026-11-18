@@ -11,7 +11,6 @@ import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.CloudUpload
 import androidx.compose.material.icons.rounded.CurrencyExchange
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.TableChart
@@ -51,7 +50,6 @@ data class SettingsActions(
     val onExport: () -> Unit = {},
     val onDismissExport: () -> Unit = {},
     val onOpenPrivacy: () -> Unit = {},
-    val onOpenAbout: () -> Unit = {},
 )
 
 @Composable
@@ -124,7 +122,11 @@ fun SettingsContent(state: SettingsUiState, actions: SettingsActions, modifier: 
 
         SectionHeader(stringResource(R.string.settings_about_section), Modifier.padding(top = Spacing.s))
         NavRow(Icons.Rounded.Shield, stringResource(R.string.privacy_title), stringResource(R.string.privacy_hint), actions.onOpenPrivacy)
-        NavRow(Icons.Rounded.Info, stringResource(R.string.about_title), stringResource(R.string.about_hint), actions.onOpenAbout)
+        FinanceCard(Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.about_version, state.versionName), style = FinanceTheme.type.bodyStrong, color = FinanceTheme.colors.textPrimary)
+            Text(stringResource(R.string.about_made_by), style = FinanceTheme.type.body, color = FinanceTheme.colors.textSecondary)
+            Text(stringResource(R.string.about_geist), style = FinanceTheme.type.caption, color = FinanceTheme.colors.textTertiary)
+        }
     }
     if (exportWarning) {
         ConfirmDialog(

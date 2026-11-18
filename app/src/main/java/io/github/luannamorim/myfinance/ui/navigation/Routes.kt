@@ -34,4 +34,3 @@ enum class CategoryScope { INCOME, EXPENSE, ASSET }
 @Serializable data object CurrencySettingsRoute
 @Serializable data object BackupRoute
 @Serializable data object PrivacyRoute
-@Serializable data object AboutRoute

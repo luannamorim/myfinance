@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -31,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -42,8 +44,10 @@ import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.ui.common.ActionErrorDialog
 import io.github.luannamorim.myfinance.ui.common.ConfirmSheet
+import io.github.luannamorim.myfinance.ui.common.IconLabel
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
 import io.github.luannamorim.myfinance.ui.common.OccurrenceRowItem
+import io.github.luannamorim.myfinance.ui.common.SummaryIcons
 import io.github.luannamorim.myfinance.ui.common.TotalTiles
 import io.github.luannamorim.myfinance.ui.common.suggestAssetAmount
 import io.github.luannamorim.myfinance.ui.components.AdaptiveRow
@@ -59,6 +63,7 @@ import io.github.luannamorim.myfinance.ui.components.SectionHeader
 import io.github.luannamorim.myfinance.ui.components.TabScreen
 import io.github.luannamorim.myfinance.ui.components.TextAction
 import io.github.luannamorim.myfinance.ui.components.shrinkToFit
+import io.github.luannamorim.myfinance.ui.components.spokenAmount
 import io.github.luannamorim.myfinance.ui.theme.FinanceShapes
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import io.github.luannamorim.myfinance.ui.theme.Spacing
@@ -115,15 +120,17 @@ fun OverviewContent(state: OverviewUiState, actions: OverviewActions, modifier: 
         if (nw != null) NetWorthHero(nw.total, nw.cash, nw.investments, nw.personal)
 
         TotalTiles(
-            stringResource(R.string.overview_available), state.available,
-            stringResource(R.string.overview_projected, formats.dates.dayMonth(state.today.withDayOfMonth(state.today.lengthOfMonth()))), state.projected,
+            stringResource(R.string.overview_available), SummaryIcons.Cash, state.available,
+            stringResource(R.string.overview_projected, formats.dates.dayMonth(state.today.withDayOfMonth(state.today.lengthOfMonth()))), SummaryIcons.Projected, state.projected,
         )
 
         state.month?.takeIf { state.hasTransactions }?.let { m ->
             SectionHeader(stringResource(R.string.overview_this_month), action = { TextAction(stringResource(R.string.overview_see_all), onClick = actions.onSeeCashFlow) })
             FinanceCard(Modifier.fillMaxWidth()) {
-                MonthLine(stringResource(R.string.cashflow_income), m.receivedIncome, m.expectedIncome)
-                MonthLine(stringResource(R.string.cashflow_expenses), m.paidExpenses, m.expectedExpenses)
+                MonthLine(stringResource(R.string.cashflow_income), SummaryIcons.Income, soFarOf(m.receivedIncome, m.expectedIncome))
+                MonthLine(stringResource(R.string.cashflow_expenses), SummaryIcons.Expenses, soFarOf(m.paidExpenses, m.expectedExpenses))
+                Spacer(Modifier.height(Spacing.s))
+                MonthLine(stringResource(R.string.cashflow_result), SummaryIcons.Result, soFarOf(m.receivedIncome - m.paidExpenses, m.expectedIncome - m.expectedExpenses, signed = true))
             }
         }
 
@@ -222,14 +229,29 @@ private fun CompositionBar(parts: List<Pair<Float, Color>>) {
     }
 }
 
+/** A "this month" figure as shown and as read aloud ("minus" instead of "−"). */
+private data class MonthValue(val text: String, val spoken: String)
+
+/** "R$ 9.000,00 of 14.614,30": what is done so far, of what the month expects ([signed]: "+" on a positive so far). */
 @Composable
-private fun MonthLine(label: String, done: Total, expected: Total) {
+private fun soFarOf(done: Total, expected: Total, signed: Boolean = false): MonthValue {
     val formats = LocalFormats.current
+    val doneText = formats.money.format(done.money, signed = signed)
+    val expectedText = formats.money.formatNumber(expected.money.minor, expected.money.currency)
+    return MonthValue(
+        text = stringResource(R.string.overview_income_line, doneText, expectedText),
+        spoken = stringResource(R.string.overview_income_line, spokenAmount(doneText), spokenAmount(expectedText)),
+    )
+}
+
+@Composable
+private fun MonthLine(label: String, icon: ImageVector, value: MonthValue) {
     AdaptiveRow(
-        main = { Text(label, style = FinanceTheme.type.body, color = FinanceTheme.colors.textSecondary) },
+        main = { IconLabel(icon, 18.dp) { Text(label, style = FinanceTheme.type.body, color = FinanceTheme.colors.textSecondary) } },
         trailing = {
             Text(
-                stringResource(R.string.overview_income_line, formats.money.format(done.money), formats.money.formatNumber(expected.money.minor, expected.money.currency)),
+                value.text,
+                modifier = Modifier.semantics { contentDescription = value.spoken },
                 style = FinanceTheme.type.numeric,
                 color = FinanceTheme.colors.textPrimary,
                 maxLines = 1,
