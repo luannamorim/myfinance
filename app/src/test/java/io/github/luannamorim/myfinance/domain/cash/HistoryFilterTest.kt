@@ -7,6 +7,7 @@ import io.github.luannamorim.myfinance.testutil.adjustment
 import io.github.luannamorim.myfinance.testutil.brl
 import io.github.luannamorim.myfinance.testutil.confirmed
 import io.github.luannamorim.myfinance.testutil.d
+import io.github.luannamorim.myfinance.testutil.opening
 import io.github.luannamorim.myfinance.testutil.pending
 import io.github.luannamorim.myfinance.testutil.usd
 import org.junit.Assert.assertEquals
@@ -64,6 +65,15 @@ class HistoryFilterTest {
         assertEquals(emptyList<String>(), run(HistoryFilter(nov, query = "rent")))
         // With a chip too: both apply.
         assertEquals(emptyList<String>(), run(HistoryFilter(nov, query = "eletrica", progress = HistoryProgress.DONE)))
+    }
+
+    @Test
+    fun openingBalances_areNotListed() {
+        // A US$ 0,00 opening saved today: before 1.4.1 it showed as "Balance adjustment · R$ 0,00".
+        val zeroOpening = opening(usd("0.00"), "2026-11-12")
+        val listed = { f: HistoryFilter -> History.filter(emptyList(), listOf(zeroOpening, adj), f) { it.name }.map { (it as HistoryEntry.Adjustment).adjustment } }
+        assertEquals(listOf(adj), listed(HistoryFilter(nov)))
+        assertEquals(listOf(adj), listed(HistoryFilter(nov, progress = HistoryProgress.DONE)))
     }
 
     @Test

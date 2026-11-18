@@ -1,6 +1,7 @@
 package io.github.luannamorim.myfinance.domain.cash
 
 import io.github.luannamorim.myfinance.core.format.SearchText
+import io.github.luannamorim.myfinance.domain.model.AdjustmentKind
 import io.github.luannamorim.myfinance.domain.model.CashAdjustment
 import io.github.luannamorim.myfinance.domain.model.Occurrence
 import io.github.luannamorim.myfinance.domain.model.OccurrenceState
@@ -37,7 +38,8 @@ object History {
     /**
      * The month's entries, newest first. [searchText] gives the searchable text of an occurrence (name, category,
      * description and note, already localized); the search ignores accents and case. Cancelled occurrences show only
-     * without [HistoryFilter.progress]; balance adjustments count as done and are left out of a search.
+     * without [HistoryFilter.progress]; balance adjustments count as done and are left out of a search. Opening
+     * balances are the starting point (Settings → Opening balances), not history lines.
      */
     fun filter(
         occurrences: List<Occurrence>,
@@ -54,7 +56,7 @@ object History {
         val adjustmentEntries = if (filter.query.isNotBlank() || filter.progress == HistoryProgress.OPEN) {
             emptyList()
         } else {
-            adjustments.filter { YearMonth.from(it.date) == filter.month }.map { HistoryEntry.Adjustment(it) }
+            adjustments.filter { it.kind == AdjustmentKind.ADJUSTMENT && YearMonth.from(it.date) == filter.month }.map { HistoryEntry.Adjustment(it) }
         }
         return (transactions + adjustmentEntries).sortedWith(compareByDescending<HistoryEntry> { it.date }.thenByDescending { entryId(it) })
     }

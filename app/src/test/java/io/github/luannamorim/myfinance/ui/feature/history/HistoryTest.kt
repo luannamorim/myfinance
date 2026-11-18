@@ -24,10 +24,12 @@ import io.github.luannamorim.myfinance.testutil.rate
 import io.github.luannamorim.myfinance.testutil.usd
 import io.github.luannamorim.myfinance.testutil.confirmed
 import io.github.luannamorim.myfinance.testutil.d
+import io.github.luannamorim.myfinance.testutil.opening
 import io.github.luannamorim.myfinance.testutil.pending
 import io.github.luannamorim.myfinance.testutil.snapBothThemes
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
@@ -127,6 +129,13 @@ class HistoryTest {
 
         compose.onNodeWithText("Done").performClick()
         assertNull(filter.progress)
+    }
+
+    @Test
+    fun onlyAnOpeningBalance_isNoHistoryYet() {
+        val s = historyState(CashLedger(adjustments = listOf(opening(brl("0.00"), "2026-11-12"))), categories, HistoryFilter(nov), emptyMap(), today)
+        assertFalse(s.hasAnyData)
+        assertEquals(0, s.items.size)
     }
 
     @Test

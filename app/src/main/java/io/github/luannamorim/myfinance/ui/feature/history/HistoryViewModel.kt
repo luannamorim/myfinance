@@ -15,6 +15,7 @@ import io.github.luannamorim.myfinance.domain.cash.HistoryEntry
 import io.github.luannamorim.myfinance.domain.cash.HistoryFilter
 import io.github.luannamorim.myfinance.domain.fx.Converter
 import io.github.luannamorim.myfinance.domain.fx.ExchangeRates
+import io.github.luannamorim.myfinance.domain.model.AdjustmentKind
 import io.github.luannamorim.myfinance.domain.model.Category
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.ui.common.OccurrenceRow
@@ -68,7 +69,8 @@ fun historyState(
             }
         },
         categories = categories,
-        hasAnyData = ledger.occurrences.isNotEmpty() || ledger.adjustments.isNotEmpty(),
+        // An opening balance alone is no history yet: it is the starting point, not a line.
+        hasAnyData = ledger.occurrences.isNotEmpty() || ledger.adjustments.any { it.kind == AdjustmentKind.ADJUSTMENT },
         today = today,
     )
 }
