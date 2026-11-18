@@ -81,7 +81,7 @@ fun cashFlowState(
     val pendingInMonth = ledger.occurrences.filter {
         it.state == OccurrenceState.PENDING && YearMonth.from(it.dueDate) == month && !it.dueDate.isBefore(today)
     }
-    fun rows(list: List<io.github.luannamorim.myfinance.domain.model.Occurrence>) = list.sortedBy { it.dueDate }.map { OccurrenceRow.of(it, byId, today) }
+    fun rows(list: List<io.github.luannamorim.myfinance.domain.model.Occurrence>) = list.sortedBy { it.dueDate }.map { OccurrenceRow.of(it, byId, today, display, converter) }
     val usesConversion = ledger.occurrences.any { it.expected.currency != display || it.actual?.currency?.let { c -> c != display } == true } ||
         ledger.adjustments.any { it.amount.currency != display }
     val summary = CashCalculator.monthSummary(ledger, month, today, display, converter)

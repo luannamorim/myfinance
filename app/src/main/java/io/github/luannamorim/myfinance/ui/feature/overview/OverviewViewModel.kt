@@ -19,6 +19,7 @@ import io.github.luannamorim.myfinance.domain.fx.ExchangeRates
 import io.github.luannamorim.myfinance.domain.fx.Total
 import io.github.luannamorim.myfinance.domain.model.Category
 import io.github.luannamorim.myfinance.domain.model.Currency
+import io.github.luannamorim.myfinance.domain.model.nextCurrency
 import io.github.luannamorim.myfinance.domain.model.ExchangeRate
 import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.domain.model.OccurrenceState
@@ -46,6 +47,8 @@ data class OverviewUiState(
     val loading: Boolean = true,
     val today: LocalDate = LocalDate.MIN,
     val display: Currency = Currency.BRL,
+    /** What a tap on the flag switches to; null when only one currency is on. */
+    val nextDisplay: Currency? = null,
     val netWorth: NetWorth? = null,
     val available: Total? = null,
     val projected: Total? = null,
@@ -79,6 +82,7 @@ fun overviewState(
     rates: ExchangeRates,
     display: Currency,
     today: LocalDate,
+    enabled: Set<Currency> = Currency.entries.toSet(),
 ): OverviewUiState {
     val converter = Converter(rates)
     val byId = categories.associateBy { it.id }
@@ -95,14 +99,15 @@ fun overviewState(
         loading = false,
         today = today,
         display = display,
+        nextDisplay = nextCurrency(display, enabled).takeIf { it != display },
         netWorth = NetWorthCalculator.at(today, cash, portfolio, display, converter),
         available = CashCalculator.consolidate(CashCalculator.available(cash, today), display, converter),
         projected = CashCalculator.consolidate(CashCalculator.projected(cash, today, YearMonth.from(today).atEndOfMonth()), display, converter),
         month = CashCalculator.monthSummary(cash, YearMonth.from(today), today, display, converter),
-        upcoming = upcoming.map { OccurrenceRow.of(it, byId, today) },
+        upcoming = upcoming.map { OccurrenceRow.of(it, byId, today, display, converter) },
         targets = portfolio.assets.mapNotNull { portfolio.transferTarget(it.id) }.associateBy { it.assetId },
         rates = rates,
-        recent = recent.map { OccurrenceRow.of(it, byId, today) },
+        recent = recent.map { OccurrenceRow.of(it, byId, today, display, converter) },
         rate = rates.latest(),
         usesConversion = currencies.any { it != display },
         hasOpening = cash.adjustments.isNotEmpty(),
@@ -126,7 +131,7 @@ class OverviewViewModel @Inject constructor(
     private val local = MutableStateFlow(Local())
 
     private val base = combine(cash.ledger, portfolio.data, categories.observeAll(), rates.rates, settings.settings) { c, p, cats, r, s ->
-        overviewState(c, p, cats, r, s.displayCurrency, time.today())
+        overviewState(c, p, cats, r, s.displayCurrency, time.today(), s.enabledCurrencies)
     }
 
     val state: StateFlow<OverviewUiState> = combine(base, local) { s, l ->

@@ -54,7 +54,6 @@ import io.github.luannamorim.myfinance.ui.components.AdaptiveRow
 import io.github.luannamorim.myfinance.ui.components.AmountDisplay
 import io.github.luannamorim.myfinance.ui.components.AmountTone
 import io.github.luannamorim.myfinance.ui.components.FinanceCard
-import io.github.luannamorim.myfinance.ui.components.FinanceChip
 import io.github.luannamorim.myfinance.ui.components.IncompleteNote
 import io.github.luannamorim.myfinance.ui.components.LegendDot
 import io.github.luannamorim.myfinance.ui.components.NavRow
@@ -68,6 +67,14 @@ import io.github.luannamorim.myfinance.ui.theme.FinanceShapes
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import io.github.luannamorim.myfinance.ui.theme.Spacing
 import java.time.LocalDate
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.semantics.Role
+import io.github.luannamorim.myfinance.ui.common.displayName
+import io.github.luannamorim.myfinance.ui.components.CurrencyFlag
 
 data class OverviewActions(
     val onDisplay: (Currency) -> Unit = {},
@@ -109,10 +116,8 @@ fun OverviewContent(state: OverviewUiState, actions: OverviewActions, modifier: 
         modifier = modifier,
         subtitle = formats.dates.longDate(state.today).takeUnless { state.loading },
         actions = {
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
-                Currency.entries.forEach { cur -> FinanceChip(cur.symbol, selected = state.display == cur, onClick = { actions.onDisplay(cur) }) }
-            }
             AddMenu(actions.onAddTransaction, actions.onAddAsset)
+            if (!state.loading) FlagButton(state.display, state.nextDisplay, actions.onDisplay)
         },
     ) {
         if (state.loading) return@TabScreen
@@ -182,6 +187,26 @@ private fun AddMenu(onAddTransaction: () -> Unit, onAddAsset: () -> Unit) {
     }
 }
 
+/**
+ * The flag of the currency amounts are shown in; a tap switches to [next] (the next one turned on in
+ * Settings). With a single currency on, [next] is null and the flag only tells which one it is.
+ */
+@Composable
+private fun FlagButton(display: Currency, next: Currency?, onSwitch: (Currency) -> Unit) {
+    val description = if (next != null) {
+        stringResource(R.string.overview_display_switch, display.displayName(), next.displayName())
+    } else {
+        stringResource(R.string.overview_display_currency, display.displayName())
+    }
+    val tap = if (next != null) Modifier.clickable(role = Role.Button) { onSwitch(next) } else Modifier
+    Box(
+        Modifier.size(48.dp).clip(CircleShape).then(tap).semantics(mergeDescendants = true) { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        Crossfade(display, animationSpec = tween(200), label = "flag") { CurrencyFlag(it, 32.dp) }
+    }
+}
+
 @Composable
 private fun AddMenuItem(icon: ImageVector, label: String, onClick: () -> Unit) {
     val c = FinanceTheme.colors
@@ -238,9 +263,11 @@ private fun soFarOf(done: Total, expected: Total, signed: Boolean = false): Mont
     val formats = LocalFormats.current
     val doneText = formats.money.format(done.money, signed = signed)
     val expectedText = formats.money.formatNumber(expected.money.minor, expected.money.currency)
+    // "≈" when an amount had no rate for its date and was left out, as on every other converted total.
+    val approx = if (done.incomplete || expected.incomplete) "≈ " else ""
     return MonthValue(
-        text = stringResource(R.string.overview_income_line, doneText, expectedText),
-        spoken = stringResource(R.string.overview_income_line, spokenAmount(doneText), spokenAmount(expectedText)),
+        text = approx + stringResource(R.string.overview_income_line, doneText, expectedText),
+        spoken = approx + stringResource(R.string.overview_income_line, spokenAmount(doneText), spokenAmount(expectedText)),
     )
 }
 

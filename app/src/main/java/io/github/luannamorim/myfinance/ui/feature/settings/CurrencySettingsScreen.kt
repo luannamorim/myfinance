@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -37,8 +38,11 @@ import io.github.luannamorim.myfinance.domain.model.AppSettings
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.ExchangeRate
 import io.github.luannamorim.myfinance.domain.model.RateSource
+import io.github.luannamorim.myfinance.domain.model.withCurrencyEnabled
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
+import io.github.luannamorim.myfinance.ui.common.displayName
 import io.github.luannamorim.myfinance.ui.components.ChoiceRow
+import io.github.luannamorim.myfinance.ui.components.CurrencyFlag
 import io.github.luannamorim.myfinance.ui.components.DateSelector
 import io.github.luannamorim.myfinance.ui.components.DetailScaffold
 import io.github.luannamorim.myfinance.ui.components.FinanceCard
@@ -143,9 +147,25 @@ fun CurrencySettingsContent(state: CurrencyUiState, actions: CurrencyActions) {
     val formats = LocalFormats.current
     val s = state.settings
     val currencies = Currency.entries.map { it to it.symbol }
+    val shown = currencies.filter { (cur, _) -> cur in s.enabledCurrencies }
     DetailScaffold(title = stringResource(R.string.currency_title), onBack = actions.onBack) {
+        SectionHeader(stringResource(R.string.currency_in_use))
         FinanceCard(Modifier.fillMaxWidth()) {
-            ChoiceRow(stringResource(R.string.currency_display), currencies, s.displayCurrency, { cur -> actions.onUpdate { it.copy(displayCurrency = cur) } })
+            Currency.entries.forEach { cur ->
+                val on = cur in s.enabledCurrencies
+                SwitchRow(
+                    title = "${cur.displayName()} · ${cur.symbol}",
+                    hint = null,
+                    checked = on,
+                    onChange = { checked -> actions.onUpdate { it.withCurrencyEnabled(cur, checked) } },
+                    enabled = !(on && s.enabledCurrencies.size == 1),
+                    leading = { CurrencyFlag(cur, 24.dp) },
+                )
+            }
+            Text(stringResource(R.string.currency_in_use_hint), style = FinanceTheme.type.caption, color = c.textSecondary, modifier = Modifier.padding(top = Spacing.xs))
+        }
+        FinanceCard(Modifier.fillMaxWidth()) {
+            ChoiceRow(stringResource(R.string.currency_display), shown, s.displayCurrency, { cur -> actions.onUpdate { it.copy(displayCurrency = cur) } })
             Spacer(Modifier.height(Spacing.l))
             ChoiceRow(stringResource(R.string.currency_default), currencies, s.defaultCurrency, { cur -> actions.onUpdate { it.copy(defaultCurrency = cur) } })
         }

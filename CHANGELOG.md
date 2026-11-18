@@ -7,9 +7,13 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 - Overview and Cash Flow: icons next to income (↑), expenses (↓), available cash, projected, transfers and month result (=).
 - Overview: the month result in "This month" (so far of expected).
+- Overview: a round flag in the header switches the currency amounts are shown in (R$ ⇄ US$), replacing the R$ / US$ chips.
+- Settings → Currency: "Currencies in use" picks the currencies the flag switches between; at least one stays on.
 
 ### Changed
 - Cash Flow: the next month's projection reads "Projected · 31/12" instead of "Projected at the end of December 2026".
+- Overview, Cash Flow and History: transactions are shown in the display currency too, with the amount as entered underneath. Paid and received ones convert at the PTAX of their date, pending ones at the latest rate, as the totals do.
+- Overview: "This month" marks its amounts with "≈" when one had no rate and was left out, like the other totals.
 - Settings: About is now a card in Settings (version, author and font license), like MyFit; the separate About screen and the source code link are gone.
 
 ## [1.2.3] - 2026-11-16

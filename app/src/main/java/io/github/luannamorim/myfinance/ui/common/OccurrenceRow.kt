@@ -11,9 +11,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import io.github.luannamorim.myfinance.domain.cash.CashCalculator
 import io.github.luannamorim.myfinance.domain.cash.DisplayStatus
 import io.github.luannamorim.myfinance.domain.cash.OccurrenceStatus
+import io.github.luannamorim.myfinance.domain.fx.Converter
 import io.github.luannamorim.myfinance.domain.model.Category
+import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.EntryKind
 import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.domain.model.Occurrence
@@ -26,7 +29,11 @@ import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import io.github.luannamorim.myfinance.ui.theme.Spacing
 import java.time.LocalDate
 
-/** A transaction line for lists: actual values once confirmed, expected values before. */
+/**
+ * A transaction line for lists: actual values once confirmed, expected values before. [amount] is in the
+ * display currency when there is a rate, at the same date the totals use ([CashCalculator.rateDate]);
+ * [original] is then the amount as entered.
+ */
 data class OccurrenceRow(
     val id: Long,
     val name: String,
@@ -36,17 +43,22 @@ data class OccurrenceRow(
     val date: LocalDate,
     val status: DisplayStatus,
     val occurrence: Occurrence,
+    val original: Money? = null,
 ) {
     companion object {
-        fun of(o: Occurrence, categories: Map<Long, Category>, today: LocalDate): OccurrenceRow {
+        fun of(o: Occurrence, categories: Map<Long, Category>, today: LocalDate, display: Currency, converter: Converter): OccurrenceRow {
             val confirmed = o.state == OccurrenceState.CONFIRMED
+            val entered = if (confirmed) o.actual ?: o.expected else o.expected
+            val date = if (confirmed) o.actualDate ?: o.dueDate else o.dueDate
+            val converted = if (entered.currency == display) null else converter.convert(entered, display, CashCalculator.rateDate(o))
             return OccurrenceRow(
                 id = o.id,
                 name = o.name,
                 category = categories[o.categoryId],
                 kind = o.kind,
-                amount = if (confirmed) o.actual ?: o.expected else o.expected,
-                date = if (confirmed) o.actualDate ?: o.dueDate else o.dueDate,
+                amount = converted ?: entered,
+                original = entered.takeIf { converted != null },
+                date = date,
                 status = OccurrenceStatus.of(o, today),
                 occurrence = o,
             )
@@ -79,6 +91,7 @@ fun OccurrenceRowItem(row: OccurrenceRow, onClick: () -> Unit, modifier: Modifie
                 trailing = {
                     Column(horizontalAlignment = Alignment.End) {
                         AmountDisplay(if (row.kind.cashInflow) row.amount else -row.amount, signed = row.kind.cashInflow)
+                        row.original?.let { Text(formats.money.format(it), style = FinanceTheme.type.caption.copy(fontFeatureSettings = "tnum"), color = c.textSecondary) }
                         trailing?.invoke()
                     }
                 },

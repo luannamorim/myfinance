@@ -6,12 +6,17 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.luannamorim.myfinance.core.time.TimeSource
 import io.github.luannamorim.myfinance.core.time.today
 import io.github.luannamorim.myfinance.data.repository.CashRepository
+import io.github.luannamorim.myfinance.data.prefs.SettingsRepository
 import io.github.luannamorim.myfinance.data.repository.CategoryRepository
+import io.github.luannamorim.myfinance.data.repository.ExchangeRateRepository
 import io.github.luannamorim.myfinance.domain.cash.CashLedger
 import io.github.luannamorim.myfinance.domain.cash.History
 import io.github.luannamorim.myfinance.domain.cash.HistoryEntry
 import io.github.luannamorim.myfinance.domain.cash.HistoryFilter
+import io.github.luannamorim.myfinance.domain.fx.Converter
+import io.github.luannamorim.myfinance.domain.fx.ExchangeRates
 import io.github.luannamorim.myfinance.domain.model.Category
+import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.ui.common.OccurrenceRow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -38,8 +43,17 @@ data class HistoryUiState(
     val today: LocalDate = LocalDate.MIN,
 )
 
-fun historyState(ledger: CashLedger, categories: List<Category>, filter: HistoryFilter, names: Map<Long, String>, today: LocalDate): HistoryUiState {
+fun historyState(
+    ledger: CashLedger,
+    categories: List<Category>,
+    filter: HistoryFilter,
+    names: Map<Long, String>,
+    today: LocalDate,
+    display: Currency = Currency.BRL,
+    rates: ExchangeRates = ExchangeRates.EMPTY,
+): HistoryUiState {
     val byId = categories.associateBy { it.id }
+    val converter = Converter(rates)
     val entries = History.filter(ledger.occurrences, ledger.adjustments, filter, today) { o ->
         listOfNotNull(o.name, names[o.categoryId] ?: byId[o.categoryId]?.name, o.description, o.note).joinToString(" ")
     }
@@ -49,7 +63,7 @@ fun historyState(ledger: CashLedger, categories: List<Category>, filter: History
         months = History.byMonth(entries).map { (month, list) ->
             month to list.map {
                 when (it) {
-                    is HistoryEntry.Transaction -> HistoryItem.Transaction(OccurrenceRow.of(it.occurrence, byId, today))
+                    is HistoryEntry.Transaction -> HistoryItem.Transaction(OccurrenceRow.of(it.occurrence, byId, today, display, converter))
                     is HistoryEntry.Adjustment -> HistoryItem.Adjustment(it)
                 }
             }
@@ -64,6 +78,8 @@ fun historyState(ledger: CashLedger, categories: List<Category>, filter: History
 class HistoryViewModel @Inject constructor(
     cash: CashRepository,
     categories: CategoryRepository,
+    rates: ExchangeRateRepository,
+    settings: SettingsRepository,
     private val time: TimeSource,
 ) : ViewModel() {
 
@@ -72,8 +88,11 @@ class HistoryViewModel @Inject constructor(
     /** Localized category names (the screen resolves predefined ones), so search matches what the user sees. */
     private val names = MutableStateFlow<Map<Long, String>>(emptyMap())
 
-    val state: StateFlow<HistoryUiState> = combine(cash.ledger, categories.observeAll(), filter, names) { ledger, cats, f, n ->
-        historyState(ledger, cats, f, n, time.today())
+    /** The display currency and the rates rows convert with (combine takes at most five flows). */
+    private val conversion = combine(settings.settings, rates.rates) { s, r -> s.displayCurrency to r }
+
+    val state: StateFlow<HistoryUiState> = combine(cash.ledger, categories.observeAll(), filter, names, conversion) { ledger, cats, f, n, (display, r) ->
+        historyState(ledger, cats, f, n, time.today(), display, r)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
 
     fun setCategoryNames(value: Map<Long, String>) {

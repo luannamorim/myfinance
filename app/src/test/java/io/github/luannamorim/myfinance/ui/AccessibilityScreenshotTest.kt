@@ -107,6 +107,13 @@ class AccessibilityScreenshotTest {
     }
 
     @Test
+    fun overview_inUsd_largeFont() {
+        compose.snapBothThemes("a11y_overview_usd_font150") { OverviewContent(overviewState(cash, portfolio, categories, rates, Currency.USD, today), OverviewActions()) }
+        // A converted row keeps the amount as entered underneath.
+        compose.onNodeWithText("R$\u00A0250,00").assertExists()
+    }
+
+    @Test
     fun cashFlow_largeFont() {
         compose.snapBothThemes("a11y_cashflow_font150") {
             CashFlowContent(cashFlowState(cash, categories, rates, Currency.BRL, YearMonth.of(2026, 11), today), CashFlowActions())

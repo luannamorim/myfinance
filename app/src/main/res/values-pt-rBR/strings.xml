@@ -309,6 +309,8 @@
 
     <!-- Currency settings -->
     <string name="currency_title">Moeda e cotação</string>
+    <string name="currency_in_use">Moedas em uso</string>
+    <string name="currency_in_use_hint">Pelo menos uma fica ligada. A bandeira no Resumo alterna entre as que estão ligadas.</string>
     <string name="currency_hint">R$ e US$, PTAX do Banco Central</string>
     <string name="currency_default">Padrão para novos lançamentos</string>
     <string name="currency_display">Mostrar totais em</string>
@@ -450,6 +452,10 @@
     <string name="overview_start_asset_hint">Renda fixa, ações, ETFs, imóveis, veículos</string>
     <string name="overview_composition_note">Moveu dinheiro entre o caixa e um investimento? Lance como transferência: caixa e ativo mudam juntos, sem contar como receita ou despesa.</string>
     <string name="overview_add">Adicionar</string>
+    <string name="overview_display_currency">Moeda dos valores: %1$s</string>
+    <string name="overview_display_switch">Moeda dos valores: %1$s. Toque para %2$s</string>
+    <string name="currency_name_brl">Real</string>
+    <string name="currency_name_usd">Dólar</string>
 
     <!-- Backup -->
     <string name="backup_title">Backup</string>

@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -144,6 +145,38 @@ class OverviewTest {
         )
         compose.setContent { FinanceTheme { OverviewContent(overviewState(short, PortfolioData(), categories, rates, Currency.BRL, today), OverviewActions()) } }
         compose.onNodeWithContentDescription("minus R$ 100,00 of minus 600,00").assertExists()
+    }
+
+    @Test
+    fun displayInUsd_convertsTheRows_andShowsTheOriginal() {
+        compose.snapBothThemes("overview_usd") { OverviewContent(overviewState(cash, portfolio, categories, rates, Currency.USD, today), OverviewActions()) }
+        // Electricity: R$ 250,00 at 5,6143.
+        compose.onNodeWithText("\u2212US$\u00A044,53").assertExists()
+        compose.onNodeWithText("R$\u00A0250,00").assertExists()
+    }
+
+    @Test
+    fun displayInUsd_monthWithoutOldRates_isMarkedApproximate() {
+        // The only rate is 12/11: the R$ salary (05/11) can't be converted, so the totals are partial.
+        compose.setContent { FinanceTheme { OverviewContent(overviewState(cash, portfolio, categories, rates, Currency.USD, today), OverviewActions()) } }
+        compose.onNodeWithText("≈ US$ 0,00 of 1.000,00").assertExists()
+    }
+
+    @Test
+    fun flag_tap_switchesToTheNextCurrency() {
+        var chosen: Currency? = null
+        compose.setContent { FinanceTheme { OverviewContent(overviewState(cash, portfolio, categories, rates, Currency.BRL, today), OverviewActions(onDisplay = { chosen = it })) } }
+        compose.onNodeWithText("US$").assertDoesNotExist() // the R$ / US$ chips are gone
+        compose.onNodeWithContentDescription("Display currency: Brazilian real. Tap for US dollar").performClick()
+        assertEquals(Currency.USD, chosen)
+    }
+
+    @Test
+    fun flag_withOneCurrencyOn_doesNothing() {
+        compose.setContent {
+            FinanceTheme { OverviewContent(overviewState(cash, portfolio, categories, rates, Currency.BRL, today, enabled = setOf(Currency.BRL)), OverviewActions()) }
+        }
+        compose.onNodeWithContentDescription("Display currency: Brazilian real").assertHasNoClickAction()
     }
 
     @Test

@@ -6,6 +6,7 @@ import androidx.compose.ui.res.stringResource
 import io.github.luannamorim.myfinance.R
 import io.github.luannamorim.myfinance.domain.model.AssetCategory
 import io.github.luannamorim.myfinance.domain.model.Category
+import io.github.luannamorim.myfinance.domain.model.Currency
 
 /** Localized names of the predefined categories, by seed key (CategorySeed). */
 private val seedNames: Map<String, Int> = mapOf(
@@ -51,6 +52,15 @@ private val seedNames: Map<String, Int> = mapOf(
 fun seedNameRes(seedKey: String?): Int? = seedKey?.let { seedNames[it] }
 
 /** The user's name for the category, or the localized predefined name if it was never renamed. */
+/** "Brazilian real", "US dollar": what TalkBack says and what Settings lists. */
+@Composable
+fun Currency.displayName(): String = stringResource(
+    when (this) {
+        Currency.BRL -> R.string.currency_name_brl
+        Currency.USD -> R.string.currency_name_usd
+    },
+)
+
 @Composable
 fun Category.displayName(): String = name ?: seedNameRes(seedKey)?.let { stringResource(it) } ?: ""
 

@@ -41,19 +41,31 @@ fun NavRow(icon: ImageVector, title: String, hint: String?, onClick: () -> Unit,
     }
 }
 
-/** A full-width switch with a title and an optional hint; the whole row toggles. */
+/** A full-width switch with a title, an optional hint and optional [leading] content; the whole row toggles. */
 @Composable
-fun SwitchRow(title: String, hint: String?, checked: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+fun SwitchRow(
+    title: String,
+    hint: String?,
+    checked: Boolean,
+    onChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    leading: (@Composable () -> Unit)? = null,
+) {
     val c = FinanceTheme.colors
     Row(
-        modifier.fillMaxWidth().toggleable(value = checked, role = Role.Switch, onValueChange = onChange).padding(vertical = Spacing.s),
+        modifier.fillMaxWidth().toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onChange).padding(vertical = Spacing.s),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (leading != null) {
+            leading()
+            Spacer(Modifier.width(Spacing.m))
+        }
         Column(Modifier.weight(1f)) {
             Text(title, style = FinanceTheme.type.bodyStrong, color = c.textPrimary)
             if (hint != null) Text(hint, style = FinanceTheme.type.caption, color = c.textSecondary)
         }
-        Switch(checked = checked, onCheckedChange = null, colors = SwitchDefaults.colors(checkedTrackColor = c.accent, checkedThumbColor = c.onAccent))
+        Switch(checked = checked, onCheckedChange = null, enabled = enabled, colors = SwitchDefaults.colors(checkedTrackColor = c.accent, checkedThumbColor = c.onAccent))
     }
 }
 

@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import io.github.luannamorim.myfinance.domain.model.AppSettings
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.DateFormatStyle
@@ -29,6 +30,7 @@ class SettingsRepository @Inject constructor(
         val dateFormat = stringPreferencesKey("date_format")
         val defaultCurrency = stringPreferencesKey("default_currency")
         val displayCurrency = stringPreferencesKey("display_currency")
+        val enabledCurrencies = stringSetPreferencesKey("enabled_currencies")
         val autoFetchRates = booleanPreferencesKey("auto_fetch_rates")
         val autoBackup = booleanPreferencesKey("auto_backup")
     }
@@ -47,6 +49,7 @@ class SettingsRepository @Inject constructor(
             prefs[Keys.dateFormat] = next.dateFormat.name
             prefs[Keys.defaultCurrency] = next.defaultCurrency.name
             prefs[Keys.displayCurrency] = next.displayCurrency.name
+            prefs[Keys.enabledCurrencies] = next.enabledCurrencies.map { it.name }.toSet()
             prefs[Keys.autoFetchRates] = next.autoFetchRates
             prefs[Keys.autoBackup] = next.autoBackup
         }
@@ -67,6 +70,7 @@ class SettingsRepository @Inject constructor(
             dateFormat = this[Keys.dateFormat]?.let { enumValueOrNull<DateFormatStyle>(it) } ?: defaults.dateFormat,
             defaultCurrency = this[Keys.defaultCurrency]?.let { enumValueOrNull<Currency>(it) } ?: defaults.defaultCurrency,
             displayCurrency = this[Keys.displayCurrency]?.let { enumValueOrNull<Currency>(it) } ?: defaults.displayCurrency,
+            enabledCurrencies = this[Keys.enabledCurrencies]?.mapNotNull { enumValueOrNull<Currency>(it) }?.toSet()?.takeIf { it.isNotEmpty() } ?: defaults.enabledCurrencies,
             autoFetchRates = this[Keys.autoFetchRates] ?: defaults.autoFetchRates,
             autoBackup = this[Keys.autoBackup] ?: defaults.autoBackup,
         )

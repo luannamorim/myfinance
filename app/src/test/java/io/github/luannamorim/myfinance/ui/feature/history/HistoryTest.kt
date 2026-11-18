@@ -16,7 +16,11 @@ import io.github.luannamorim.myfinance.domain.model.EntryKind.EXPENSE
 import io.github.luannamorim.myfinance.domain.model.EntryKind.INCOME
 import io.github.luannamorim.myfinance.testutil.PHONE_TALL
 import io.github.luannamorim.myfinance.testutil.adjustment
+import io.github.luannamorim.myfinance.domain.fx.ExchangeRates
+import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.testutil.brl
+import io.github.luannamorim.myfinance.testutil.rate
+import io.github.luannamorim.myfinance.testutil.usd
 import io.github.luannamorim.myfinance.testutil.confirmed
 import io.github.luannamorim.myfinance.testutil.d
 import io.github.luannamorim.myfinance.testutil.pending
@@ -60,6 +64,15 @@ class HistoryTest {
         val s = historyState(ledger, categories, HistoryFilter(query = "aluguel"), mapOf(20L to "Aluguel"), today)
         assertEquals(3, s.months.sumOf { it.second.size })
         assertEquals(listOf(YearMonth.of(2026, 12), YearMonth.of(2026, 11), YearMonth.of(2026, 10)), s.months.map { it.first })
+    }
+
+    @Test
+    fun displayInUsd_convertsTheRows_atTheirPaymentDate() {
+        val rates = ExchangeRates(listOf(rate("2026-11-01", "5.0000")))
+        val s = historyState(ledger, categories, HistoryFilter(), emptyMap(), today, Currency.USD, rates)
+        val groceries = s.months.flatMap { it.second }.filterIsInstance<HistoryItem.Transaction>().first { it.row.name == "Groceries" }.row
+        assertEquals(usd("62.48"), groceries.amount) // R$ 312,40 / 5,00
+        assertEquals(brl("312.40"), groceries.original)
     }
 
     @Test

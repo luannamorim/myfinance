@@ -1,6 +1,7 @@
 package io.github.luannamorim.myfinance.ui.feature
 
 import io.github.luannamorim.myfinance.domain.cash.CashLedger
+import io.github.luannamorim.myfinance.domain.fx.Converter
 import io.github.luannamorim.myfinance.domain.fx.ExchangeRates
 import io.github.luannamorim.myfinance.domain.model.Asset
 import io.github.luannamorim.myfinance.domain.model.AssetCategory
@@ -16,7 +17,10 @@ import io.github.luannamorim.myfinance.testutil.confirmed
 import io.github.luannamorim.myfinance.testutil.d
 import io.github.luannamorim.myfinance.testutil.opening
 import io.github.luannamorim.myfinance.testutil.pending
+import io.github.luannamorim.myfinance.testutil.rate
 import io.github.luannamorim.myfinance.testutil.transfer
+import io.github.luannamorim.myfinance.testutil.usd
+import io.github.luannamorim.myfinance.ui.common.OccurrenceRow
 import io.github.luannamorim.myfinance.ui.feature.cashflow.ChartSpan
 import io.github.luannamorim.myfinance.ui.feature.cashflow.cashFlowCharts
 import io.github.luannamorim.myfinance.ui.feature.cashflow.cashFlowState
@@ -49,6 +53,51 @@ class StateBuildersTest {
         valuations = emptyMap(),
         categories = listOf(AssetCategory(1, null, AssetGroup.INVESTMENT, "receipt_long", "asset.fixed_income", false, 0)),
     )
+
+    private val ptax = ExchangeRates(listOf(rate("2026-11-12", "5.6143")))
+
+    @Test
+    fun pendingRow_inOtherCurrency_isConverted() {
+        val o = pending(EntryKind.EXPENSE, brl("250.00"), "2026-11-20", category = 20, name = "Electricity")
+        val row = OccurrenceRow.of(o, emptyMap(), today, Currency.USD, Converter(ptax))
+        assertEquals(usd("44.53"), row.amount) // 250,00 / 5,6143 = 44,529…
+        assertEquals(brl("250.00"), row.original)
+    }
+
+    @Test
+    fun overduePendingRow_usesTheLatestRate_likeTheTotals() {
+        val rates = ExchangeRates(listOf(rate("2026-10-01", "5.0000"), rate("2026-11-12", "6.0000")))
+        val o = pending(EntryKind.EXPENSE, usd("100.00"), "2026-10-25", category = 20, name = "Hosting")
+        val row = OccurrenceRow.of(o, emptyMap(), today, Currency.BRL, Converter(rates))
+        // Projected counts a pending item at the latest rate (6,00), not at its due date's (5,00).
+        assertEquals(brl("600.00"), row.amount)
+        assertEquals(usd("100.00"), row.original)
+    }
+
+    @Test
+    fun row_inDisplayCurrency_hasNoOriginal() {
+        val o = pending(EntryKind.EXPENSE, brl("250.00"), "2026-11-20", category = 20, name = "Electricity")
+        val row = OccurrenceRow.of(o, emptyMap(), today, Currency.BRL, Converter(ptax))
+        assertEquals(brl("250.00"), row.amount)
+        assertNull(row.original)
+    }
+
+    @Test
+    fun row_withoutRate_keepsItsAmount() {
+        val o = pending(EntryKind.INCOME, usd("1000.00"), "2026-11-25", category = 20, name = "Website")
+        val row = OccurrenceRow.of(o, emptyMap(), today, Currency.BRL, Converter(ExchangeRates.EMPTY))
+        assertEquals(usd("1000.00"), row.amount)
+        assertNull(row.original)
+    }
+
+    @Test
+    fun confirmedRow_convertsAtThePaymentDate() {
+        val rates = ExchangeRates(listOf(rate("2026-11-01", "5.0000"), rate("2026-11-10", "6.0000")))
+        val o = confirmed(EntryKind.INCOME, usd("100.00"), "2026-11-05", on = "2026-11-10", category = 20, name = "Website")
+        val row = OccurrenceRow.of(o, emptyMap(), today, Currency.BRL, Converter(rates))
+        assertEquals(brl("600.00"), row.amount) // the 10/11 rate, not the 05/11 due date's
+        assertEquals(usd("100.00"), row.original)
+    }
 
     @Test
     fun overviewUpcoming_isOverdueAndThisMonthOnly() {

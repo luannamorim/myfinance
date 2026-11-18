@@ -43,4 +43,26 @@ class SettingsRepositoryTest {
         other.importJson(repo.exportJson())
         assertEquals(changed, other.current())
     }
+
+    @Test
+    fun enabledCurrencies_default_isAll() = runBlocking {
+        assertEquals(setOf(Currency.BRL, Currency.USD), testSettings().current().enabledCurrencies)
+    }
+
+    @Test
+    fun enabledCurrencies_roundTrip() = runBlocking {
+        val repo = testSettings()
+        repo.update { it.copy(enabledCurrencies = setOf(Currency.USD), displayCurrency = Currency.USD) }
+        assertEquals(setOf(Currency.USD), repo.current().enabledCurrencies)
+    }
+
+    @Test
+    fun importJson_fromBeforeEnabledCurrencies_turnsAllOn() = runBlocking {
+        // A settings.json written by 1.2.x, without the field.
+        val old = """{"themeMode":"LIGHT","numberFormat":"COMMA_DECIMAL","dateFormat":"DMY","defaultCurrency":"BRL","displayCurrency":"USD","autoFetchRates":true,"autoBackup":true}"""
+        val repo = testSettings()
+        repo.importJson(old)
+        assertEquals(setOf(Currency.BRL, Currency.USD), repo.current().enabledCurrencies)
+        assertEquals(Currency.USD, repo.current().displayCurrency)
+    }
 }

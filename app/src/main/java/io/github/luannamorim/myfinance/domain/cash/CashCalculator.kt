@@ -81,10 +81,16 @@ object CashCalculator {
 
     /** The amount an occurrence contributes and the date its rate is taken from, or null if cancelled. */
     private fun Occurrence.effective(): Pair<Money, LocalDate?>? = when (state) {
-        OccurrenceState.CONFIRMED -> actual?.let { it to actualDate }
-        OccurrenceState.PENDING -> expected to null
+        OccurrenceState.CONFIRMED -> actual?.let { it to rateDate(this) }
+        OccurrenceState.PENDING -> expected to rateDate(this)
         OccurrenceState.CANCELLED -> null
     }
+
+    /**
+     * The date an occurrence converts at: the payment date once confirmed; null (the latest rate) while
+     * pending or cancelled, since it is a forecast. Totals and list rows both use it, so they agree.
+     */
+    fun rateDate(o: Occurrence): LocalDate? = if (o.state == OccurrenceState.CONFIRMED) o.actualDate else null
 
     /** The month an occurrence belongs to: its actual date when confirmed, its due date otherwise. */
     fun monthOf(o: Occurrence): YearMonth = YearMonth.from(if (o.state == OccurrenceState.CONFIRMED) o.actualDate ?: o.dueDate else o.dueDate)
