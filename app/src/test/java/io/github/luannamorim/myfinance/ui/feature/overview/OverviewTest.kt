@@ -116,11 +116,17 @@ class OverviewTest {
     }
 
     @Test
-    fun thisMonth_showsTheResult_soFarOfExpected() {
+    fun thisMonth_showsWhatTheMonthExpects_andThePnl() {
         compose.setContent { FinanceTheme { OverviewContent(overviewState(cash, portfolio, categories, rates, Currency.BRL, today), OverviewActions()) } }
-        compose.onNodeWithText("Month result").assertExists()
-        // So far: 9.000,00 − 2.862,40. Expected: 14.614,30 (9.000 + US$ 1.000 at 5,6143) − 3.112,40.
-        compose.onNodeWithText("+R$ 6.137,60 of 11.501,90").assertExists()
+        compose.onNodeWithText("P&L").assertExists()
+        // Expected income: 9.000 + US$ 1.000 at 5,6143 = 14.614,30; expected expenses: 3.112,40. Nothing "so far".
+        compose.onNodeWithText("R$\u00A014.614,30").assertExists()
+        compose.onNodeWithText("R$\u00A03.112,40").assertExists()
+        compose.onNodeWithText("+R$\u00A011.501,90").assertExists()
+        compose.onNodeWithText("R$ 9.000,00 of 14.614,30").assertDoesNotExist()
+        // The transfer hint and the exchange-rate line are gone (the rate lives in Settings).
+        compose.onNodeWithText("Moving money", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("PTAX", substring = true).assertDoesNotExist()
     }
 
     @Test
@@ -130,9 +136,12 @@ class OverviewTest {
                 confirmed(EntryKind.EXPENSE, brl("100.00"), "2026-11-05", category = 50, name = "Groceries"),
                 pending(EntryKind.EXPENSE, brl("500.00"), "2026-11-20", category = 30, name = "Electricity"),
             ),
+            // So the projected balance (1.000 − 600 = 400) isn't the same figure as the P&L.
+            adjustments = listOf(opening(brl("1000.00"), "2026-11-01")),
         )
         compose.setContent { FinanceTheme { OverviewContent(overviewState(short, PortfolioData(), categories, rates, Currency.BRL, today), OverviewActions()) } }
-        compose.onNodeWithText("−R$ 100,00 of −600,00").assertExists()
+        // Expected: 0 − 600,00 (100,00 paid + 500,00 to pay).
+        compose.onNodeWithText("\u2212R$\u00A0600,00").assertExists()
     }
 
     @Test
@@ -142,9 +151,11 @@ class OverviewTest {
                 confirmed(EntryKind.EXPENSE, brl("100.00"), "2026-11-05", category = 50, name = "Groceries"),
                 pending(EntryKind.EXPENSE, brl("500.00"), "2026-11-20", category = 30, name = "Electricity"),
             ),
+            // So the projected balance (1.000 − 600 = 400) isn't the same figure as the P&L.
+            adjustments = listOf(opening(brl("1000.00"), "2026-11-01")),
         )
         compose.setContent { FinanceTheme { OverviewContent(overviewState(short, PortfolioData(), categories, rates, Currency.BRL, today), OverviewActions()) } }
-        compose.onNodeWithContentDescription("minus R$ 100,00 of minus 600,00").assertExists()
+        compose.onNodeWithContentDescription("minus R$\u00A0600,00").assertExists()
     }
 
     @Test
@@ -157,9 +168,9 @@ class OverviewTest {
 
     @Test
     fun displayInUsd_monthWithoutOldRates_isMarkedApproximate() {
-        // The only rate is 12/11: the R$ salary (05/11) can't be converted, so the totals are partial.
+        // The only rate is 12/11: the R$ salary (05/11) can't be converted, so the expected income is only the US$ 1.000.
         compose.setContent { FinanceTheme { OverviewContent(overviewState(cash, portfolio, categories, rates, Currency.USD, today), OverviewActions()) } }
-        compose.onNodeWithText("≈ US$ 0,00 of 1.000,00").assertExists()
+        compose.onNodeWithText("\u2248 US$\u00A01.000,00").assertExists()
     }
 
     @Test

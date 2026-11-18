@@ -36,8 +36,9 @@ sealed interface HistoryItem {
 
 data class HistoryUiState(
     val loading: Boolean = true,
-    val filter: HistoryFilter = HistoryFilter(),
-    val months: List<Pair<YearMonth, List<HistoryItem>>> = emptyList(),
+    val filter: HistoryFilter = HistoryFilter(YearMonth.now()),
+    /** The month's lines, newest first. */
+    val items: List<HistoryItem> = emptyList(),
     val categories: List<Category> = emptyList(),
     val hasAnyData: Boolean = false,
     val today: LocalDate = LocalDate.MIN,
@@ -54,18 +55,16 @@ fun historyState(
 ): HistoryUiState {
     val byId = categories.associateBy { it.id }
     val converter = Converter(rates)
-    val entries = History.filter(ledger.occurrences, ledger.adjustments, filter, today) { o ->
+    val entries = History.filter(ledger.occurrences, ledger.adjustments, filter) { o ->
         listOfNotNull(o.name, names[o.categoryId] ?: byId[o.categoryId]?.name, o.description, o.note).joinToString(" ")
     }
     return HistoryUiState(
         loading = false,
         filter = filter,
-        months = History.byMonth(entries).map { (month, list) ->
-            month to list.map {
-                when (it) {
-                    is HistoryEntry.Transaction -> HistoryItem.Transaction(OccurrenceRow.of(it.occurrence, byId, today, display, converter))
-                    is HistoryEntry.Adjustment -> HistoryItem.Adjustment(it)
-                }
+        items = entries.map {
+            when (it) {
+                is HistoryEntry.Transaction -> HistoryItem.Transaction(OccurrenceRow.of(it.occurrence, byId, today, display, converter))
+                is HistoryEntry.Adjustment -> HistoryItem.Adjustment(it)
             }
         },
         categories = categories,
@@ -83,7 +82,8 @@ class HistoryViewModel @Inject constructor(
     private val time: TimeSource,
 ) : ViewModel() {
 
-    private val filter = MutableStateFlow(HistoryFilter())
+    /** Opens on the current month, like Cash Flow. */
+    private val filter = MutableStateFlow(HistoryFilter(YearMonth.from(time.today())))
 
     /** Localized category names (the screen resolves predefined ones), so search matches what the user sees. */
     private val names = MutableStateFlow<Map<Long, String>>(emptyMap())
@@ -100,8 +100,4 @@ class HistoryViewModel @Inject constructor(
     }
 
     fun update(transform: (HistoryFilter) -> HistoryFilter) = filter.update(transform)
-
-    fun clear() {
-        filter.value = HistoryFilter()
-    }
 }

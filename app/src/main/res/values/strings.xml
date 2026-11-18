@@ -276,10 +276,6 @@
     </plurals>
 
     <!-- Exchange rate footer -->
-    <string name="rate_footer">US$ 1 = R$ %1$s · PTAX %2$s</string>
-    <string name="rate_footer_manual">US$ 1 = R$ %1$s · manual %2$s</string>
-    <string name="rate_missing">No USD rate yet: dollar amounts can\'t be converted.</string>
-    <string name="rate_update">Update</string>
     <string name="rate_incomplete">≈ Some amounts couldn\'t be converted. Add an exchange rate.</string>
 
     <!-- Cash flow charts -->
@@ -294,15 +290,10 @@
 
     <!-- History -->
     <string name="history_search">Search transactions</string>
-    <string name="history_filters">Filters</string>
-    <string name="history_more_filters">Categories and dates</string>
-    <string name="history_clear">Clear filters</string>
-    <string name="history_from">From</string>
-    <string name="history_to">To</string>
-    <string name="history_any_date">Any date</string>
-    <string name="history_apply">Apply</string>
-    <string name="history_no_results">No transactions match these filters.</string>
-    <string name="history_month">Month</string>
+    <string name="history_no_results">Nothing found this month.</string>
+    <string name="history_empty_month">No transactions this month.</string>
+    <string name="history_open">Open</string>
+    <string name="history_done">Done</string>
 
     <!-- Currency settings -->
     <string name="currency_title">Currency and exchange rate</string>
@@ -435,7 +426,6 @@
     <string name="overview_available">Available cash</string>
     <string name="overview_projected">Projected · %1$s</string>
     <string name="overview_this_month">This month</string>
-    <string name="overview_income_line">%1$s of %2$s</string>
     <string name="overview_upcoming">Upcoming</string>
     <string name="overview_recent">Recent</string>
     <string name="overview_see_all">See all</string>
@@ -447,7 +437,6 @@
     <string name="overview_start_transaction_hint">Salary, rent, bills: one-time or recurring</string>
     <string name="overview_start_asset">Add an investment or asset</string>
     <string name="overview_start_asset_hint">Fixed income, stocks, ETFs, real estate, vehicles</string>
-    <string name="overview_composition_note">Moving money between cash and an investment? Record it as a transfer: cash and the asset change together, and it isn\'t income or an expense.</string>
     <string name="overview_add">Add</string>
     <string name="overview_display_currency">Display currency: %1$s</string>
     <string name="overview_display_switch">Display currency: %1$s. Tap for %2$s</string>
@@ -579,7 +568,10 @@
     <string name="editor_already_transferred">Already done</string>
     <string name="seed_expense_credit_card">Credit Card</string>
     <string name="seed_expense_loans">Loans</string>
-    <string name="cashflow_transfers">Transfers this month</string>
+    <string name="cashflow_transfers">Transfers</string>
+    <string name="cashflow_transfers_to">to investment</string>
+    <string name="cashflow_transfers_from">from investment</string>
+    <string name="cashflow_transfers_both">%1$s to investment · %2$s from investment</string>
     <string name="cashflow_pending_transfers">Transfers</string>
     <string name="cash_link_from">Take it from cash</string>
     <string name="cash_link_from_hint">Records a transfer: your cash goes down by the same amount</string>
@@ -596,7 +588,6 @@
     <string name="portfolio_cash_hint">From Cash Flow, for reference</string>
     <string name="portfolio_total_with_cash">Total with cash</string>
     <string name="charts_summary_bars_months">Income and expenses over the last %1$d months.</string>
-    <string name="cashflow_result">Month result</string>
-    <string name="cashflow_result_hint">Expected income − expected expenses.</string>
-    <string name="cashflow_result_so_far">So far: %1$s (received − paid)</string>
+    <string name="cashflow_result">P&amp;L</string>
+    <string name="cashflow_result_of">of %1$s expected</string>
 </resources>

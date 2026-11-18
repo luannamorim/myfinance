@@ -11,6 +11,7 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.luannamorim.myfinance.domain.cash.CashLedger
 import io.github.luannamorim.myfinance.domain.cash.HistoryFilter
+import io.github.luannamorim.myfinance.domain.cash.HistoryProgress
 import io.github.luannamorim.myfinance.domain.model.Category
 import io.github.luannamorim.myfinance.domain.model.EntryKind.EXPENSE
 import io.github.luannamorim.myfinance.domain.model.EntryKind.INCOME
@@ -59,62 +60,87 @@ class HistoryTest {
         adjustments = listOf(adjustment(brl("-37.60"), "2026-11-11")),
     )
 
+    private val nov = YearMonth.of(2026, 11)
+
     @Test
-    fun searchUsesLocalizedCategoryNames() {
-        val s = historyState(ledger, categories, HistoryFilter(query = "aluguel"), mapOf(20L to "Aluguel"), today)
-        assertEquals(3, s.months.sumOf { it.second.size })
-        assertEquals(listOf(YearMonth.of(2026, 12), YearMonth.of(2026, 11), YearMonth.of(2026, 10)), s.months.map { it.first })
+    fun searchUsesLocalizedCategoryNames_withinTheMonth() {
+        val s = historyState(ledger, categories, HistoryFilter(nov, query = "aluguel"), mapOf(20L to "Aluguel"), today)
+        // November's rent only: the October and December ones are in their own months.
+        assertEquals(listOf("Rent"), s.items.filterIsInstance<HistoryItem.Transaction>().map { it.row.name })
+        assertEquals(1, s.items.size)
     }
 
     @Test
     fun displayInUsd_convertsTheRows_atTheirPaymentDate() {
         val rates = ExchangeRates(listOf(rate("2026-11-01", "5.0000")))
-        val s = historyState(ledger, categories, HistoryFilter(), emptyMap(), today, Currency.USD, rates)
-        val groceries = s.months.flatMap { it.second }.filterIsInstance<HistoryItem.Transaction>().first { it.row.name == "Groceries" }.row
+        val s = historyState(ledger, categories, HistoryFilter(nov), emptyMap(), today, Currency.USD, rates)
+        val groceries = s.items.filterIsInstance<HistoryItem.Transaction>().first { it.row.name == "Groceries" }.row
         assertEquals(usd("62.48"), groceries.amount) // R$ 312,40 / 5,00
         assertEquals(brl("312.40"), groceries.original)
     }
 
     @Test
-    fun screenshot_grouped() {
-        val state = historyState(ledger, categories, HistoryFilter(), emptyMap(), today)
-        compose.snapBothThemes("history") { HistoryContent(state, {}, {}, {}) }
+    fun screenshot() {
+        val state = historyState(ledger, categories, HistoryFilter(nov), emptyMap(), today)
+        compose.snapBothThemes("history") { HistoryContent(state, {}, {}) }
     }
 
     @Test
-    fun monthChip_startsAtTheCurrentMonth_andTheSwitcherMovesIt() {
-        var filter by mutableStateOf(HistoryFilter())
+    fun screenshot_done() {
+        val state = historyState(ledger, categories, HistoryFilter(nov, progress = HistoryProgress.DONE), emptyMap(), today)
+        compose.snapBothThemes("history_done") { HistoryContent(state, {}, {}) }
+    }
+
+    @Test
+    fun opensOnAMonth_andTheSwitcherMovesIt() {
+        var filter by mutableStateOf(HistoryFilter(nov))
         compose.setContent {
-            FinanceTheme { HistoryContent(historyState(ledger, categories, filter, emptyMap(), today), {}, { t -> filter = t(filter) }, {}) }
+            FinanceTheme { HistoryContent(historyState(ledger, categories, filter, emptyMap(), today), {}, { t -> filter = t(filter) }) }
         }
-        compose.onNodeWithText("Month").performClick()
-        assertEquals(YearMonth.of(2026, 11), filter.month)
         compose.onNodeWithText("November 2026").assertIsDisplayed()
-        // The switcher names the month, so the section header is not repeated.
+        // The switcher names the month: no section header, and the old filters are gone.
         compose.onNodeWithText("November 2026".uppercase()).assertDoesNotExist()
+        compose.onNodeWithText("Categories and dates").assertDoesNotExist()
         compose.onNodeWithText("Groceries").assertIsDisplayed()
 
         compose.onNodeWithContentDescription("Previous month").performClick()
         assertEquals(YearMonth.of(2026, 10), filter.month)
         compose.onNodeWithText("Groceries").assertDoesNotExist()
         compose.onNodeWithText("Rent").assertIsDisplayed()
-
-        compose.onNodeWithText("Month").performClick()
-        assertNull(filter.month)
-        compose.onNodeWithText("Groceries").assertIsDisplayed()
     }
 
     @Test
-    fun screenshot_monthFilter() {
-        val state = historyState(ledger, categories, HistoryFilter(month = YearMonth.of(2026, 11)), emptyMap(), today)
-        compose.snapBothThemes("history_month") { HistoryContent(state, {}, {}, {}) }
+    fun openAndDone_oneAtATime_andATapAgainShowsAll() {
+        var filter by mutableStateOf(HistoryFilter(nov))
+        compose.setContent {
+            FinanceTheme { HistoryContent(historyState(ledger, categories, filter, emptyMap(), today), {}, { t -> filter = t(filter) }) }
+        }
+        // November has nothing open: the December rent is next month's.
+        compose.onNodeWithText("Open").performClick()
+        assertEquals(HistoryProgress.OPEN, filter.progress)
+        compose.onNodeWithText("Nothing found this month.").assertIsDisplayed()
+
+        compose.onNodeWithText("Done").performClick()
+        assertEquals(HistoryProgress.DONE, filter.progress)
+        compose.onNodeWithText("Groceries").assertIsDisplayed()
+        compose.onNodeWithText("Balance adjustment").assertIsDisplayed()
+
+        compose.onNodeWithText("Done").performClick()
+        assertNull(filter.progress)
+    }
+
+    @Test
+    fun emptyMonth_saysSo() {
+        val state = historyState(ledger, categories, HistoryFilter(YearMonth.of(2026, 9)), emptyMap(), today)
+        compose.setContent { FinanceTheme { HistoryContent(state, {}, {}) } }
+        compose.onNodeWithText("No transactions this month.").assertIsDisplayed()
     }
 
     @Test
     fun showsRowsAndAdjustment() {
-        val state = historyState(ledger, categories, HistoryFilter(), emptyMap(), today)
-        compose.setContent { FinanceTheme { HistoryContent(state, {}, {}, {}) } }
+        val state = historyState(ledger, categories, HistoryFilter(nov), emptyMap(), today)
+        compose.setContent { FinanceTheme { HistoryContent(state, {}, {}) } }
         compose.onNodeWithText("Balance adjustment").assertIsDisplayed()
-        compose.onNodeWithText("November 2026".uppercase()).assertIsDisplayed()
+        compose.onNodeWithText("Salary").assertIsDisplayed()
     }
 }

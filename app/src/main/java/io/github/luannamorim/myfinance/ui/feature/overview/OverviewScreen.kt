@@ -57,12 +57,9 @@ import io.github.luannamorim.myfinance.ui.components.FinanceCard
 import io.github.luannamorim.myfinance.ui.components.IncompleteNote
 import io.github.luannamorim.myfinance.ui.components.LegendDot
 import io.github.luannamorim.myfinance.ui.components.NavRow
-import io.github.luannamorim.myfinance.ui.components.RateFooter
 import io.github.luannamorim.myfinance.ui.components.SectionHeader
 import io.github.luannamorim.myfinance.ui.components.TabScreen
 import io.github.luannamorim.myfinance.ui.components.TextAction
-import io.github.luannamorim.myfinance.ui.components.shrinkToFit
-import io.github.luannamorim.myfinance.ui.components.spokenAmount
 import io.github.luannamorim.myfinance.ui.theme.FinanceShapes
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import io.github.luannamorim.myfinance.ui.theme.Spacing
@@ -83,7 +80,6 @@ data class OverviewActions(
     val onDismissConfirm: () -> Unit = {},
     val onConfirm: (Money, LocalDate, String?, Money?) -> Unit = { _, _, _, _ -> },
     val onDismissError: () -> Unit = {},
-    val onUpdateRates: () -> Unit = {},
     val onSeeCashFlow: () -> Unit = {},
     val onSeeHistory: () -> Unit = {},
     val onOpening: () -> Unit = {},
@@ -102,14 +98,12 @@ fun OverviewScreen(actions: OverviewActions, viewModel: OverviewViewModel = hilt
             onDismissConfirm = viewModel::dismissConfirm,
             onConfirm = viewModel::confirm,
             onDismissError = viewModel::dismissError,
-            onUpdateRates = viewModel::updateRates,
         ),
     )
 }
 
 @Composable
 fun OverviewContent(state: OverviewUiState, actions: OverviewActions, modifier: Modifier = Modifier) {
-    val c = FinanceTheme.colors
     val formats = LocalFormats.current
     TabScreen(
         title = stringResource(R.string.nav_overview),
@@ -132,10 +126,11 @@ fun OverviewContent(state: OverviewUiState, actions: OverviewActions, modifier: 
         state.month?.takeIf { state.hasTransactions }?.let { m ->
             SectionHeader(stringResource(R.string.overview_this_month), action = { TextAction(stringResource(R.string.overview_see_all), onClick = actions.onSeeCashFlow) })
             FinanceCard(Modifier.fillMaxWidth()) {
-                MonthLine(stringResource(R.string.cashflow_income), SummaryIcons.Income, soFarOf(m.receivedIncome, m.expectedIncome))
-                MonthLine(stringResource(R.string.cashflow_expenses), SummaryIcons.Expenses, soFarOf(m.paidExpenses, m.expectedExpenses))
+                // What the month expects; what is done so far lives in Cash Flow.
+                MonthLine(stringResource(R.string.cashflow_income), SummaryIcons.Income, m.expectedIncome)
+                MonthLine(stringResource(R.string.cashflow_expenses), SummaryIcons.Expenses, m.expectedExpenses)
                 Spacer(Modifier.height(Spacing.s))
-                MonthLine(stringResource(R.string.cashflow_result), SummaryIcons.Result, soFarOf(m.receivedIncome - m.paidExpenses, m.expectedIncome - m.expectedExpenses, signed = true))
+                MonthLine(stringResource(R.string.cashflow_result), SummaryIcons.Result, m.expectedIncome - m.expectedExpenses, AmountTone.AUTO)
             }
         }
 
@@ -158,10 +153,6 @@ fun OverviewContent(state: OverviewUiState, actions: OverviewActions, modifier: 
             if (!state.hasTransactions) NavRow(Icons.Rounded.Add, stringResource(R.string.overview_start_transaction), stringResource(R.string.overview_start_transaction_hint), actions.onAddTransaction)
             if (!state.hasAssets) NavRow(Icons.Rounded.DonutLarge, stringResource(R.string.overview_start_asset), stringResource(R.string.overview_start_asset_hint), actions.onAddAsset)
         }
-        if (state.hasAssets && state.hasOpening) {
-            Text(stringResource(R.string.overview_composition_note), style = FinanceTheme.type.caption, color = c.textTertiary, modifier = Modifier.padding(top = Spacing.s))
-        }
-        if (state.usesConversion) RateFooter(state.rate, onUpdate = actions.onUpdateRates, updating = state.updatingRates)
     }
     state.confirming?.let { row ->
         ConfirmSheet(
@@ -254,37 +245,12 @@ private fun CompositionBar(parts: List<Pair<Float, Color>>) {
     }
 }
 
-/** A "this month" figure as shown and as read aloud ("minus" instead of "−"). */
-private data class MonthValue(val text: String, val spoken: String)
-
-/** "R$ 9.000,00 of 14.614,30": what is done so far, of what the month expects ([signed]: "+" on a positive so far). */
+/** A "this month" line: what the month expects, signed and coloured for the P&L ([tone] AUTO). */
 @Composable
-private fun soFarOf(done: Total, expected: Total, signed: Boolean = false): MonthValue {
-    val formats = LocalFormats.current
-    val doneText = formats.money.format(done.money, signed = signed)
-    val expectedText = formats.money.formatNumber(expected.money.minor, expected.money.currency)
-    // "≈" when an amount had no rate for its date and was left out, as on every other converted total.
-    val approx = if (done.incomplete || expected.incomplete) "≈ " else ""
-    return MonthValue(
-        text = approx + stringResource(R.string.overview_income_line, doneText, expectedText),
-        spoken = approx + stringResource(R.string.overview_income_line, spokenAmount(doneText), spokenAmount(expectedText)),
-    )
-}
-
-@Composable
-private fun MonthLine(label: String, icon: ImageVector, value: MonthValue) {
+private fun MonthLine(label: String, icon: ImageVector, total: Total, tone: AmountTone = AmountTone.NEUTRAL) {
     AdaptiveRow(
         main = { IconLabel(icon, 18.dp) { Text(label, style = FinanceTheme.type.body, color = FinanceTheme.colors.textSecondary) } },
-        trailing = {
-            Text(
-                value.text,
-                modifier = Modifier.semantics { contentDescription = value.spoken },
-                style = FinanceTheme.type.numeric,
-                color = FinanceTheme.colors.textPrimary,
-                maxLines = 1,
-                autoSize = shrinkToFit(FinanceTheme.type.numeric),
-            )
-        },
+        trailing = { AmountDisplay(total.money, signed = tone == AmountTone.AUTO, tone = tone, approximate = total.incomplete) },
         modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xs),
     )
 }

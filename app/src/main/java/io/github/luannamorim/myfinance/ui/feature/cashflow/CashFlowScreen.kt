@@ -43,7 +43,6 @@ import io.github.luannamorim.myfinance.ui.components.IncompleteNote
 import io.github.luannamorim.myfinance.ui.components.MonthSwitcher
 import io.github.luannamorim.myfinance.ui.components.NavRow
 import io.github.luannamorim.myfinance.ui.components.PrimaryButton
-import io.github.luannamorim.myfinance.ui.components.RateFooter
 import io.github.luannamorim.myfinance.ui.components.SectionHeader
 import io.github.luannamorim.myfinance.ui.components.TabScreen
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
@@ -97,16 +96,7 @@ fun CashFlowContent(state: CashFlowUiState, actions: CashFlowActions, modifier: 
             val result = state.result
             val soFar = state.resultSoFar
             if (result != null && soFar != null) ResultCard(result, soFar)
-            if (!s.transfersOut.money.isZero || !s.transfersIn.money.isZero) {
-                // Neither income nor expense: money moved between cash and the portfolio.
-                FinanceCard(Modifier.fillMaxWidth()) {
-                    IconLabel(SummaryIcons.Transfers, 18.dp) {
-                        Text(stringResource(R.string.cashflow_transfers), style = FinanceTheme.type.bodyStrong, color = c.textPrimary)
-                    }
-                    if (!s.transfersOut.money.isZero) SummaryLine(stringResource(R.string.transfer_to_asset), Total(-s.transfersOut.money, s.transfersOut.incomplete), AmountTone.NEUTRAL)
-                    if (!s.transfersIn.money.isZero) SummaryLine(stringResource(R.string.transfer_from_asset), s.transfersIn, AmountTone.NEUTRAL)
-                }
-            }
+            if (!s.transfersOut.money.isZero || !s.transfersIn.money.isZero) TransfersCard(s.transfersOut, s.transfersIn)
             if (s.overdueEarlierCount > 0 && state.month != YearMonth.from(state.today)) {
                 Text(
                     pluralStringResource(R.plurals.cashflow_overdue_earlier, s.overdueEarlierCount, s.overdueEarlierCount, formats.money.format(s.overdueEarlier.money)),
@@ -138,11 +128,13 @@ fun CashFlowContent(state: CashFlowUiState, actions: CashFlowActions, modifier: 
         }
         NavRow(Icons.Rounded.Repeat, stringResource(R.string.recurring_title), stringResource(R.string.recurring_hint), actions.onRecurring, Modifier.padding(top = Spacing.s))
         NavRow(Icons.AutoMirrored.Rounded.ShowChart, stringResource(R.string.cashflow_charts), stringResource(R.string.cashflow_charts_hint), actions.onCharts)
-        if (state.usesConversion) RateFooter(state.rate)
     }
 }
 
-/** Income − expenses of the month (not the cash balance): green when it's left over, red when it's short. */
+/**
+ * The month's P&L (income − expenses, not the cash balance): received − paid so far, green when it's left over and
+ * red when it's short, with what the month expects underneath.
+ */
 @Composable
 private fun ResultCard(result: Total, soFar: Total) {
     val c = FinanceTheme.colors
@@ -150,16 +142,35 @@ private fun ResultCard(result: Total, soFar: Total) {
     FinanceCard(Modifier.fillMaxWidth()) {
         AdaptiveRow(
             main = { IconLabel(SummaryIcons.Result, 18.dp) { Text(stringResource(R.string.cashflow_result), style = FinanceTheme.type.bodyStrong, color = c.textPrimary) } },
-            trailing = { AmountDisplay(result.money, signed = true, tone = AmountTone.AUTO, approximate = result.incomplete) },
+            trailing = { AmountDisplay(soFar.money, signed = true, tone = AmountTone.AUTO, approximate = soFar.incomplete) },
             modifier = Modifier.fillMaxWidth(),
         )
-        Text(stringResource(R.string.cashflow_result_hint), style = FinanceTheme.type.caption, color = c.textSecondary)
-        Text(
-            stringResource(R.string.cashflow_result_so_far, (if (soFar.incomplete) "≈ " else "") + formats.money.format(soFar.money, signed = true)),
-            style = FinanceTheme.type.caption,
-            color = c.textSecondary,
-            modifier = Modifier.padding(top = Spacing.xs),
+        val expected = (if (result.incomplete) "≈ " else "") + formats.money.format(result.money, signed = true)
+        Text(stringResource(R.string.cashflow_result_of, expected), style = FinanceTheme.type.caption, color = c.textSecondary)
+    }
+}
+
+/**
+ * Money moved between cash and the portfolio, neither income nor expense: the net for cash on the title line
+ * ("−" when it went to investments), and where it went underneath.
+ */
+@Composable
+private fun TransfersCard(toAssets: Total, fromAssets: Total) {
+    val c = FinanceTheme.colors
+    val formats = LocalFormats.current
+    val net = fromAssets - toAssets
+    val caption = when {
+        fromAssets.money.isZero -> stringResource(R.string.cashflow_transfers_to)
+        toAssets.money.isZero -> stringResource(R.string.cashflow_transfers_from)
+        else -> stringResource(R.string.cashflow_transfers_both, formats.money.format(toAssets.money), formats.money.format(fromAssets.money))
+    }
+    FinanceCard(Modifier.fillMaxWidth()) {
+        AdaptiveRow(
+            main = { IconLabel(SummaryIcons.Transfers, 18.dp) { Text(stringResource(R.string.cashflow_transfers), style = FinanceTheme.type.bodyStrong, color = c.textPrimary) } },
+            trailing = { AmountDisplay(net.money, signed = true, approximate = net.incomplete) },
+            modifier = Modifier.fillMaxWidth(),
         )
+        Text(caption, style = FinanceTheme.type.caption, color = c.textSecondary)
     }
 }
 

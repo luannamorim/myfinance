@@ -17,7 +17,6 @@ import io.github.luannamorim.myfinance.domain.fx.Total
 import io.github.luannamorim.myfinance.domain.model.AssetCategory
 import io.github.luannamorim.myfinance.domain.model.AssetGroup
 import io.github.luannamorim.myfinance.domain.model.Currency
-import io.github.luannamorim.myfinance.domain.model.ExchangeRate
 import io.github.luannamorim.myfinance.domain.model.OccurrenceState
 import io.github.luannamorim.myfinance.domain.portfolio.Allocation
 import io.github.luannamorim.myfinance.domain.portfolio.AssetSnapshot
@@ -49,8 +48,6 @@ data class PortfolioUiState(
     /** Open assets (filtered by group and selected category), largest value first. */
     val assets: List<AssetRow> = emptyList(),
     val closed: List<AssetRow> = emptyList(),
-    val rate: ExchangeRate? = null,
-    val usesConversion: Boolean = false,
     val empty: Boolean = true,
     /** Cash available today, from Cash Flow: a reference shown in "All", never part of the portfolio figures. */
     val cash: Total? = null,
@@ -93,8 +90,6 @@ fun portfolioState(
         assets = rows.filter { !it.snapshot.closed && (selected == null || it.snapshot.asset.categoryId == selected) }
             .sortedByDescending { (it.displayValue?.money ?: it.snapshot.value).minor },
         closed = rows.filter { it.snapshot.closed },
-        rate = rates.latest(),
-        usesConversion = data.assets.any { it.currency != display },
         empty = data.assets.isEmpty(),
         cash = cashTotal,
         cashShare = cashShare,

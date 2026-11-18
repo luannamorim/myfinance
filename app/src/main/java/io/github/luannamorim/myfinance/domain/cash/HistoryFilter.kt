@@ -2,32 +2,20 @@ package io.github.luannamorim.myfinance.domain.cash
 
 import io.github.luannamorim.myfinance.core.format.SearchText
 import io.github.luannamorim.myfinance.domain.model.CashAdjustment
-import io.github.luannamorim.myfinance.domain.model.Currency
-import io.github.luannamorim.myfinance.domain.model.EntryKind
 import io.github.luannamorim.myfinance.domain.model.Occurrence
 import io.github.luannamorim.myfinance.domain.model.OccurrenceState
 import java.time.LocalDate
 import java.time.YearMonth
 
-/**
- * History filters. An empty set means "no filter" on that dimension. [month] narrows to one month; with [from] or
- * [to] set too, only the dates inside both are listed.
- */
-data class HistoryFilter(
-    val query: String = "",
-    val kinds: Set<EntryKind> = emptySet(),
-    val statuses: Set<DisplayStatus> = emptySet(),
-    val categoryIds: Set<Long> = emptySet(),
-    val currencies: Set<Currency> = emptySet(),
-    val from: LocalDate? = null,
-    val to: LocalDate? = null,
-    val month: YearMonth? = null,
-) {
-    /** Filters that only make sense for transactions (adjustments are hidden while any is set). */
-    val transactionOnly: Boolean get() = query.isNotBlank() || kinds.isNotEmpty() || statuses.isNotEmpty() || categoryIds.isNotEmpty()
+/** What History narrows a month to: what is still open (overdue, pending, upcoming) or what is done. */
+enum class HistoryProgress { OPEN, DONE }
 
-    val isEmpty: Boolean get() = this == HistoryFilter()
-}
+/** History shows one [month], optionally narrowed by a search [query] and by [progress] (null: the whole month). */
+data class HistoryFilter(
+    val month: YearMonth,
+    val query: String = "",
+    val progress: HistoryProgress? = null,
+)
 
 /** One history line: a transaction or a balance adjustment. */
 sealed interface HistoryEntry {
@@ -43,48 +31,39 @@ sealed interface HistoryEntry {
 }
 
 object History {
-    /** Planned occurrences further ahead than this are hidden unless a date filter reaches them. */
-    const val FUTURE_DAYS = 60L
-
     /** The date a transaction is listed under: when it happened if confirmed, when it is due otherwise. */
     fun dateOf(o: Occurrence): LocalDate = if (o.state == OccurrenceState.CONFIRMED) o.actualDate ?: o.dueDate else o.dueDate
 
     /**
-     * Filters and sorts (newest first). [searchText] gives the searchable text of an occurrence (name, category,
-     * description and note, already localized); the search ignores accents and case.
+     * The month's entries, newest first. [searchText] gives the searchable text of an occurrence (name, category,
+     * description and note, already localized); the search ignores accents and case. Cancelled occurrences show only
+     * without [HistoryFilter.progress]; balance adjustments count as done and are left out of a search.
      */
     fun filter(
         occurrences: List<Occurrence>,
         adjustments: List<CashAdjustment>,
         filter: HistoryFilter,
-        today: LocalDate,
         searchText: (Occurrence) -> String,
     ): List<HistoryEntry> {
-        val limit = listOfNotNull(filter.to, filter.month?.atEndOfMonth()).minOrNull() ?: today.plusDays(FUTURE_DAYS)
-        val start = listOfNotNull(filter.from, filter.month?.atDay(1)).maxOrNull()
-        fun inRange(date: LocalDate) = !date.isAfter(limit) && (start == null || !date.isBefore(start))
         val transactions = occurrences.asSequence()
-            .filter { inRange(dateOf(it)) }
-            .filter { filter.kinds.isEmpty() || it.kind in filter.kinds }
-            .filter { filter.statuses.isEmpty() || OccurrenceStatus.of(it, today) in filter.statuses }
-            .filter { filter.categoryIds.isEmpty() || it.categoryId in filter.categoryIds }
-            .filter { filter.currencies.isEmpty() || it.expected.currency in filter.currencies || it.actual?.currency in filter.currencies }
+            .filter { YearMonth.from(dateOf(it)) == filter.month }
+            .filter { it.state.matches(filter.progress) }
             .filter { filter.query.isBlank() || SearchText.matches(searchText(it), filter.query) }
             .map { HistoryEntry.Transaction(it) }
             .toList()
-        val adjustmentEntries = if (filter.transactionOnly) {
+        val adjustmentEntries = if (filter.query.isNotBlank() || filter.progress == HistoryProgress.OPEN) {
             emptyList()
         } else {
-            adjustments
-                .filter { inRange(it.date) && (filter.currencies.isEmpty() || it.amount.currency in filter.currencies) }
-                .map { HistoryEntry.Adjustment(it) }
+            adjustments.filter { YearMonth.from(it.date) == filter.month }.map { HistoryEntry.Adjustment(it) }
         }
         return (transactions + adjustmentEntries).sortedWith(compareByDescending<HistoryEntry> { it.date }.thenByDescending { entryId(it) })
     }
 
-    /** Groups entries (already sorted newest first) by month. */
-    fun byMonth(entries: List<HistoryEntry>): List<Pair<YearMonth, List<HistoryEntry>>> =
-        entries.groupBy { YearMonth.from(it.date) }.toList()
+    private fun OccurrenceState.matches(progress: HistoryProgress?): Boolean = when (progress) {
+        null -> true
+        HistoryProgress.OPEN -> this == OccurrenceState.PENDING
+        HistoryProgress.DONE -> this == OccurrenceState.CONFIRMED
+    }
 
     private fun entryId(e: HistoryEntry): Long = when (e) {
         is HistoryEntry.Transaction -> e.occurrence.id

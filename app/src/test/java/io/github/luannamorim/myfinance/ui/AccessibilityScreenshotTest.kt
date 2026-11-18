@@ -135,7 +135,7 @@ class AccessibilityScreenshotTest {
 
     @Test
     fun history_largeFont() {
-        compose.snapBothThemes("a11y_history_font150") { HistoryContent(historyState(cash, categories, HistoryFilter(), emptyMap(), today), {}, {}, {}) }
+        compose.snapBothThemes("a11y_history_font150") { HistoryContent(historyState(cash, categories, HistoryFilter(YearMonth.from(today)), emptyMap(), today), {}, {}) }
     }
 
     @Test

@@ -17,7 +17,6 @@ import io.github.luannamorim.myfinance.domain.model.Asset
 import io.github.luannamorim.myfinance.domain.model.AssetCategory
 import io.github.luannamorim.myfinance.domain.model.AssetFlow
 import io.github.luannamorim.myfinance.domain.model.Currency
-import io.github.luannamorim.myfinance.domain.model.ExchangeRate
 import io.github.luannamorim.myfinance.domain.model.FlowKind
 import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.domain.portfolio.AssetSnapshot
@@ -59,7 +58,6 @@ data class AssetDetailUiState(
     /** Invested vs value over time, in the asset currency. */
     val series: List<SeriesPoint> = emptyList(),
     val imageFile: File? = null,
-    val rate: ExchangeRate? = null,
     val today: LocalDate = LocalDate.MIN,
     val sheet: AssetSheet? = null,
     val gone: Boolean = false,
@@ -88,7 +86,6 @@ fun assetDetailState(data: PortfolioData, assetId: Long, rates: ExchangeRates, d
         flows = flows.sortedWith(compareByDescending<AssetFlow> { it.date }.thenByDescending { it.id }),
         series = Series.portfolio(single, Period.ALL, today, asset.currency, converter),
         imageFile = asset.imagePath?.let(imageFile),
-        rate = rates.latest(),
         today = today,
         rates = rates,
     )

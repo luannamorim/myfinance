@@ -25,7 +25,6 @@ import io.github.luannamorim.myfinance.testutil.rate
 import io.github.luannamorim.myfinance.testutil.usd
 import io.github.luannamorim.myfinance.ui.feature.overview.overviewState
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.math.BigDecimal
 
@@ -91,7 +90,6 @@ class ScenarioTest {
         assertEquals(Total(brl("120.00")), m.overdueEarlier)
         assertEquals(listOf("Internet", "Electricity", "Cloud"), s.upcoming.map { it.name })
         assertEquals(listOf("Freelance", "Rent", "Salary"), s.recent.map { it.name })
-        assertTrue(s.usesConversion)
     }
 
     @Test

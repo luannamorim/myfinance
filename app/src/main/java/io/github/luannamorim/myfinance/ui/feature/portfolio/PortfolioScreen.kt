@@ -46,7 +46,6 @@ import io.github.luannamorim.myfinance.ui.components.IncompleteNote
 import io.github.luannamorim.myfinance.ui.components.LegendDot
 import io.github.luannamorim.myfinance.ui.components.NavRow
 import io.github.luannamorim.myfinance.ui.components.PrimaryButton
-import io.github.luannamorim.myfinance.ui.components.RateFooter
 import io.github.luannamorim.myfinance.ui.components.SectionHeader
 import io.github.luannamorim.myfinance.ui.components.TabScreen
 import io.github.luannamorim.myfinance.ui.components.TextAction
@@ -181,7 +180,6 @@ fun PortfolioContent(state: PortfolioUiState, actions: PortfolioActions, modifie
             state.closed.forEach { AssetCard(it, actions.onOpen) }
         }
         NavRow(Icons.AutoMirrored.Rounded.ShowChart, stringResource(R.string.portfolio_charts), stringResource(R.string.portfolio_charts_hint), actions.onCharts, Modifier.padding(top = Spacing.s))
-        if (state.usesConversion) RateFooter(state.rate)
     }
 }
 

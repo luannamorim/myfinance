@@ -10,7 +10,6 @@ import io.github.luannamorim.myfinance.data.repository.CashRepository
 import io.github.luannamorim.myfinance.data.repository.CategoryRepository
 import io.github.luannamorim.myfinance.data.repository.ExchangeRateRepository
 import io.github.luannamorim.myfinance.data.repository.PortfolioRepository
-import io.github.luannamorim.myfinance.data.repository.RefreshResult
 import io.github.luannamorim.myfinance.domain.cash.CashCalculator
 import io.github.luannamorim.myfinance.domain.cash.CashLedger
 import io.github.luannamorim.myfinance.domain.cash.MonthSummary
@@ -20,7 +19,6 @@ import io.github.luannamorim.myfinance.domain.fx.Total
 import io.github.luannamorim.myfinance.domain.model.Category
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.nextCurrency
-import io.github.luannamorim.myfinance.domain.model.ExchangeRate
 import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.domain.model.OccurrenceState
 import io.github.luannamorim.myfinance.domain.networth.NetWorth
@@ -56,14 +54,10 @@ data class OverviewUiState(
     /** Overdue first, then the rest due this month; at most [OverviewLimits.UPCOMING]. */
     val upcoming: List<OccurrenceRow> = emptyList(),
     val recent: List<OccurrenceRow> = emptyList(),
-    val rate: ExchangeRate? = null,
-    val usesConversion: Boolean = false,
     val hasOpening: Boolean = false,
     val hasTransactions: Boolean = false,
     val hasAssets: Boolean = false,
     val confirming: OccurrenceRow? = null,
-    val updatingRates: Boolean = false,
-    val rateResult: RefreshResult? = null,
     /** Assets of transfers, for the confirm sheet. */
     val targets: Map<Long, TransferTarget> = emptyMap(),
     val rates: ExchangeRates = ExchangeRates.EMPTY,
@@ -93,8 +87,6 @@ fun overviewState(
     val recent = cash.occurrences.filter { it.state == OccurrenceState.CONFIRMED && it.actualDate != null }
         .sortedWith(compareByDescending<io.github.luannamorim.myfinance.domain.model.Occurrence> { it.actualDate }.thenByDescending { it.id })
         .take(OverviewLimits.RECENT)
-    val currencies = (cash.occurrences.flatMap { listOfNotNull(it.expected.currency, it.actual?.currency) } +
-        cash.adjustments.map { it.amount.currency } + portfolio.assets.map { it.currency }).toSet()
     return OverviewUiState(
         loading = false,
         today = today,
@@ -108,22 +100,20 @@ fun overviewState(
         targets = portfolio.assets.mapNotNull { portfolio.transferTarget(it.id) }.associateBy { it.assetId },
         rates = rates,
         recent = recent.map { OccurrenceRow.of(it, byId, today, display, converter) },
-        rate = rates.latest(),
-        usesConversion = currencies.any { it != display },
         hasOpening = cash.adjustments.isNotEmpty(),
         hasTransactions = cash.occurrences.isNotEmpty(),
         hasAssets = portfolio.assets.isNotEmpty(),
     )
 }
 
-private data class Local(val confirming: Long? = null, val updating: Boolean = false, val result: RefreshResult? = null, val error: ActionError? = null)
+private data class Local(val confirming: Long? = null, val error: ActionError? = null)
 
 @HiltViewModel
 class OverviewViewModel @Inject constructor(
     private val cash: CashRepository,
     portfolio: PortfolioRepository,
     categories: CategoryRepository,
-    private val rates: ExchangeRateRepository,
+    rates: ExchangeRateRepository,
     private val settings: SettingsRepository,
     private val time: TimeSource,
 ) : ViewModel() {
@@ -137,8 +127,6 @@ class OverviewViewModel @Inject constructor(
     val state: StateFlow<OverviewUiState> = combine(base, local) { s, l ->
         s.copy(
             confirming = l.confirming?.let { id -> s.upcoming.firstOrNull { it.id == id } },
-            updatingRates = l.updating,
-            rateResult = l.result,
             error = l.error,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), OverviewUiState())
@@ -160,12 +148,4 @@ class OverviewViewModel @Inject constructor(
     }
 
     fun dismissError() = local.update { it.copy(error = null) }
-
-    fun updateRates() {
-        local.update { it.copy(updating = true, result = null) }
-        viewModelScope.launch {
-            val result = rates.refresh(force = true)
-            local.update { it.copy(updating = false, result = result) }
-        }
-    }
 }

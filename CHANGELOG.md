@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- Overview: "This month" shows only what the month expects (income, expenses and P&L); what is done so far stays in Cash Flow. The P&L is green when positive and red when negative.
+- Cash Flow: "Month result" is now "P&L" and shows what is left so far (received − paid), with "of … expected" underneath instead of the two captions.
+- Cash Flow: "Transfers this month" is now "Transfers", with the amount on the title line and where it went ("to investment") underneath.
+- History: opens on the current month with arrows to change it, like Cash Flow. The type, currency, status, category and date filters give way to two chips, Open (overdue, pending, upcoming) and Done (paid, received, transferred, and balance adjustments). Search stays and looks within the month.
+
+### Removed
+- The exchange-rate line (US$ 1 = R$ … · PTAX) at the bottom of Overview, Cash Flow, Portfolio and the asset detail; the rate and its date are in Settings → Currency and exchange rate.
+- Overview: the "Moving money between cash and an investment?" hint.
+
 ## [1.3.0] - 2026-11-18
 
 ### Added

@@ -91,7 +91,6 @@ class PortfolioTest {
         assertEquals(listOf(3L, 2L, 1L), s.slices.map { it.first.categoryId })
         assertEquals(listOf("Car", "VOO", "Tesouro Selic"), s.assets.map { it.snapshot.asset.name })
         assertEquals(listOf("Old CDB"), s.closed.map { it.snapshot.asset.name })
-        assertTrue(s.usesConversion)
     }
 
     @Test

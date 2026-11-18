@@ -48,7 +48,6 @@ import io.github.luannamorim.myfinance.ui.components.FinanceLineChart
 import io.github.luannamorim.myfinance.ui.components.LegendDot
 import io.github.luannamorim.myfinance.ui.components.LineSeries
 import io.github.luannamorim.myfinance.ui.components.PrimaryButton
-import io.github.luannamorim.myfinance.ui.components.RateFooter
 import io.github.luannamorim.myfinance.ui.components.SecondaryButton
 import io.github.luannamorim.myfinance.ui.components.SectionHeader
 import io.github.luannamorim.myfinance.ui.feature.settings.CategoryBadge
@@ -159,7 +158,6 @@ fun AssetDetailContent(state: AssetDetailUiState, actions: AssetDetailActions) {
                 TotalLine(stringResource(R.string.asset_value), conv.value)
                 TotalLine(stringResource(R.string.asset_contributed), conv.contributed)
                 TotalLine(stringResource(R.string.asset_gain), conv.gain, AmountTone.AUTO)
-                RateFooter(state.rate, Modifier.padding(top = Spacing.s))
             }
         }
         Text(stringResource(R.string.asset_method), style = FinanceTheme.type.caption, color = c.textTertiary)

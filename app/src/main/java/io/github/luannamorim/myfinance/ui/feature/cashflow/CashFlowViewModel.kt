@@ -18,7 +18,6 @@ import io.github.luannamorim.myfinance.domain.fx.Total
 import io.github.luannamorim.myfinance.domain.model.Category
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.EntryKind
-import io.github.luannamorim.myfinance.domain.model.ExchangeRate
 import io.github.luannamorim.myfinance.domain.model.OccurrenceState
 import io.github.luannamorim.myfinance.ui.common.OccurrenceRow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,9 +35,9 @@ data class CashFlowUiState(
     val today: LocalDate = LocalDate.now(),
     val display: Currency = Currency.BRL,
     val summary: MonthSummary? = null,
-    /** The month's result: expected income − expected expenses (transfers don't count); green or red. */
+    /** The month's P&L as expected: expected income − expected expenses (transfers don't count). */
     val result: Total? = null,
-    /** The result so far: income received − expenses paid. */
+    /** The P&L so far: income received − expenses paid; the figure the card shows, green or red. */
     val resultSoFar: Total? = null,
     /** Cash today (current month) or at the end of a past month. */
     val balance: Total? = null,
@@ -52,9 +51,6 @@ data class CashFlowUiState(
     val pendingTransfers: List<OccurrenceRow> = emptyList(),
     val nextMonth: MonthSummary? = null,
     val nextMonthProjected: Total? = null,
-    val rate: ExchangeRate? = null,
-    /** Some amount is in another currency than [display] (show the rate). */
-    val usesConversion: Boolean = false,
     val empty: Boolean = true,
 )
 
@@ -82,8 +78,6 @@ fun cashFlowState(
         it.state == OccurrenceState.PENDING && YearMonth.from(it.dueDate) == month && !it.dueDate.isBefore(today)
     }
     fun rows(list: List<io.github.luannamorim.myfinance.domain.model.Occurrence>) = list.sortedBy { it.dueDate }.map { OccurrenceRow.of(it, byId, today, display, converter) }
-    val usesConversion = ledger.occurrences.any { it.expected.currency != display || it.actual?.currency?.let { c -> c != display } == true } ||
-        ledger.adjustments.any { it.amount.currency != display }
     val summary = CashCalculator.monthSummary(ledger, month, today, display, converter)
     return CashFlowUiState(
         loading = false,
@@ -102,8 +96,6 @@ fun cashFlowState(
         pendingTransfers = rows(pendingInMonth.filter { it.kind.isTransfer }),
         nextMonth = CashCalculator.monthSummary(ledger, next, today, display, converter),
         nextMonthProjected = CashCalculator.consolidate(CashCalculator.projected(ledger, today, next.atEndOfMonth()), display, converter),
-        rate = rates.latest(),
-        usesConversion = usesConversion,
         empty = ledger.occurrences.isEmpty() && ledger.adjustments.isEmpty(),
     )
 }

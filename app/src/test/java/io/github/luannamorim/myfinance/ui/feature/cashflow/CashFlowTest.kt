@@ -10,6 +10,7 @@ import io.github.luannamorim.myfinance.domain.model.Category
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.EntryKind.EXPENSE
 import io.github.luannamorim.myfinance.domain.model.EntryKind.INCOME
+import io.github.luannamorim.myfinance.domain.model.EntryKind.TRANSFER_IN
 import io.github.luannamorim.myfinance.domain.model.EntryKind.TRANSFER_OUT
 import io.github.luannamorim.myfinance.testutil.PHONE_TALL
 import io.github.luannamorim.myfinance.testutil.brl
@@ -78,7 +79,6 @@ class CashFlowTest {
         // Next month: 17.267,60 + 9.000 − 2.500 = 23.767,60
         assertEquals(Total(brl("23767.60")), s.nextMonthProjected)
         assertEquals(brl("9000.00"), s.nextMonth!!.expectedIncome.money)
-        assertFalse(s.usesConversion)
     }
 
     @Test
@@ -90,10 +90,9 @@ class CashFlowTest {
     }
 
     @Test
-    fun usdItem_needsARate_andIsFlagged() {
+    fun usdItem_needsARate() {
         val withUsd = ledger.copy(occurrences = ledger.occurrences + pending(EXPENSE, usd("20.00"), "2026-11-28", category = 40, name = "Cloud"))
         val noRate = cashFlowState(withUsd, categories, ExchangeRates.EMPTY, Currency.BRL, YearMonth.of(2026, 11), today)
-        assertTrue(noRate.usesConversion)
         assertTrue(noRate.projectedEnd!!.incomplete)
         val rated = cashFlowState(withUsd, categories, ExchangeRates(listOf(rate("2026-11-12", "5.6143"))), Currency.BRL, YearMonth.of(2026, 11), today)
         // 17.267,60 − 20 × 5,6143 (112,29) = 17.155,31
@@ -118,6 +117,16 @@ class CashFlowTest {
     }
 
     @Test
+    fun pnl_showsSoFar_withTheExpectedUnderneath() {
+        compose.setContent { FinanceTheme { CashFlowContent(state(), CashFlowActions()) } }
+        compose.onNodeWithText("P&L").assertExists()
+        // So far: 9.000,00 received − 2.862,40 paid. Expected: 10.500,00 − 3.112,40.
+        compose.onNodeWithText("+R$\u00A06.137,60").assertExists()
+        compose.onNodeWithText("of +R$\u00A07.387,60 expected").assertExists()
+        compose.onNodeWithText("PTAX", substring = true).assertDoesNotExist()
+    }
+
+    @Test
     fun nextMonth_projectedLabel_isShort() {
         compose.setContent { FinanceTheme { CashFlowContent(state(), CashFlowActions()) } }
         compose.onNodeWithText("Projected · 31/12").assertExists()
@@ -130,7 +139,23 @@ class CashFlowTest {
         compose.snapBothThemes("cashflow_transfers") {
             CashFlowContent(cashFlowState(withTransfer, categories, ExchangeRates.EMPTY, Currency.BRL, YearMonth.of(2026, 11), today), CashFlowActions())
         }
-        compose.onNodeWithText("Transfers this month").assertExists()
+        // The amount sits on the title line; where it went is underneath.
+        compose.onNodeWithText("Transfers").assertExists()
+        compose.onNodeWithText("\u2212R$\u00A02.000,00").assertExists()
+        compose.onNodeWithText("to investment").assertExists()
+    }
+
+    @Test
+    fun transfers_bothWays_showTheNet_andBothParts() {
+        val both = ledger.copy(
+            occurrences = ledger.occurrences +
+                transfer(TRANSFER_OUT, brl("2000.00"), "2026-11-15", on = "2026-11-15", name = "Tesouro") +
+                transfer(TRANSFER_IN, brl("500.00"), "2026-11-16", on = "2026-11-16", name = "Tesouro"),
+        )
+        compose.setContent { FinanceTheme { CashFlowContent(cashFlowState(both, categories, ExchangeRates.EMPTY, Currency.BRL, YearMonth.of(2026, 11), today), CashFlowActions()) } }
+        // 500,00 back − 2.000,00 out.
+        compose.onNodeWithText("\u2212R$\u00A01.500,00").assertExists()
+        compose.onNodeWithText("R$\u00A02.000,00 to investment \u00B7 R$\u00A0500,00 from investment").assertExists()
     }
 
     @Test

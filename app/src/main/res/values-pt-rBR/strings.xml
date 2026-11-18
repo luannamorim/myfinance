@@ -279,10 +279,6 @@
     </plurals>
 
     <!-- Exchange rate footer -->
-    <string name="rate_footer">US$ 1 = R$ %1$s · PTAX %2$s</string>
-    <string name="rate_footer_manual">US$ 1 = R$ %1$s · manual %2$s</string>
-    <string name="rate_missing">Ainda sem cotação do dólar: valores em US$ não podem ser convertidos.</string>
-    <string name="rate_update">Atualizar</string>
     <string name="rate_incomplete">≈ Alguns valores não puderam ser convertidos. Adicione uma cotação.</string>
 
     <!-- Cash flow charts -->
@@ -297,15 +293,10 @@
 
     <!-- History -->
     <string name="history_search">Buscar transações</string>
-    <string name="history_filters">Filtros</string>
-    <string name="history_more_filters">Categorias e datas</string>
-    <string name="history_clear">Limpar filtros</string>
-    <string name="history_from">De</string>
-    <string name="history_to">Até</string>
-    <string name="history_any_date">Qualquer data</string>
-    <string name="history_apply">Aplicar</string>
-    <string name="history_no_results">Nenhuma transação corresponde a estes filtros.</string>
-    <string name="history_month">Mês</string>
+    <string name="history_no_results">Nada encontrado neste mês.</string>
+    <string name="history_empty_month">Nenhuma transação neste mês.</string>
+    <string name="history_open">Em aberto</string>
+    <string name="history_done">Realizado</string>
 
     <!-- Currency settings -->
     <string name="currency_title">Moeda e cotação</string>
@@ -438,7 +429,6 @@
     <string name="overview_available">Disponível</string>
     <string name="overview_projected">Previsto · %1$s</string>
     <string name="overview_this_month">Este mês</string>
-    <string name="overview_income_line">%1$s de %2$s</string>
     <string name="overview_upcoming">Próximos</string>
     <string name="overview_recent">Recentes</string>
     <string name="overview_see_all">Ver tudo</string>
@@ -450,7 +440,6 @@
     <string name="overview_start_transaction_hint">Salário, aluguel, contas: únicas ou recorrentes</string>
     <string name="overview_start_asset">Adicione um investimento ou bem</string>
     <string name="overview_start_asset_hint">Renda fixa, ações, ETFs, imóveis, veículos</string>
-    <string name="overview_composition_note">Moveu dinheiro entre o caixa e um investimento? Lance como transferência: caixa e ativo mudam juntos, sem contar como receita ou despesa.</string>
     <string name="overview_add">Adicionar</string>
     <string name="overview_display_currency">Moeda dos valores: %1$s</string>
     <string name="overview_display_switch">Moeda dos valores: %1$s. Toque para %2$s</string>
@@ -582,7 +571,10 @@
     <string name="editor_already_transferred">Já feita</string>
     <string name="seed_expense_credit_card">Cartão de crédito</string>
     <string name="seed_expense_loans">Empréstimos</string>
-    <string name="cashflow_transfers">Transferências do mês</string>
+    <string name="cashflow_transfers">Transferências</string>
+    <string name="cashflow_transfers_to">para investimento</string>
+    <string name="cashflow_transfers_from">do investimento</string>
+    <string name="cashflow_transfers_both">%1$s para investimento · %2$s do investimento</string>
     <string name="cashflow_pending_transfers">Transferências</string>
     <string name="cash_link_from">Sai do caixa</string>
     <string name="cash_link_from_hint">Registra uma transferência: seu caixa diminui no mesmo valor</string>
@@ -599,7 +591,6 @@
     <string name="portfolio_cash_hint">Do Fluxo de Caixa, só referência</string>
     <string name="portfolio_total_with_cash">Total com caixa</string>
     <string name="charts_summary_bars_months">Receitas e despesas nos últimos %1$d meses.</string>
-    <string name="cashflow_result">Resultado do mês</string>
-    <string name="cashflow_result_hint">Receitas previstas − despesas previstas.</string>
-    <string name="cashflow_result_so_far">Até agora: %1$s (recebido − pago)</string>
+    <string name="cashflow_result">P&amp;L</string>
+    <string name="cashflow_result_of">de %1$s previsto</string>
 </resources>

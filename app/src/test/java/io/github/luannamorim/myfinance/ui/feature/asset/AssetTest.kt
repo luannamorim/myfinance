@@ -43,7 +43,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -155,7 +154,6 @@ class AssetTest {
         rates.setManual(d("2026-11-12"), BigDecimal("5.6143"))
         val state = detail(id).state.awaitUntil { it.converted != null && !it.converted!!.value.incomplete }
         assertEquals(brl("1175.73"), state.converted!!.gain.money)
-        assertNotNull(state.rate)
     }
 
     @Test
