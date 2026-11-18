@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.4.0] - 2026-11-18
 
 ### Changed
 - Overview: "This month" shows only what the month expects (income, expenses and P&L); what is done so far stays in Cash Flow. The P&L is green when positive and red when negative.
