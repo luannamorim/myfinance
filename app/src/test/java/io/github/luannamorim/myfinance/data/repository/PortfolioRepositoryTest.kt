@@ -4,9 +4,11 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.luannamorim.myfinance.core.time.FakeTimeSource
+import io.github.luannamorim.myfinance.data.db.entity.AssetPriceEntity
 import io.github.luannamorim.myfinance.data.images.ImageStore
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.FlowKind
+import io.github.luannamorim.myfinance.domain.model.PriceSource
 import io.github.luannamorim.myfinance.domain.portfolio.PortfolioCalculator
 import io.github.luannamorim.myfinance.testutil.brl
 import io.github.luannamorim.myfinance.testutil.d
@@ -19,6 +21,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -124,5 +127,152 @@ class PortfolioRepositoryTest {
         assertTrue(db.portfolioDao().getAllFlows().isEmpty())
         assertTrue(db.portfolioDao().getAllValuations().isEmpty())
         assertTrue(!photo.exists())
+    }
+
+    // Tracked assets (a ticker): share quantities on every flow, value from quotes.
+
+    private fun trackedDraft(ticker: String? = "aapl", quantity: String? = "2.5", currency: Currency = Currency.USD, date: String = "2026-11-02") =
+        draft("Apple", currency, "asset.stocks").copy(acquisitionDate = d(date), quantity = quantity?.let(::BigDecimal), ticker = ticker)
+
+    private fun tracked(quantity: String = "2.5", date: String = "2026-11-02", ticker: String = "aapl") = runBlocking {
+        repo.createAsset(trackedDraft(ticker, quantity, date = date), usd("867.98"), null)
+    }
+
+    private suspend fun flowCount() = db.portfolioDao().getAllFlows().size
+
+    @Test
+    fun createTracked_storesQuantityOnInitial() = runBlocking {
+        val id = tracked()
+        val asset = repo.asset(id)!!
+        assertEquals("AAPL", asset.ticker)
+        assertNull(asset.quantity)
+        val initial = db.portfolioDao().getFlows(id).single()
+        assertEquals(FlowKind.INITIAL, initial.kind)
+        assertEquals("2.5", initial.quantityDelta)
+    }
+
+    @Test
+    fun createTracked_inBrl_refused() {
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking { repo.createAsset(trackedDraft(currency = Currency.BRL), brl("867.98"), null) }
+        }
+    }
+
+    @Test
+    fun createTracked_invalidTicker_refused() {
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking { repo.createAsset(trackedDraft(ticker = "not a ticker"), usd("867.98"), null) }
+        }
+    }
+
+    @Test
+    fun createTracked_withoutQuantity_refused() = runBlocking {
+        assertThrows(QuantityRequiredException::class.java) {
+            runBlocking { repo.createAsset(trackedDraft(quantity = null), usd("867.98"), null) }
+        }
+        assertThrows(QuantityRequiredException::class.java) {
+            runBlocking { repo.createAsset(trackedDraft(quantity = "0"), usd("867.98"), null) }
+        }
+        assertTrue(db.portfolioDao().listAssets().isEmpty())
+    }
+
+    @Test
+    fun createTracked_withInitialValue_refused() {
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking { repo.createAsset(trackedDraft(), usd("867.98"), usd("900.00")) }
+        }
+    }
+
+    @Test
+    fun createTracked_withZeroInitial_refused() {
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking { repo.createAsset(trackedDraft(), usd("0.00"), null) }
+        }
+    }
+
+    @Test
+    fun updateTracked_keepsTickerAndIgnoresQuantity() = runBlocking {
+        val id = tracked()
+        repo.updateAsset(id, trackedDraft(ticker = null, quantity = "7").copy(name = "Apple Inc."))
+        val asset = repo.asset(id)!!
+        assertEquals("Apple Inc.", asset.name)
+        assertEquals("AAPL", asset.ticker)
+        assertNull(asset.quantity)
+    }
+
+    @Test
+    fun sellMoreThanHeld_refused() = runBlocking {
+        val id = tracked(quantity = "2")
+        val before = flowCount()
+        assertThrows(InsufficientQuantityException::class.java) {
+            runBlocking { repo.addFlow(id, FlowKind.PARTIAL_DISPOSAL, d("2026-11-10"), usd("1000.00"), quantityDelta = BigDecimal("3")) }
+        }
+        assertEquals(before, flowCount())
+    }
+
+    @Test
+    fun backdatedSell_refused() = runBlocking {
+        val id = tracked(quantity = "2", date = "2026-11-02")
+        repo.addFlow(id, FlowKind.PARTIAL_DISPOSAL, d("2026-11-10"), usd("500.00"), quantityDelta = BigDecimal("2"))
+        assertThrows(InsufficientQuantityException::class.java) {
+            runBlocking { repo.addFlow(id, FlowKind.PARTIAL_DISPOSAL, d("2026-11-05"), usd("250.00"), quantityDelta = BigDecimal("1")) }
+        }
+        assertEquals(2, flowCount())
+    }
+
+    @Test
+    fun flowWithoutQuantity_onTracked_refused() = runBlocking {
+        val id = tracked()
+        assertThrows(QuantityRequiredException::class.java) {
+            runBlocking { repo.addFlow(id, FlowKind.CONTRIBUTION, d("2026-11-10"), usd("100.00")) }
+        }
+        assertEquals(1, flowCount())
+    }
+
+    @Test
+    fun close_storesHoldings() = runBlocking {
+        val id = tracked(quantity = "2.5")
+        repo.addFlow(id, FlowKind.FULL_DISPOSAL, d("2026-11-10"), usd("900.00"), quantityDelta = null)
+        assertEquals("2.5", db.portfolioDao().getFlows(id).single { it.kind == FlowKind.FULL_DISPOSAL }.quantityDelta)
+    }
+
+    @Test
+    fun withdrawalOnTracked_refused() = runBlocking {
+        val id = tracked()
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking { repo.addFlow(id, FlowKind.WITHDRAWAL, d("2026-11-10"), usd("10.00"), quantityDelta = BigDecimal("1")) }
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking { repo.addFlow(id, FlowKind.CONTRIBUTION, d("2026-11-10"), usd("10.00"), quantityDelta = BigDecimal("1"), newValue = usd("1000.00")) }
+        }
+        assertEquals(1, flowCount())
+    }
+
+    @Test
+    fun valuationOnTracked_refused() = runBlocking {
+        val id = tracked()
+        assertThrows(TrackedAssetValuationException::class.java) { runBlocking { repo.addValuation(id, d("2026-11-10"), usd("1000.00")) } }
+        assertTrue(db.portfolioDao().getAllValuations().isEmpty())
+    }
+
+    @Test
+    fun deleteBuy_leavingShortSell_refused() = runBlocking {
+        val id = tracked(quantity = "1", date = "2026-11-02")
+        repo.addFlow(id, FlowKind.CONTRIBUTION, d("2026-11-05"), usd("300.00"), quantityDelta = BigDecimal("2"))
+        repo.addFlow(id, FlowKind.PARTIAL_DISPOSAL, d("2026-11-10"), usd("600.00"), quantityDelta = BigDecimal("3"))
+        val buy = db.portfolioDao().getFlows(id).single { it.kind == FlowKind.CONTRIBUTION }
+        assertThrows(InsufficientQuantityException::class.java) { runBlocking { repo.deleteFlow(buy.id) } }
+        assertEquals(3, flowCount())
+    }
+
+    @Test
+    fun deleteAsset_prunesItsPrices() = runBlocking {
+        val first = tracked()
+        val second = tracked()
+        db.marketDao().upsertPrices(listOf(AssetPriceEntity(symbol = "AAPL", date = d("2026-11-10").toEpochDay(), price = "270.5", source = PriceSource.YAHOO, fetchedAtMs = 0)))
+        repo.deleteAsset(first)
+        assertEquals(1, db.marketDao().listPrices().size)
+        repo.deleteAsset(second)
+        assertTrue(db.marketDao().listPrices().isEmpty())
     }
 }

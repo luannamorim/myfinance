@@ -22,7 +22,7 @@ class InitialTransferException : IllegalStateException("This transfer is the ass
  * TRANSFER_OUT has a CONTRIBUTION, a confirmed TRANSFER_IN a WITHDRAWAL (or the disposal it was recorded with),
  * in the asset's currency; any other state has none. Every function must run inside a database transaction.
  */
-internal class TransferFlows(db: MyFinanceDatabase) {
+internal class TransferFlows(private val db: MyFinanceDatabase) {
     private val portfolio = db.portfolioDao()
 
     /**
@@ -37,6 +37,7 @@ internal class TransferFlows(db: MyFinanceDatabase) {
         }
         val assetId = checkNotNull(occurrence.assetId) { "A transfer needs an asset" }
         val asset = checkNotNull(portfolio.getAsset(assetId)) { "Asset $assetId not found" }
+        if (asset.ticker != null) throw TrackedAssetTransferException()
         val actual = Money(checkNotNull(occurrence.actualAmount), occurrence.actualCurrency ?: occurrence.currency)
         val date = checkNotNull(occurrence.actualDate)
         val amount = when {
@@ -78,7 +79,13 @@ internal class TransferFlows(db: MyFinanceDatabase) {
         portfolio.getFlowByOccurrence(occurrenceId)?.let { unlink(it) }
     }
 
+    /** Removing a flow of a tracked asset must not leave a date selling more shares than were held. */
     private suspend fun unlink(flow: AssetFlowEntity) {
-        if (flow.kind == FlowKind.INITIAL) portfolio.updateFlow(flow.copy(occurrenceId = null)) else portfolio.deleteFlow(flow.id)
+        if (flow.kind == FlowKind.INITIAL) {
+            portfolio.updateFlow(flow.copy(occurrenceId = null))
+        } else {
+            portfolio.deleteFlow(flow.id)
+            portfolio.getAsset(flow.assetId)?.let { db.checkHoldings(it) }
+        }
     }
 }

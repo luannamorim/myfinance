@@ -9,12 +9,14 @@ import io.github.luannamorim.myfinance.data.db.entity.AssetFlowEntity
 import io.github.luannamorim.myfinance.data.db.entity.AssetValuationEntity
 import io.github.luannamorim.myfinance.data.db.entity.OccurrenceEntity
 import io.github.luannamorim.myfinance.data.images.ImageStore
+import io.github.luannamorim.myfinance.domain.market.Ticker
 import io.github.luannamorim.myfinance.domain.model.Asset
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.EntryKind
 import io.github.luannamorim.myfinance.domain.model.FlowKind
 import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.domain.model.OccurrenceState
+import io.github.luannamorim.myfinance.domain.portfolio.Holdings
 import io.github.luannamorim.myfinance.domain.portfolio.PortfolioData
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.conflate
@@ -24,7 +26,10 @@ import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** What the asset editor saves. The currency only applies when creating. */
+/**
+ * What the asset editor saves. The currency and [ticker] only apply when creating; with a ticker the asset is
+ * tracked (valued at its quote) and [quantity] is the number of shares bought on the acquisition date.
+ */
 data class AssetDraft(
     val name: String,
     val categoryId: Long,
@@ -35,12 +40,36 @@ data class AssetDraft(
     val quantity: BigDecimal? = null,
     val notes: String? = null,
     val imagePath: String? = null,
+    val ticker: String? = null,
 )
 
 enum class ValuationResult { ADDED, REPLACED }
 
 /** Adding a flow or valuation after the position was closed (delete the closing first). */
 class AssetClosedException : IllegalStateException("The position is closed")
+
+/** A flow of a tracked asset without a positive number of shares. */
+class QuantityRequiredException : IllegalArgumentException("A quantity is required")
+
+/** The flows of a tracked asset would sell, on some date, more shares than were held. */
+class InsufficientQuantityException : IllegalArgumentException("Selling more than held")
+
+/** Tracked assets have no valuations: their value comes from the quote. */
+class TrackedAssetValuationException : IllegalStateException("The value comes from the quote")
+
+/** Tracked assets can't be a transfer's target: shares are bought and sold on the asset's screen. */
+class TrackedAssetTransferException : IllegalStateException("Buy or sell this asset on its screen")
+
+/**
+ * Throws [InsufficientQuantityException] when the flows of [asset], if tracked, hold fewer than zero shares on
+ * some date (splits applied). Runs inside the caller's transaction, after the write, so a throw rolls it back.
+ */
+internal suspend fun MyFinanceDatabase.checkHoldings(asset: AssetEntity) {
+    val symbol = asset.ticker ?: return
+    val flows = portfolioDao().getFlows(asset.id).map { it.toDomain(asset.currency) }
+    val splits = marketDao().splitsOf(symbol).map { it.toDomain() }
+    if (Holdings.firstShortfall(flows, splits) != null) throw InsufficientQuantityException()
+}
 
 /**
  * Assets, their cash flows and valuations. Flows and valuations are in the asset's currency, which never
@@ -92,19 +121,27 @@ class PortfolioRepository @Inject constructor(
             require(!draft.acquisitionDate.isAfter(today)) { "A transfer can't be in the future" }
         }
         val id = db.withTransaction {
+            val ticker = draft.ticker?.let { raw -> requireNotNull(Ticker.normalize(raw)) { "Invalid ticker" } }
+            if (ticker != null) {
+                require(draft.currency == Currency.USD) { "Tracked assets are in USD" }
+                if (draft.quantity == null || draft.quantity.signum() <= 0) throw QuantityRequiredException()
+                require(initial.minor > 0) { "A tracked asset needs what was paid" }
+                require(initialValue == null) { "The value of a tracked asset comes from the quote" }
+            }
             val id = dao.insertAsset(
                 AssetEntity(
                     name = draft.name.trim(), categoryId = draft.categoryId, currency = draft.currency, description = draft.description.clean(),
                     institution = draft.institution.clean(), acquisitionDate = draft.acquisitionDate.toEpochDay(),
-                    quantity = draft.quantity?.stripTrailingZeros()?.toPlainString(), notes = draft.notes.clean(), imagePath = draft.imagePath,
-                    createdAtMs = now, updatedAtMs = now, ticker = null,
+                    quantity = draft.quantity.takeIf { ticker == null }?.stripTrailingZeros()?.toPlainString(), notes = draft.notes.clean(),
+                    imagePath = draft.imagePath, createdAtMs = now, updatedAtMs = now, ticker = ticker,
                 ),
             )
             val transfer = fromCash?.let { insertTransfer(EntryKind.TRANSFER_OUT, id, draft.name.trim(), it, draft.acquisitionDate, null, now) }
             dao.insertFlow(
                 AssetFlowEntity(
                     assetId = id, kind = FlowKind.INITIAL, date = draft.acquisitionDate.toEpochDay(), amount = initial.minor,
-                    createdAtMs = now, occurrenceId = transfer,
+                    quantityDelta = draft.quantity.takeIf { ticker != null }?.stripTrailingZeros()?.toPlainString(), createdAtMs = now,
+                    occurrenceId = transfer,
                 ),
             )
             if (initialValue != null && initialValue != initial) {
@@ -117,7 +154,10 @@ class PortfolioRepository @Inject constructor(
         return id
     }
 
-    /** Updates the details. The currency can't change: flows and valuations are in it. */
+    /**
+     * Updates the details. The currency can't change: flows and valuations are in it. A tracked asset keeps its
+     * ticker and has no quantity of its own (its flows carry the shares), so [AssetDraft.quantity] is ignored.
+     */
     suspend fun updateAsset(id: Long, draft: AssetDraft) {
         validate(draft)
         val current = checkNotNull(dao.getAsset(id)) { "Asset $id not found" }
@@ -126,7 +166,8 @@ class PortfolioRepository @Inject constructor(
         dao.updateAsset(
             current.copy(
                 name = draft.name.trim(), categoryId = draft.categoryId, description = draft.description.clean(), institution = draft.institution.clean(),
-                acquisitionDate = draft.acquisitionDate.toEpochDay(), quantity = draft.quantity?.stripTrailingZeros()?.toPlainString(),
+                acquisitionDate = draft.acquisitionDate.toEpochDay(),
+                quantity = if (current.ticker != null) null else draft.quantity?.stripTrailingZeros()?.toPlainString(),
                 notes = draft.notes.clean(), imagePath = draft.imagePath, updatedAtMs = time.nowMs(),
             ),
         )
@@ -138,6 +179,9 @@ class PortfolioRepository @Inject constructor(
      * Not allowed after the position was closed or in the future. With [cash] (in the cash currency) the money
      * comes from cash (a contribution) or goes to it (a withdrawal or disposal): a confirmed one-time transfer
      * is recorded with the flow. Closing the position stops its recurring transfers.
+     *
+     * On a tracked asset every flow carries its shares in [quantityDelta] (a closing takes what is held then),
+     * there are no withdrawals or [newValue], and no date may end up selling more shares than were held.
      */
     suspend fun addFlow(
         assetId: Long,
@@ -160,6 +204,7 @@ class PortfolioRepository @Inject constructor(
             require(asset.currency == amount.currency) { "Flows are in the asset currency" }
             val flows = dao.getFlows(assetId)
             if (flows.any { it.kind == FlowKind.FULL_DISPOSAL }) throw AssetClosedException()
+            val quantity = if (asset.ticker == null) quantityDelta else trackedQuantity(asset, flows, kind, date, quantityDelta, newValue)
             val now = time.nowMs()
             val transfer = cash?.let {
                 val direction = if (kind.inflow) EntryKind.TRANSFER_OUT else EntryKind.TRANSFER_IN
@@ -168,14 +213,36 @@ class PortfolioRepository @Inject constructor(
             dao.insertFlow(
                 AssetFlowEntity(
                     assetId = assetId, kind = kind, date = date.toEpochDay(), amount = amount.minor,
-                    quantityDelta = quantityDelta?.stripTrailingZeros()?.toPlainString(), note = note.clean(), createdAtMs = now,
+                    quantityDelta = quantity?.stripTrailingZeros()?.toPlainString(), note = note.clean(), createdAtMs = now,
                     occurrenceId = transfer,
                 ),
             )
             if (newValue != null && kind != FlowKind.FULL_DISPOSAL) upsertValuation(assetId, date, newValue, null)
             if (kind == FlowKind.FULL_DISPOSAL) stopRecurringTransfers(assetId, today, delete = false)
+            db.checkHoldings(asset)
         }
         backup.onDataChanged()
+    }
+
+    /** The shares of a new flow of the tracked [asset]: what is held on [date] for a closing, else [quantityDelta]. */
+    private suspend fun trackedQuantity(
+        asset: AssetEntity,
+        flows: List<AssetFlowEntity>,
+        kind: FlowKind,
+        date: LocalDate,
+        quantityDelta: BigDecimal?,
+        newValue: Money?,
+    ): BigDecimal {
+        require(kind != FlowKind.WITHDRAWAL) { "Tracked assets have no withdrawals" }
+        require(newValue == null) { "The value of a tracked asset comes from the quote" }
+        if (kind != FlowKind.FULL_DISPOSAL) {
+            if (quantityDelta == null || quantityDelta.signum() <= 0) throw QuantityRequiredException()
+            return quantityDelta
+        }
+        val splits = db.marketDao().splitsOf(checkNotNull(asset.ticker)).map { it.toDomain() }
+        val held = Holdings.quantityAt(flows.map { it.toDomain(asset.currency) }, splits, date)
+        if (held == null || held.signum() <= 0) throw InsufficientQuantityException()
+        return held
     }
 
     /** A confirmed one-time transfer between cash and [assetId]; returns its id (the caller links the flow). */
@@ -207,6 +274,7 @@ class PortfolioRepository @Inject constructor(
         require(!date.isAfter(time.today())) { "Date can't be in the future" }
         val result = db.withTransaction {
             val asset = checkNotNull(dao.getAsset(assetId)) { "Asset $assetId not found" }
+            if (asset.ticker != null) throw TrackedAssetValuationException()
             require(asset.currency == value.currency) { "Valuations are in the asset currency" }
             val closing = dao.getFlows(assetId).firstOrNull { it.kind == FlowKind.FULL_DISPOSAL }
             if (closing != null && date.toEpochDay() >= closing.date) throw AssetClosedException()
@@ -232,13 +300,14 @@ class PortfolioRepository @Inject constructor(
     /**
      * Deletes a flow; the INITIAL flow stays (it defines the asset). Deleting the closing reopens the position.
      * A flow that came from a transfer takes the transfer with it: a one-time transfer is deleted, a recurring
-     * one goes back to pending.
+     * one goes back to pending. On a tracked asset no date may end up selling more shares than were held.
      */
     suspend fun deleteFlow(id: Long) {
         db.withTransaction {
             val flow = checkNotNull(dao.getFlow(id)) { "Flow $id not found" }
             check(flow.kind != FlowKind.INITIAL) { "The initial flow can't be deleted" }
             dao.deleteFlow(id)
+            dao.getAsset(flow.assetId)?.let { db.checkHoldings(it) }
             val transfer = flow.occurrenceId?.let { cashDao.getOccurrence(it) } ?: return@withTransaction
             if (transfer.templateId == null) {
                 cashDao.deleteOccurrence(transfer.id)
@@ -261,13 +330,15 @@ class PortfolioRepository @Inject constructor(
 
     /**
      * Deletes the asset with its flows, valuations and photo, and its planned transfers (recurring ones and
-     * pending ones). Transfers already done stay in the cash history, without the asset.
+     * pending ones). Transfers already done stay in the cash history, without the asset. Quotes of a ticker no
+     * other asset tracks go with it.
      */
     suspend fun deleteAsset(id: Long) {
         val asset = dao.getAsset(id) ?: return
         db.withTransaction {
             stopRecurringTransfers(id, time.today(), delete = true)
             dao.deleteAsset(id)
+            db.marketDao().pruneUnused()
         }
         images.delete(asset.imagePath)
         backup.onDataChanged()

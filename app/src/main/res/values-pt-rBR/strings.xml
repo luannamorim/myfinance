@@ -546,6 +546,10 @@
     <string name="error_amount_missing">Informe o valor na moeda do ativo.</string>
     <string name="error_initial_transfer">Essa transferência é o investimento inicial do ativo. Exclua a transferência ou o ativo.</string>
     <string name="error_transfer_locked">Uma transferência feita mantém o ativo e a direção. Desfaça primeiro.</string>
+    <string name="error_quantity_required">Informe quantas ações.</string>
+    <string name="error_insufficient_quantity">São mais ações do que você tinha nessa data.</string>
+    <string name="error_tracked_valuation">O valor deste ativo vem da cotação.</string>
+    <string name="error_tracked_transfer">Compre ou venda esta ação na tela dela, na Carteira.</string>
     <string name="error_failed">Algo deu errado. Nada foi alterado.</string>
     <string name="confirm_transfer">Confirmar transferência</string>
     <string name="confirm_transfer_out_amount">Valor que saiu do caixa</string>

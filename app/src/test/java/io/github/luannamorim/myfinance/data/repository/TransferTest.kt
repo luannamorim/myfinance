@@ -18,6 +18,7 @@ import io.github.luannamorim.myfinance.testutil.d
 import io.github.luannamorim.myfinance.testutil.inMemoryDb
 import io.github.luannamorim.myfinance.testutil.snapshot
 import io.github.luannamorim.myfinance.testutil.usd
+import io.github.luannamorim.myfinance.ui.common.transferTargets
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -31,6 +32,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import java.math.BigDecimal
 
 /** Transfers between cash and the portfolio (docs/ARCHITECTURE.md, "Transfers"). */
 @RunWith(AndroidJUnit4::class)
@@ -218,5 +220,44 @@ class TransferTest {
         assertEquals(tesouro, restored.assetId)
         assertNull(restored.categoryId)
         assertEquals(id, flows(tesouro).single { it.kind == FlowKind.CONTRIBUTION }.occurrenceId)
+    }
+
+    private suspend fun trackedAsset(): Long {
+        val stocks = db.categoryDao().getAllAssetCategories().first { it.seedKey == "asset.stocks" }.id
+        return portfolio.createAsset(
+            AssetDraft("Apple", stocks, Currency.USD, acquisitionDate = d("2026-11-02"), quantity = BigDecimal("2"), ticker = "AAPL"),
+            usd("540.00"),
+            null,
+        )
+    }
+
+    @Test
+    fun confirmTransferToTracked_refused() = runBlocking {
+        val apple = trackedAsset()
+        val id = cash.create(TransactionDraft("Apple", null, EntryKind.TRANSFER_OUT, brl("570.00"), d("2026-11-12"), null, assetId = apple))
+        assertThrows(TrackedAssetTransferException::class.java) {
+            runBlocking { cash.confirm(id, brl("570.00"), d("2026-11-12"), null, assetAmount = usd("100.00")) }
+        }
+        assertEquals(OccurrenceState.PENDING, cash.occurrence(id)!!.state)
+        assertEquals(1, flows(apple).size)
+    }
+
+    @Test
+    fun transferTargets_excludeTracked() = runBlocking {
+        val apple = trackedAsset()
+        val targets = portfolio.data.first().transferTargets().map { it.assetId }
+        assertFalse(apple in targets)
+        assertTrue(tesouro in targets && voo in targets)
+    }
+
+    @Test
+    fun deletingTheTransferOfABuy_leavingShortSell_refused() = runBlocking {
+        val apple = trackedAsset()
+        portfolio.addFlow(apple, FlowKind.CONTRIBUTION, d("2026-11-05"), usd("100.00"), quantityDelta = BigDecimal("1"), cash = brl("570.00"))
+        portfolio.addFlow(apple, FlowKind.PARTIAL_DISPOSAL, d("2026-11-10"), usd("900.00"), quantityDelta = BigDecimal("3"))
+        val transfer = flows(apple).single { it.kind == FlowKind.CONTRIBUTION }.occurrenceId!!
+        assertThrows(InsufficientQuantityException::class.java) { runBlocking { cash.deleteOccurrence(transfer) } }
+        assertEquals(3, flows(apple).size)
+        assertEquals(OccurrenceState.CONFIRMED, cash.occurrence(transfer)!!.state)
     }
 }

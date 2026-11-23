@@ -543,6 +543,10 @@
     <string name="error_amount_missing">Enter the amount in the asset\'s currency.</string>
     <string name="error_initial_transfer">This transfer is the asset\'s initial investment. Delete the transfer or the asset instead.</string>
     <string name="error_transfer_locked">A done transfer keeps its asset and direction. Undo it first.</string>
+    <string name="error_quantity_required">Enter how many shares.</string>
+    <string name="error_insufficient_quantity">That\'s more shares than you held on that date.</string>
+    <string name="error_tracked_valuation">This asset\'s value comes from its quote.</string>
+    <string name="error_tracked_transfer">Buy or sell this stock on its screen in Portfolio.</string>
     <string name="error_failed">Something went wrong. Nothing was changed.</string>
     <string name="confirm_transfer">Confirm transfer</string>
     <string name="confirm_transfer_out_amount">Amount taken from cash</string>

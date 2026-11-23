@@ -11,6 +11,10 @@ import io.github.luannamorim.myfinance.R
 import io.github.luannamorim.myfinance.core.format.AmountInput
 import io.github.luannamorim.myfinance.data.repository.AssetClosedException
 import io.github.luannamorim.myfinance.data.repository.InitialTransferException
+import io.github.luannamorim.myfinance.data.repository.InsufficientQuantityException
+import io.github.luannamorim.myfinance.data.repository.QuantityRequiredException
+import io.github.luannamorim.myfinance.data.repository.TrackedAssetTransferException
+import io.github.luannamorim.myfinance.data.repository.TrackedAssetValuationException
 import io.github.luannamorim.myfinance.data.repository.TransferAmountMissingException
 import io.github.luannamorim.myfinance.data.repository.TransferBeforeAcquisitionException
 import io.github.luannamorim.myfinance.data.repository.TransferLockedException
@@ -48,10 +52,11 @@ fun PortfolioData.transferTarget(assetId: Long?): TransferTarget? {
     )
 }
 
-/** Assets a new transfer can go to or come from: open ones, investments first, by name. */
+/** Assets a new transfer can go to or come from: open, untracked ones (shares are bought on their screen), investments first, by name. */
 fun PortfolioData.transferTargets(): List<TransferTarget> {
     val group = categories.associate { it.id to it.group }
     return assets
+        .filter { it.ticker == null }
         .sortedWith(compareBy({ group[it.categoryId]?.ordinal ?: Int.MAX_VALUE }, { it.name.lowercase() }))
         .mapNotNull { transferTarget(it.id) }
         .filterNot { it.closed }
@@ -72,7 +77,18 @@ fun EntryKind.directionLabel(): String = stringResource(
 )
 
 /** Why a write was refused, in words the user can act on. */
-enum class ActionError { ASSET_CLOSED, BEFORE_ACQUISITION, AMOUNT_MISSING, INITIAL_TRANSFER, TRANSFER_LOCKED, FAILED }
+enum class ActionError {
+    ASSET_CLOSED,
+    BEFORE_ACQUISITION,
+    AMOUNT_MISSING,
+    INITIAL_TRANSFER,
+    TRANSFER_LOCKED,
+    QUANTITY_REQUIRED,
+    INSUFFICIENT_QUANTITY,
+    TRACKED_VALUATION,
+    TRACKED_TRANSFER,
+    FAILED,
+}
 
 fun Throwable.toActionError(): ActionError = when (this) {
     is AssetClosedException -> ActionError.ASSET_CLOSED
@@ -80,6 +96,10 @@ fun Throwable.toActionError(): ActionError = when (this) {
     is TransferAmountMissingException -> ActionError.AMOUNT_MISSING
     is InitialTransferException -> ActionError.INITIAL_TRANSFER
     is TransferLockedException -> ActionError.TRANSFER_LOCKED
+    is QuantityRequiredException -> ActionError.QUANTITY_REQUIRED
+    is InsufficientQuantityException -> ActionError.INSUFFICIENT_QUANTITY
+    is TrackedAssetValuationException -> ActionError.TRACKED_VALUATION
+    is TrackedAssetTransferException -> ActionError.TRACKED_TRANSFER
     else -> ActionError.FAILED
 }
 
@@ -95,6 +115,10 @@ fun ActionErrorDialog(error: ActionError?, onDismiss: () -> Unit) {
                 ActionError.AMOUNT_MISSING -> R.string.error_amount_missing
                 ActionError.INITIAL_TRANSFER -> R.string.error_initial_transfer
                 ActionError.TRANSFER_LOCKED -> R.string.error_transfer_locked
+                ActionError.QUANTITY_REQUIRED -> R.string.error_quantity_required
+                ActionError.INSUFFICIENT_QUANTITY -> R.string.error_insufficient_quantity
+                ActionError.TRACKED_VALUATION -> R.string.error_tracked_valuation
+                ActionError.TRACKED_TRANSFER -> R.string.error_tracked_transfer
                 ActionError.FAILED -> R.string.error_failed
             },
         ),
