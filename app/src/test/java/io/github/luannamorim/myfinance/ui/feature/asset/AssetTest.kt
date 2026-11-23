@@ -260,6 +260,16 @@ class AssetTest {
     }
 
     @Test
+    fun tracked_oneShare_isSingular() {
+        val id = tracked(quantity = "1")
+        price("AAPL", "2026-11-10", "347.19")
+        val vm = detail(id)
+        showDetail(vm)
+        compose.waitUntil(5_000) { vm.state.value.snapshot?.price != null }
+        compose.onNodeWithText("1 share × US$\u00a0347.19 · close of ", substring = true).assertExists()
+    }
+
+    @Test
     fun tracked_crypto_captionUsesCoinCode() {
         val id = tracked("BTC-USD", "0.05", paid = "3000.00", category = "asset.cryptocurrencies")
         price("BTC-USD", "2026-11-10", "63336.84")
@@ -371,7 +381,7 @@ class AssetTest {
         showDetail(vm)
         vm.addFlow(FlowKind.PARTIAL_DISPOSAL, d("2026-11-05"), usd("300.00"), BigDecimal("1"), null, null, null)
         compose.waitUntil(5_000) { vm.state.value.error != null }
-        compose.onNodeWithText("That's more shares than you held on that date.").assertExists()
+        compose.onNodeWithText("That's more than you held on that date.").assertExists()
         assertEquals(2, vm.state.value.flows.size)
     }
 

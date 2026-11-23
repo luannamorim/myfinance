@@ -9,6 +9,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.luannamorim.myfinance.R
@@ -19,12 +20,14 @@ import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import io.github.luannamorim.myfinance.ui.theme.Spacing
 import java.math.BigDecimal
 
-/** "10 shares" / "10 ações" for stocks and ETFs; "0,05 BTC" for crypto ([Ticker.unitCode]). */
+/** "1 share" / "10 shares" ("1 ação" / "10 ações") for stocks and ETFs; "0,05 BTC" for crypto ([Ticker.unitCode]). */
 @Composable
 fun unitsLabel(quantity: BigDecimal, ticker: String): String {
     val number = LocalFormats.current.money.formatQuantity(quantity)
     val coin = Ticker.unitCode(ticker)
-    return if (coin != null) "$number $coin" else stringResource(R.string.units_shares, number)
+    // Singular only for exactly one; fractions and zero read as plural ("0,5 ações", "0 ações").
+    val count = if (quantity.compareTo(BigDecimal.ONE) == 0) 1 else 2
+    return if (coin != null) "$number $coin" else pluralStringResource(R.plurals.units_shares, count, number)
 }
 
 @Composable

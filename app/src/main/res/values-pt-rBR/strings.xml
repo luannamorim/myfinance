@@ -365,7 +365,11 @@
     <string name="asset_total_paid">= %1$s</string>
     <string name="asset_today_value">Hoje: %1$s × %2$s = %3$s</string>
     <string name="asset_quote_unavailable">Não deu para buscar a cotação de hoje. Dá para salvar mesmo assim; ela é buscada depois.</string>
-    <string name="units_shares">%1$s ações</string>
+    <plurals name="units_shares">
+        <item quantity="one">%1$s ação</item>
+        <item quantity="many">%1$s ações</item>
+        <item quantity="other">%1$s ações</item>
+    </plurals>
     <string name="asset_split_note">Inclui desdobramento %1$s em %2$s. Informe a quantidade e o preço da data da compra.</string>
 
     <!-- Asset detail -->
@@ -563,7 +567,7 @@
     <string name="privacy_storage_title">Seus dados ficam neste celular</string>
     <string name="privacy_storage">Transações, saldos, ativos, avaliações, cotações e configurações ficam só no armazenamento privado do MyFinance, protegidos pelo isolamento de apps e pela criptografia de arquivos do Android. Não há conta nem servidor.</string>
     <string name="privacy_network_title">Duas buscas na internet</string>
-    <string name="privacy_network">Para converter dólares, o MyFinance pede ao Banco Central do Brasil (api.bcb.gov.br) a PTAX pública de um intervalo de datas, por HTTPS. Nada sobre você ou seu dinheiro é enviado. Se você tem ações ou cripto, ele também pede ao Yahoo Finance (finance.yahoo.com) as cotações diárias, enviando só os códigos que você tem, ou o texto que você digita na busca de códigos (ex.: NVDA, BTC-USD). Você pode desligar a busca automática em Moeda e cotação.</string>
+    <string name="privacy_network">Para converter dólares, o MyFinance pede ao Banco Central do Brasil (api.bcb.gov.br) a PTAX pública de um intervalo de datas, por HTTPS. Nada sobre você ou seu dinheiro é enviado. Se você tem ações ou cripto, ele também pede ao Yahoo Finance (finance.yahoo.com) as cotações diárias, enviando só os códigos que você tem e um intervalo de datas, ou o texto que você digita na busca de códigos (ex.: NVDA, BTC-USD). Você pode desligar a busca automática em Moeda e cotação.</string>
     <string name="privacy_backup_title">Backups criptografados</string>
     <string name="privacy_backup">Os backups são criptografados com AES-256 e uma chave derivada da sua senha de recuperação antes de saírem do app. A senha nunca é guardada. Exportações CSV não são criptografadas.</string>
     <string name="privacy_tracking_title">Sem rastreamento</string>
@@ -585,8 +589,8 @@
     <string name="error_amount_missing">Informe o valor na moeda do ativo.</string>
     <string name="error_initial_transfer">Essa transferência é o investimento inicial do ativo. Exclua a transferência ou o ativo.</string>
     <string name="error_transfer_locked">Uma transferência feita mantém o ativo e a direção. Desfaça primeiro.</string>
-    <string name="error_quantity_required">Informe quantas ações.</string>
-    <string name="error_insufficient_quantity">São mais ações do que você tinha nessa data.</string>
+    <string name="error_quantity_required">Informe a quantidade.</string>
+    <string name="error_insufficient_quantity">É mais do que você tinha nessa data.</string>
     <string name="error_tracked_valuation">O valor deste ativo vem da cotação.</string>
     <string name="error_tracked_transfer">Compre ou venda esta ação na tela dela, na Carteira.</string>
     <string name="error_failed">Algo deu errado. Nada foi alterado.</string>
@@ -642,7 +646,7 @@
     <string name="cashflow_result_of">de %1$s previsto</string>
     <string name="stocks_title">Ações e cripto</string>
     <string name="stocks_auto">Buscar cotações de ações e cripto</string>
-    <string name="stocks_auto_hint">Yahoo Finance (finance.yahoo.com). Só os códigos que você tem, ou o texto que você digita na busca, são enviados (ex.: NVDA, BTC-USD).</string>
+    <string name="stocks_auto_hint">Yahoo Finance (finance.yahoo.com). Só os códigos que você tem e um intervalo de datas, ou o texto que você digita na busca, são enviados (ex.: NVDA, BTC-USD).</string>
     <string name="stocks_none">Nenhum ativo segue uma cotação ainda.</string>
     <string name="stocks_error_network">Não foi possível acessar o Yahoo Finance. As últimas cotações continuam valendo.</string>
     <string name="stocks_error_format">O Yahoo Finance respondeu algo inesperado. As últimas cotações continuam valendo.</string>
