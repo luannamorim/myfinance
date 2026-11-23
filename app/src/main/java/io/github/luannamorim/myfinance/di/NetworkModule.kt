@@ -4,6 +4,8 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import io.github.luannamorim.myfinance.data.market.QuoteClient
+import io.github.luannamorim.myfinance.data.market.YahooQuoteClient
 import io.github.luannamorim.myfinance.data.rates.BcbRateClient
 import io.github.luannamorim.myfinance.data.rates.RateClient
 
@@ -12,4 +14,7 @@ import io.github.luannamorim.myfinance.data.rates.RateClient
 abstract class NetworkModule {
     @Binds
     abstract fun bindRateClient(impl: BcbRateClient): RateClient
+
+    @Binds
+    abstract fun bindQuoteClient(impl: YahooQuoteClient): QuoteClient
 }
