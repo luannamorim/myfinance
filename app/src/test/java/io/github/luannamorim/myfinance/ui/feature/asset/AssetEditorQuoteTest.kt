@@ -98,6 +98,7 @@ class AssetEditorQuoteTest {
 
     @Test
     fun createCrypto_viaUi() {
+        time.set("2026-11-23") // btc.json's last bar; later bars would be dropped as future ones
         val vm = editor()
         compose.setContent { FinanceTheme { AssetEditorScreen(onClose = {}, viewModel = vm) } }
         compose.waitUntil(5_000) { vm.state.value.categories.isNotEmpty() && !vm.state.value.loading }
@@ -135,7 +136,7 @@ class AssetEditorQuoteTest {
         vm.pickTicker(nvda)
         compose.waitUntil(5_000) { vm.state.value.preview != null }
         val s = vm.state.value
-        assertEquals(d("2024-06-03"), client.chartRequests.last().second)
+        assertEquals(d("2024-05-27"), client.chartRequests.last().second) // a week before the purchase
         assertEquals(1, s.preview!!.splitsSince.size)
         assertEquals(0, BigDecimal(100).compareTo(s.todayQuantity))
         assertEquals(usd("12179.00"), s.todayValue)
@@ -220,6 +221,7 @@ class AssetEditorQuoteTest {
 
     @Test
     fun repick_keepsUserEditedFields() = runBlocking {
+        time.set("2026-11-23") // btc.json's last bar; later bars would be dropped as future ones
         val vm = editor()
         vm.state.awaitUntil { !it.loading }
         vm.edit { it.copy(tracked = true) }
