@@ -81,8 +81,4 @@ class HoldingsTest {
         assertEquals(usd("1212.80"), Holdings.cost(BigDecimal(10), BigDecimal("121.28"), Currency.USD))
         assertEquals(usd("205.00"), Holdings.cost(BigDecimal(50_000_000), BigDecimal("0.0000041"), Currency.USD))
     }
-
-    @Test fun unitPrice_dividesAmountByQuantity() {
-        assertEquals(usd("121.28"), Holdings.unitPrice(usd("1212.80"), BigDecimal(10)))
-    }
 }

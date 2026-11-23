@@ -39,10 +39,6 @@ object Holdings {
     fun cost(quantity: BigDecimal, unitPrice: BigDecimal, currency: Currency): Money =
         Money.of(quantity.multiply(unitPrice), currency)
 
-    /** Price per unit of [quantity] units costing [amount]. */
-    fun unitPrice(amount: Money, quantity: BigDecimal): Money =
-        Money.of(amount.toBigDecimal().divide(quantity, SCALE, RoundingMode.HALF_EVEN), amount.currency)
-
     private fun applySplit(q: BigDecimal, split: Split): BigDecimal =
         q.multiply(split.numerator).divide(split.denominator, SCALE, RoundingMode.HALF_EVEN)
 

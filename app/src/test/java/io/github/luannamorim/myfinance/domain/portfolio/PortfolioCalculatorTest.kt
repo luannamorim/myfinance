@@ -252,6 +252,27 @@ class PortfolioCalculatorTest {
     }
 
     @Test
+    fun tracked_splitAfterLastPrice_dividesThePrice() {
+        // The split is stored before the day's first candle: 06-07's raw close is pre-split.
+        val nvda = tracked("NVDA")
+        val f = listOf(shares(nvda, FlowKind.INITIAL, usd("2321.60"), "2024-06-03", "2"))
+        val m = market("NVDA", listOf("2024-06-07" to "1209.98"), listOf(Split(d("2024-06-10"), BigDecimal(10), BigDecimal.ONE)))
+        val s = PortfolioCalculator.snapshot(nvda, f, emptyList(), m, d("2024-06-10"))!!
+        assertEquals(usd("2419.96"), s.value) // 20 × 120,998
+        assertEquals(0, BigDecimal(20).compareTo(s.quantity))
+        assertEquals(0, BigDecimal("120.998").compareTo(s.price!!.price))
+    }
+
+    @Test
+    fun tracked_valueOverflow_fallsBackToNetInvested() {
+        val f = listOf(shares(aapl, FlowKind.INITIAL, usd("1000.00"), "2026-11-02", "999999999999"))
+        val m = market("AAPL", listOf("2026-11-20" to "9999999"))
+        val s = PortfolioCalculator.snapshot(aapl, f, emptyList(), m, d("2026-11-23"))!!
+        assertEquals(usd("1000.00"), s.value)
+        assertNull(s.price)
+    }
+
+    @Test
     fun tracked_crypto_tinyPrice() {
         val shib = tracked("SHIB-USD")
         val f = listOf(shares(shib, FlowKind.INITIAL, usd("200.00"), "2026-11-02", "50000000"))

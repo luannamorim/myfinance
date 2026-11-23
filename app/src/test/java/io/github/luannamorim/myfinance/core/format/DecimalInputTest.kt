@@ -42,6 +42,16 @@ class DecimalInputTest {
     }
 
     @Test
+    fun integerPart_cappedAtTwelveDigits() {
+        ok("999999999999", "999999999999", COMMA_DECIMAL)
+        ok("999999999999", "999.999.999.999", COMMA_DECIMAL)
+        ok("999999999999.5", "999,999,999,999.5", DOT_DECIMAL)
+        bad("1000000000000", COMMA_DECIMAL)
+        bad("1.000.000.000.000", COMMA_DECIMAL)
+        bad("1,000,000,000,000", DOT_DECIMAL)
+    }
+
+    @Test
     fun maxDecimals_isConfigurable() {
         assertTrue(DecimalInput.parse("1,255", COMMA_DECIMAL, maxDecimals = 2).isFailure)
         ok("1.25", "1,25", COMMA_DECIMAL)

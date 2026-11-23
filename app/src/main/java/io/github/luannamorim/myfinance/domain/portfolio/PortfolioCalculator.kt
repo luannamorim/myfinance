@@ -114,8 +114,8 @@ object PortfolioCalculator {
         val ticker = asset.ticker
         if (ticker != null) {
             val quantity = Holdings.quantityAt(flows, market.splitsOf(ticker), at)
-            val price = market.priceOn(ticker, at)
-            val quoted = if (closed || quantity == null || price == null) null else Money.of(quantity.multiply(price.price), c)
+            val price = market.priceOn(ticker, at)?.let { splitAdjusted(it, market, ticker, at) }
+            val quoted = if (closed || quantity == null || price == null) null else valueOf(quantity, price, c)
             val tracked = if (closed) 0L else quoted?.minor ?: net
             return AssetSnapshot(
                 asset = asset,
@@ -153,6 +153,24 @@ object PortfolioCalculator {
             carriedForward = !closed && after.isNotEmpty(),
             closed = closed,
         )
+    }
+
+    /**
+     * [price] (a raw close) rescaled by the splits in (price date, [at]]: a split stored before that day's first
+     * candle would otherwise multiply the post-split quantity by a pre-split price.
+     */
+    private fun splitAdjusted(price: PricePoint, market: MarketData, ticker: String, at: LocalDate): PricePoint {
+        val later = market.splitsOf(ticker).filter { it.date.isAfter(price.date) && !it.date.isAfter(at) }
+        if (later.isEmpty()) return price
+        val adjusted = later.fold(price.price) { p, split -> p.multiply(split.denominator).divide(split.numerator, SCALE, RoundingMode.HALF_EVEN) }
+        return price.copy(price = adjusted.stripTrailingZeros())
+    }
+
+    /** quantity × price, or null when it doesn't fit in [Money] (absurd input): the value falls back to net invested. */
+    private fun valueOf(quantity: BigDecimal, price: PricePoint, c: Currency): Money? = try {
+        Money.of(quantity.multiply(price.price), c)
+    } catch (_: ArithmeticException) {
+        null
     }
 
     /** The asset at the end of [at], quotes from [data]; null when it had no record yet. */

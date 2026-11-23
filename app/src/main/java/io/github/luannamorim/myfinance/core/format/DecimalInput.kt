@@ -8,19 +8,22 @@ import java.math.BigDecimal
  * "1,234.56". So "1.000" is one thousand in the `1.234,56` format, never 1. Empty is null.
  */
 object DecimalInput {
-    private const val MAX_INTEGER_DIGITS = 15
+    /** Integer digits accepted: up to 999 999 999 999, so quantity × price stays far from overflowing [Long] minor units. */
+    private const val MAX_INTEGER_DIGITS = 12
+
+    /** Integer part (plain or in 3-digit groups) and an optional decimal part of any length, checked against maxDecimals. */
+    private val COMMA_PATTERN = Regex("""^(\d{1,$MAX_INTEGER_DIGITS}|\d{1,3}(\.\d{3}){1,3})(,(\d+))?$""")
+    private val DOT_PATTERN = Regex("""^(\d{1,$MAX_INTEGER_DIGITS}|\d{1,3}(,\d{3}){1,3})(\.(\d+))?$""")
 
     fun parse(text: String, style: NumberFormatStyle, maxDecimals: Int = 8): Result<BigDecimal?> {
         val t = text.trim()
         if (t.isEmpty()) return Result.success(null)
-        val (group, decimal) = when (style) {
-            NumberFormatStyle.COMMA_DECIMAL -> '.' to ','
-            NumberFormatStyle.DOT_DECIMAL -> ',' to '.'
+        val (group, decimal, pattern) = when (style) {
+            NumberFormatStyle.COMMA_DECIMAL -> Triple('.', ',', COMMA_PATTERN)
+            NumberFormatStyle.DOT_DECIMAL -> Triple(',', '.', DOT_PATTERN)
         }
-        val g = Regex.escape(group.toString())
-        val dsep = Regex.escape(decimal.toString())
-        val pattern = Regex("""^(\d{1,$MAX_INTEGER_DIGITS}|\d{1,3}($g\d{3}){1,4})($dsep\d{1,$maxDecimals})?$""")
-        if (!pattern.matches(t)) return Result.failure(IllegalArgumentException("Invalid number"))
+        val match = pattern.matchEntire(t)
+        if (match == null || match.groupValues[4].length > maxDecimals) return Result.failure(IllegalArgumentException("Invalid number"))
         return Result.success(BigDecimal(t.replace(group.toString(), "").replace(decimal, '.')))
     }
 
