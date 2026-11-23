@@ -9,6 +9,10 @@ import io.github.luannamorim.myfinance.domain.cash.RecurrenceRule
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.EntryKind
 import io.github.luannamorim.myfinance.domain.model.FlowKind
+import io.github.luannamorim.myfinance.data.db.entity.AssetPriceEntity
+import io.github.luannamorim.myfinance.data.db.entity.AssetSplitEntity
+import io.github.luannamorim.myfinance.domain.model.PriceSource
+import io.github.luannamorim.myfinance.testutil.asset
 import io.github.luannamorim.myfinance.testutil.brl
 import io.github.luannamorim.myfinance.testutil.d
 import io.github.luannamorim.myfinance.testutil.inMemoryDb
@@ -47,7 +51,7 @@ class ExportRepositoryTest {
     }
 
     @Test
-    fun exportsSixFiles_withHeaders_currencies_andSafeText() = runBlocking {
+    fun exportsAllFiles_withHeaders_currencies_andSafeText() = runBlocking {
         val cash = CashRepository(db, time, BackupTrigger { })
         val rent = db.categoryDao().getAll().first { it.seedKey == "expense.rent" }.id
         val subs = db.categoryDao().getAll().first { it.seedKey == "expense.subscriptions" }.id
@@ -83,5 +87,24 @@ class ExportRepositoryTest {
         assertTrue(files.getValue("asset_flows.csv").contains("VOO,CONTRIBUTION,in,2026-11-11,100.00,USD,,,$transferId\r\n"))
         assertTrue(files.getValue("valuations.csv").contains("VOO,2026-11-12,1100.00,USD"))
         assertEquals("date,base,quote,rate,source\r\n", files.getValue("exchange_rates.csv"))
+    }
+
+    @Test
+    fun exportsTicker_prices_andSplits() = runBlocking {
+        val stocks = db.categoryDao().getAllAssetCategories().first { it.seedKey == "asset.etfs" }.id
+        db.portfolioDao().insertAsset(asset(stocks, "Apple", Currency.USD, ticker = "AAPL"))
+        db.marketDao().upsertPrices(listOf(AssetPriceEntity(symbol = "AAPL", date = d("2026-11-20").toEpochDay(), price = "347.19", source = PriceSource.YAHOO, fetchedAtMs = 1)))
+        db.marketDao().insertSplits(listOf(AssetSplitEntity(symbol = "AAPL", date = d("2026-06-01").toEpochDay(), numerator = "4", denominator = "1")))
+
+        val out = ByteArrayOutputStream()
+        ExportRepository(context, db, Dispatchers.Unconfined).export(out)
+        val files = unzip(out.toByteArray())
+
+        assertEquals(8, files.size)
+        val assets = files.getValue("assets.csv").split("\r\n")
+        assertTrue(assets[0], assets[0].endsWith(",notes,ticker"))
+        assertTrue(assets.first { it.contains("Apple") }.endsWith(",AAPL"))
+        assertEquals("date,symbol,price,source\r\n2026-11-20,AAPL,347.19,YAHOO\r\n", files.getValue("asset_prices.csv"))
+        assertEquals("date,symbol,numerator,denominator\r\n2026-06-01,AAPL,4,1\r\n", files.getValue("asset_splits.csv"))
     }
 }

@@ -77,11 +77,11 @@ class ExportRepository @Inject constructor(
         )
         file(
             "assets.csv",
-            listOf("id", "name", "category", "group", "currency", "institution", "acquisition_date", "quantity", "description", "notes"),
+            listOf("id", "name", "category", "group", "currency", "institution", "acquisition_date", "quantity", "description", "notes", "ticker"),
             assets.map { a ->
                 listOf(
                     a.id.toString(), Csv.safeText(a.name), Csv.safeText(assetCategory[a.categoryId]), assetGroup[a.categoryId], a.currency.name,
-                    Csv.safeText(a.institution), day(a.acquisitionDate), a.quantity, Csv.safeText(a.description), Csv.safeText(a.notes),
+                    Csv.safeText(a.institution), day(a.acquisitionDate), a.quantity, Csv.safeText(a.description), Csv.safeText(a.notes), a.ticker,
                 )
             },
         )
@@ -112,11 +112,25 @@ class ExportRepository @Inject constructor(
                 listOf(day(r.date), r.base.name, r.quote.name, BigDecimal.valueOf(r.rateMicros, 6).stripTrailingZeros().toPlainString(), r.source.name)
             },
         )
+        file(
+            "asset_prices.csv",
+            listOf("date", "symbol", "price", "source"),
+            db.marketDao().listPrices().sortedWith(compareBy({ it.date }, { it.symbol })).map { p ->
+                listOf(day(p.date), p.symbol, p.price, p.source.name)
+            },
+        )
+        file(
+            "asset_splits.csv",
+            listOf("date", "symbol", "numerator", "denominator"),
+            db.marketDao().listSplits().sortedWith(compareBy({ it.date }, { it.symbol })).map { s ->
+                listOf(day(s.date), s.symbol, s.numerator, s.denominator)
+            },
+        )
         zip.finish()
     }
 
     companion object {
         /** Files in the export, in order. */
-        val FILES = listOf("transactions.csv", "cash_adjustments.csv", "assets.csv", "asset_flows.csv", "valuations.csv", "exchange_rates.csv")
+        val FILES = listOf("transactions.csv", "cash_adjustments.csv", "assets.csv", "asset_flows.csv", "valuations.csv", "exchange_rates.csv", "asset_prices.csv", "asset_splits.csv")
     }
 }
