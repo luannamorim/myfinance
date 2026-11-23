@@ -229,7 +229,7 @@ fun TradeSheet(
                 label = stringResource(R.string.asset_shares),
                 modifier = Modifier.weight(1f),
                 keyboardType = KeyboardType.Decimal,
-                isError = over || quantityParsed.isFailure,
+                isError = !all && (over || quantityParsed.isFailure),
                 supportingText = if (!all && quantityParsed.isFailure) stringResource(R.string.asset_number_invalid, example) else null,
                 enabled = !all,
             )

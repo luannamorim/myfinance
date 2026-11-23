@@ -306,6 +306,24 @@ class AssetTest {
     }
 
     @Test
+    fun tracked_sellAll_closesPosition() {
+        val id = tracked()
+        price("AAPL", "2026-11-10", "347.19")
+        val vm = detail(id)
+        showDetail(vm)
+        compose.onNodeWithText("Sell").performClick()
+        compose.onNodeWithText("Sell all").performClick()
+        compose.onNodeWithText("Closes the position: sells all 2.5 shares", substring = true).assertExists()
+        compose.onNode(hasText("Price per share") and hasSetTextAction()).performTextInput("300.00")
+        compose.onAllNodesWithText("Save").onLast().performClick()
+        compose.waitUntil(5_000) { vm.state.value.closed }
+        val sale = vm.state.value.flows.first()
+        assertEquals(FlowKind.FULL_DISPOSAL, sale.kind)
+        assertEquals(BigDecimal("2.5"), sale.quantityDelta?.stripTrailingZeros())
+        assertEquals(Money.of(BigDecimal("2.5").multiply(BigDecimal("300.00")), Currency.USD), sale.amount)
+    }
+
+    @Test
     fun tracked_backdatedSell_showsError() {
         val id = tracked()
         runBlocking { portfolio.addFlow(id, FlowKind.PARTIAL_DISPOSAL, d("2026-11-10"), usd("600.00"), quantityDelta = BigDecimal("2")) }
