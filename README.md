@@ -25,7 +25,7 @@ A private, offline-first Android app to manage cash flow, a portfolio of investm
   <img src="docs/screenshots/overview_dark.png" width="200" alt="Overview">
   <img src="docs/screenshots/cashflow_dark.png" width="200" alt="Cash flow">
   <img src="docs/screenshots/portfolio_dark.png" width="200" alt="Portfolio">
-  <img src="docs/screenshots/asset_detail_dark.png" width="200" alt="Asset detail">
+  <img src="docs/screenshots/stock_detail_dark.png" width="200" alt="Stock followed by its quote">
 </p>
 <p>
   <img src="docs/screenshots/history_dark.png" width="200" alt="History">
