@@ -29,10 +29,14 @@ import io.github.luannamorim.myfinance.R
 import io.github.luannamorim.myfinance.core.format.RateInput
 import io.github.luannamorim.myfinance.core.time.TimeSource
 import io.github.luannamorim.myfinance.core.time.today
+import io.github.luannamorim.myfinance.data.prefs.PriceError
+import io.github.luannamorim.myfinance.data.prefs.PriceState
 import io.github.luannamorim.myfinance.data.prefs.RateError
 import io.github.luannamorim.myfinance.data.prefs.RateState
 import io.github.luannamorim.myfinance.data.prefs.SettingsRepository
 import io.github.luannamorim.myfinance.data.repository.ExchangeRateRepository
+import io.github.luannamorim.myfinance.data.repository.PriceRefreshResult
+import io.github.luannamorim.myfinance.data.repository.PriceRepository
 import io.github.luannamorim.myfinance.data.repository.RefreshResult
 import io.github.luannamorim.myfinance.domain.model.AppSettings
 import io.github.luannamorim.myfinance.domain.model.Currency
@@ -72,6 +76,9 @@ data class CurrencyUiState(
     val rates: List<ExchangeRate> = emptyList(),
     val updating: Boolean = false,
     val result: RefreshResult? = null,
+    val priceState: PriceState = PriceState(),
+    val pricesUpdating: Boolean = false,
+    val priceResult: PriceRefreshResult? = null,
     val manualDate: LocalDate = LocalDate.MIN,
     val manualText: String = "",
     val manualError: Boolean = false,
@@ -82,13 +89,14 @@ data class CurrencyUiState(
 class CurrencySettingsViewModel @Inject constructor(
     private val settings: SettingsRepository,
     private val rates: ExchangeRateRepository,
+    private val prices: PriceRepository,
     time: TimeSource,
 ) : ViewModel() {
 
     private val local = MutableStateFlow(CurrencyUiState(manualDate = time.today(), today = time.today()))
 
-    val state: StateFlow<CurrencyUiState> = combine(settings.settings, rates.state, rates.rates, local) { s, rs, r, l ->
-        l.copy(loading = false, settings = s, rateState = rs, rates = r.recent(MAX_RATES))
+    val state: StateFlow<CurrencyUiState> = combine(settings.settings, rates.state, rates.rates, prices.state, local) { s, rs, r, ps, l ->
+        l.copy(loading = false, settings = s, rateState = rs, rates = r.recent(MAX_RATES), priceState = ps)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), local.value)
 
     fun update(transform: (AppSettings) -> AppSettings) {
@@ -100,6 +108,14 @@ class CurrencySettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val result = rates.refresh(force = true)
             local.update { it.copy(updating = false, result = result) }
+        }
+    }
+
+    fun refreshPrices() {
+        local.update { it.copy(pricesUpdating = true, priceResult = null) }
+        viewModelScope.launch {
+            val result = prices.refresh(force = true)
+            local.update { it.copy(pricesUpdating = false, priceResult = result) }
         }
     }
 
@@ -126,6 +142,7 @@ data class CurrencyActions(
     val onBack: () -> Unit = {},
     val onUpdate: ((AppSettings) -> AppSettings) -> Unit = {},
     val onRefresh: () -> Unit = {},
+    val onRefreshPrices: () -> Unit = {},
     val onManualDate: (LocalDate) -> Unit = {},
     val onManualText: (String) -> Unit = {},
     val onSaveManual: () -> Unit = {},
@@ -137,7 +154,7 @@ fun CurrencySettingsScreen(onBack: () -> Unit, viewModel: CurrencySettingsViewMo
     val state by viewModel.state.collectAsStateWithLifecycle()
     CurrencySettingsContent(
         state,
-        CurrencyActions(onBack, viewModel::update, viewModel::refresh, viewModel::setManualDate, viewModel::setManualText, viewModel::saveManual, { viewModel.deleteManual(it) }),
+        CurrencyActions(onBack, viewModel::update, viewModel::refresh, viewModel::refreshPrices, viewModel::setManualDate, viewModel::setManualText, viewModel::saveManual, { viewModel.deleteManual(it) }),
     )
 }
 
@@ -191,6 +208,28 @@ fun CurrencySettingsContent(state: CurrencyUiState, actions: CurrencyActions) {
             message?.let { (text, color) -> Text(text, style = FinanceTheme.type.caption, color = color) }
         }
 
+        SectionHeader(stringResource(R.string.stocks_title), Modifier.padding(top = Spacing.s))
+        FinanceCard(Modifier.fillMaxWidth()) {
+            SwitchRow(stringResource(R.string.stocks_auto), stringResource(R.string.stocks_auto_hint), s.autoFetchPrices, { v -> actions.onUpdate { it.copy(autoFetchPrices = v) } })
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = Spacing.s)) {
+                SecondaryButton(stringResource(R.string.currency_update), onClick = actions.onRefreshPrices, enabled = !state.pricesUpdating)
+                Spacer(Modifier.weight(1f))
+            }
+            val priceLast = state.priceState.lastFetchMs?.let { ms ->
+                val dt = Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault())
+                stringResource(R.string.currency_last_fetch, formats.dates.date(dt.toLocalDate()) + " " + "%02d:%02d".format(dt.hour, dt.minute))
+            } ?: stringResource(R.string.currency_never)
+            Text(priceLast, style = FinanceTheme.type.caption, color = c.textSecondary, modifier = Modifier.padding(top = Spacing.s))
+            val priceMessage = when (val r = state.priceResult) {
+                is PriceRefreshResult.Updated -> stringResource(R.string.currency_updated) to c.positive
+                PriceRefreshResult.UpToDate -> stringResource(R.string.currency_up_to_date) to c.textSecondary
+                PriceRefreshResult.NothingTracked -> stringResource(R.string.stocks_none) to c.textSecondary
+                is PriceRefreshResult.Failed -> stringResource(r.reason.messageRes()) to c.danger
+                else -> state.priceState.lastError?.let { stringResource(it.messageRes()) to c.warning }
+            }
+            priceMessage?.let { (text, color) -> Text(text, style = FinanceTheme.type.caption, color = color) }
+        }
+
         SectionHeader(stringResource(R.string.currency_manual), Modifier.padding(top = Spacing.s))
         FinanceCard(Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
@@ -228,4 +267,10 @@ fun CurrencySettingsContent(state: CurrencyUiState, actions: CurrencyActions) {
             }
         }
     }
+}
+
+private fun PriceError.messageRes(): Int = when (this) {
+    PriceError.NETWORK -> R.string.stocks_error_network
+    PriceError.FORMAT -> R.string.stocks_error_format
+    PriceError.NOT_FOUND -> R.string.stocks_error_not_found
 }

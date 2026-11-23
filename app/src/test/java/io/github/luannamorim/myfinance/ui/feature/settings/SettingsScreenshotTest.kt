@@ -41,6 +41,7 @@ class SettingsScreenshotTest {
             CurrencyUiState(
                 loading = false,
                 rateState = io.github.luannamorim.myfinance.data.prefs.RateState(lastFetchMs = 1_794_500_000_000),
+                priceState = io.github.luannamorim.myfinance.data.prefs.PriceState(lastFetchMs = 1_794_500_000_000),
                 rates = listOf(
                     io.github.luannamorim.myfinance.testutil.rate("2026-11-12", "5.6143"),
                     io.github.luannamorim.myfinance.testutil.rate("2026-11-11", "5.7000", io.github.luannamorim.myfinance.domain.model.RateSource.MANUAL),
