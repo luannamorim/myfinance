@@ -80,5 +80,7 @@ class HoldingsTest {
         assertEquals(usd("50.02"), Holdings.cost(BigDecimal("0.5"), BigDecimal("100.05"), Currency.USD))
         assertEquals(usd("1212.80"), Holdings.cost(BigDecimal(10), BigDecimal("121.28"), Currency.USD))
         assertEquals(usd("205.00"), Holdings.cost(BigDecimal(50_000_000), BigDecimal("0.0000041"), Currency.USD))
+        // Typed values whose product does not fit in money: no total instead of a crash.
+        assertEquals(null, Holdings.cost(BigDecimal("999999999999"), BigDecimal("100000"), Currency.USD))
     }
 }

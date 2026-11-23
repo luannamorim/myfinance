@@ -36,8 +36,13 @@ object Holdings {
             .fold(quantity) { q, split -> applySplit(q, split) }
 
     /** Value of [quantity] units at [unitPrice] (sub-cent prices such as 0.0000041 kept), rounded once. */
-    fun cost(quantity: BigDecimal, unitPrice: BigDecimal, currency: Currency): Money =
-        Money.of(quantity.multiply(unitPrice), currency)
+    /** quantity × unitPrice rounded once; null when the product does not fit in [Money] (absurd typed values). */
+    fun cost(quantity: BigDecimal, unitPrice: BigDecimal, currency: Currency): Money? =
+        try {
+            Money.of(quantity.multiply(unitPrice), currency)
+        } catch (e: ArithmeticException) {
+            null
+        }
 
     private fun applySplit(q: BigDecimal, split: Split): BigDecimal =
         q.multiply(split.numerator).divide(split.denominator, SCALE, RoundingMode.HALF_EVEN)

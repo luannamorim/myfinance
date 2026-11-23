@@ -132,7 +132,7 @@ data class AssetEditorUiState(
         }
 
     /** What the typed quantity is worth at the last close. */
-    val todayValue: Money? get() = preview?.let { p -> todayQuantity?.let { Money.of(it.multiply(p.price.price), Currency.USD) } }
+    val todayValue: Money? get() = preview?.let { p -> todayQuantity?.let { Holdings.cost(it, p.price.price, Currency.USD) } }
 }
 
 @HiltViewModel

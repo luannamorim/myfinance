@@ -210,7 +210,7 @@ fun TradeSheet(
     val quantity = if (all) heldThen else quantityParsed.getOrNull()?.takeIf { it.signum() > 0 }
     val price = priceParsed.getOrNull()?.takeIf { it.signum() > 0 }
     val over = sell && !all && quantity != null && quantity > heldThen
-    val total = if (quantity != null && price != null) Holdings.cost(quantity, price, currency).takeIf { it.minor > 0 } else null
+    val total = if (quantity != null && price != null) Holdings.cost(quantity, price, currency)?.takeIf { it.minor > 0 } else null
     val example = DecimalInput.example(money.style)
     val coin = Ticker.unitCode(ticker)
 
