@@ -2,6 +2,7 @@ package io.github.luannamorim.myfinance.domain.portfolio
 
 import io.github.luannamorim.myfinance.domain.market.Split
 import io.github.luannamorim.myfinance.domain.model.AssetFlow
+import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.FlowKind
 import io.github.luannamorim.myfinance.testutil.d
 import io.github.luannamorim.myfinance.testutil.usd
@@ -76,8 +77,9 @@ class HoldingsTest {
     }
 
     @Test fun cost_roundsOnce() {
-        assertEquals(usd("50.02"), Holdings.cost(BigDecimal("0.5"), usd("100.05")))
-        assertEquals(usd("1212.80"), Holdings.cost(BigDecimal(10), usd("121.28")))
+        assertEquals(usd("50.02"), Holdings.cost(BigDecimal("0.5"), BigDecimal("100.05"), Currency.USD))
+        assertEquals(usd("1212.80"), Holdings.cost(BigDecimal(10), BigDecimal("121.28"), Currency.USD))
+        assertEquals(usd("205.00"), Holdings.cost(BigDecimal(50_000_000), BigDecimal("0.0000041"), Currency.USD))
     }
 
     @Test fun unitPrice_dividesAmountByQuantity() {

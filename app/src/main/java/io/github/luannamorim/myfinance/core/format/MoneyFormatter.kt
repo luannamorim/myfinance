@@ -48,6 +48,17 @@ class MoneyFormatter(val style: NumberFormatStyle) {
     fun formatNumber(minor: Long, currency: Currency): String =
         decimalFormat(currency.fractionDigits).format(BigDecimal.valueOf(minor, currency.fractionDigits))
 
+    /** A price per share or coin: 2 decimals from 1 up; below 1, up to 8 decimals (at least 2): `US$ 0,00000379`. */
+    fun formatUnitPrice(price: BigDecimal, currency: Currency): String {
+        val pattern = if (price.abs() >= BigDecimal.ONE) "#,##0.00" else "#,##0.00######"
+        val df = DecimalFormat(pattern, symbols).apply { roundingMode = RoundingMode.HALF_EVEN }
+        return "${currency.symbol}$NBSP${df.format(price)}"
+    }
+
+    /** A share or coin count, up to 8 decimals without trailing zeros: `1.000`, `0,05`. */
+    fun formatQuantity(quantity: BigDecimal): String =
+        DecimalFormat("#,##0.########", symbols).apply { roundingMode = RoundingMode.HALF_EVEN }.format(quantity)
+
     /** A ratio as a percentage with two decimals: 0.024 → `2,40%`. */
     fun formatPercent(ratio: BigDecimal, signed: Boolean = false): String {
         val pct = ratio.movePointRight(2).setScale(2, RoundingMode.HALF_EVEN)

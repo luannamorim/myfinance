@@ -57,4 +57,19 @@ class MoneyFormatterTest {
         assertEquals("1,2M", comma.formatShort(123_000_000, Currency.BRL))
         assertEquals("${minus}12k", comma.formatShort(-1_200_000, Currency.BRL))
     }
+
+    @Test
+    fun formatUnitPrice_keepsSubCentDigits() {
+        assertEquals("US$${nb}182,40", comma.formatUnitPrice(BigDecimal("182.4"), Currency.USD))
+        assertEquals("US$${nb}0,00000379", comma.formatUnitPrice(BigDecimal("0.00000379"), Currency.USD))
+        assertEquals("US$${nb}0,50", comma.formatUnitPrice(BigDecimal("0.5"), Currency.USD))
+        assertEquals("US$${nb}63.336,84", comma.formatUnitPrice(BigDecimal("63336.84"), Currency.USD))
+    }
+
+    @Test
+    fun formatQuantity_upToEightDecimals() {
+        assertEquals("0,05", comma.formatQuantity(BigDecimal("0.0500")))
+        assertEquals("1.000", comma.formatQuantity(BigDecimal("1000")))
+        assertEquals("50,000,000", dot.formatQuantity(BigDecimal("50000000")))
+    }
 }

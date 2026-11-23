@@ -2,6 +2,7 @@ package io.github.luannamorim.myfinance.domain.portfolio
 
 import io.github.luannamorim.myfinance.domain.market.Split
 import io.github.luannamorim.myfinance.domain.model.AssetFlow
+import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.Money
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -34,9 +35,9 @@ object Holdings {
             .sortedBy { it.date }
             .fold(quantity) { q, split -> applySplit(q, split) }
 
-    /** Value of [quantity] units at [unitPrice], rounded once. */
-    fun cost(quantity: BigDecimal, unitPrice: Money): Money =
-        Money.of(quantity.multiply(unitPrice.toBigDecimal()), unitPrice.currency)
+    /** Value of [quantity] units at [unitPrice] (sub-cent prices such as 0.0000041 kept), rounded once. */
+    fun cost(quantity: BigDecimal, unitPrice: BigDecimal, currency: Currency): Money =
+        Money.of(quantity.multiply(unitPrice), currency)
 
     /** Price per unit of [quantity] units costing [amount]. */
     fun unitPrice(amount: Money, quantity: BigDecimal): Money =
