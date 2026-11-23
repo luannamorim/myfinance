@@ -153,6 +153,12 @@ class AssetEditorViewModel @Inject constructor(
     private var searchJob: Job? = null
     private var previewJob: Job? = null
 
+    /** What [pickTicker] filled in; replaced or cleared with the ticker only while the user hasn't changed it. */
+    private var autoName: String? = null
+    private var autoDescription: String? = null
+    private var autoCategoryId: Long? = null
+    private var defaultCurrency: Currency = Currency.BRL
+
     val state: StateFlow<AssetEditorUiState> = combine(form, categories.observeAssetCategories(includeArchived = true), rates.rates) { f, cats, r ->
         f.copy(categories = cats.filter { !it.archived || it.id == f.categoryId }, imageFile = f.imagePath?.let(images::file), rates = r)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), form.value)
@@ -161,6 +167,7 @@ class AssetEditorViewModel @Inject constructor(
         viewModelScope.launch {
             if (id == 0L) {
                 val current = settings.current()
+                defaultCurrency = current.defaultCurrency
                 form.update { it.copy(loading = false, currency = current.defaultCurrency, numberFormat = current.numberFormat) }
             } else {
                 val asset = portfolio.asset(id) ?: return@launch form.update { it.copy(done = true) }
@@ -178,10 +185,29 @@ class AssetEditorViewModel @Inject constructor(
 
     fun edit(transform: (AssetEditorUiState) -> AssetEditorUiState) {
         val before = form.value
-        form.update { transform(it).copy(nameError = false, categoryError = false, quantityError = false, tickerError = false, priceError = false) }
+        var leftTracked = false
+        form.update {
+            val next = transform(it).copy(nameError = false, categoryError = false, quantityError = false, tickerError = false, priceError = false)
+            leftTracked = it.tracked && !next.tracked
+            // Back to "typed in": nothing of the ticker stays, and the quantity text was read in another format.
+            if (leftTracked) {
+                withoutTicker(next).copy(
+                    query = "", matches = emptyList(), searching = false, searchError = false, quantity = "",
+                    currency = if (it.ticker != null) defaultCurrency else next.currency,
+                )
+            } else {
+                next
+            }
+        }
+        if (leftTracked) {
+            searchJob?.cancel()
+            previewJob?.cancel()
+            forgetAutoFill()
+            return
+        }
         val after = form.value
         // The splits since the purchase depend on its date.
-        if (after.ticker != null && after.acquisitionDate != before.acquisitionDate) loadPreview(after.ticker.symbol, after.acquisitionDate)
+        if (after.tracked && after.ticker != null && after.acquisitionDate != before.acquisitionDate) loadPreview(after.ticker.symbol, after.acquisitionDate)
     }
 
     /** Ticker search, 300 ms after the last keystroke. */
@@ -206,13 +232,18 @@ class AssetEditorViewModel @Inject constructor(
 
     /** Picks [match]: USD, and name, description and category from it unless already filled in; loads its quote. */
     fun pickTicker(match: TickerMatch) {
+        val name = Ticker.unitCode(match.symbol) ?: match.symbol
+        val description = match.name.removeSuffix(" USD")
         form.update {
             it.copy(
                 ticker = match, currency = Currency.USD, preview = null, previewError = false, tickerError = false,
-                name = it.name.ifBlank { Ticker.unitCode(match.symbol) ?: match.symbol },
-                description = it.description.ifBlank { match.name.removeSuffix(" USD") },
+                name = if (it.name.isBlank() || it.name == autoName) name else it.name,
+                description = if (it.description.isBlank() || it.description == autoDescription) description else it.description,
             )
         }
+        // Remembered only when used, so a name the user typed is never taken for an auto-filled one.
+        autoName = name.takeIf { form.value.name == it }
+        autoDescription = description.takeIf { form.value.description == it }
         loadPreview(match.symbol, form.value.acquisitionDate)
         viewModelScope.launch {
             val key = when (match.type) {
@@ -221,13 +252,33 @@ class AssetEditorViewModel @Inject constructor(
                 TickerType.CRYPTO -> "asset.cryptocurrencies"
             }
             val category = categories.observeAssetCategories(includeArchived = false).first().firstOrNull { it.seedKey == key } ?: return@launch
-            form.update { if (it.ticker == match) it.copy(categoryId = category.id, categoryError = false) else it }
+            var applied = false
+            form.update {
+                applied = it.ticker == match && (it.categoryId == null || it.categoryId == autoCategoryId)
+                if (applied) it.copy(categoryId = category.id, categoryError = false) else it
+            }
+            if (applied) autoCategoryId = category.id
         }
     }
 
     fun clearTicker() {
         previewJob?.cancel()
-        form.update { it.copy(ticker = null, preview = null, previewError = false) }
+        form.update { withoutTicker(it) }
+        forgetAutoFill()
+    }
+
+    /** [s] without the ticker, its quote, and the name, description and category it filled in (unless edited since). */
+    private fun withoutTicker(s: AssetEditorUiState): AssetEditorUiState = s.copy(
+        ticker = null, preview = null, previewError = false,
+        name = if (autoName != null && s.name == autoName) "" else s.name,
+        description = if (autoDescription != null && s.description == autoDescription) "" else s.description,
+        categoryId = if (autoCategoryId != null && s.categoryId == autoCategoryId) null else s.categoryId,
+    )
+
+    private fun forgetAutoFill() {
+        autoName = null
+        autoDescription = null
+        autoCategoryId = null
     }
 
     private fun loadPreview(symbol: String, from: LocalDate) {

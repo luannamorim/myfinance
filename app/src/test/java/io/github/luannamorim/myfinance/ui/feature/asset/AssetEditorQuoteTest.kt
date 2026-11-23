@@ -81,6 +81,7 @@ class AssetEditorQuoteTest {
     private val appScope = TestScope()
 
     private val nvda = TickerMatch("NVDA", "NVIDIA Corporation", TickerType.STOCK, "NASDAQ")
+    private val btc = TickerMatch("BTC-USD", "Bitcoin USD", TickerType.CRYPTO, "CCC")
 
     private fun resource(name: String) = javaClass.getResource("/yahoo/$name")!!.readText()
 
@@ -197,6 +198,73 @@ class AssetEditorQuoteTest {
         val s = vm.state.awaitUntil { it.quantityError }
         assertTrue(s.priceError)
         assertFalse(s.tickerError)
+    }
+
+    @Test
+    fun repick_replacesAutoFilledFields() = runBlocking {
+        val vm = editor()
+        vm.state.awaitUntil { !it.loading }
+        vm.edit { it.copy(tracked = true) }
+        vm.pickTicker(nvda)
+        vm.state.awaitUntil { it.categoryId == category("asset.stocks") }
+        vm.clearTicker()
+        val cleared = vm.state.awaitUntil { it.ticker == null }
+        assertEquals("", cleared.name)
+        assertEquals("", cleared.description)
+        assertEquals(null, cleared.categoryId)
+        vm.pickTicker(btc)
+        val s = vm.state.awaitUntil { it.categoryId == category("asset.cryptocurrencies") }
+        assertEquals("BTC", s.name)
+        assertEquals("Bitcoin", s.description)
+    }
+
+    @Test
+    fun repick_keepsUserEditedFields() = runBlocking {
+        val vm = editor()
+        vm.state.awaitUntil { !it.loading }
+        vm.edit { it.copy(tracked = true) }
+        vm.pickTicker(nvda)
+        vm.state.awaitUntil { it.categoryId == category("asset.stocks") }
+        vm.edit { it.copy(name = "My NVIDIA", categoryId = category("asset.other_investments")) }
+        vm.clearTicker()
+        vm.pickTicker(btc)
+        vm.state.awaitUntil { it.preview != null }
+        Thread.sleep(200) // the category lookup would have landed by now
+        val s = vm.state.value
+        assertEquals("My NVIDIA", s.name)
+        assertEquals("Bitcoin", s.description)
+        assertEquals(category("asset.other_investments"), s.categoryId)
+    }
+
+    @Test
+    fun switchToManual_dropsTickerAndQuantity() = runBlocking {
+        val vm = editor()
+        vm.state.awaitUntil { !it.loading }
+        vm.edit { it.copy(tracked = true, quantity = "1.000") }
+        vm.onQuery("nvd")
+        advanceDebounce()
+        vm.pickTicker(nvda)
+        vm.state.awaitUntil { it.categoryId != null && it.preview != null }
+        vm.edit { it.copy(tracked = false) }
+        val s = vm.state.awaitUntil { !it.tracked }
+        assertEquals("", s.quantity)
+        assertEquals(settings.current().defaultCurrency, s.currency)
+        assertEquals(null, s.ticker)
+        assertEquals(null, s.preview)
+        assertFalse(s.previewError)
+        assertEquals("", s.query)
+        assertTrue(s.matches.isEmpty())
+        val chartCalls = client.chartRequests.size
+        vm.edit { it.copy(acquisitionDate = d("2024-06-03")) }
+        assertEquals(chartCalls, client.chartRequests.size)
+
+        vm.edit { it.copy(name = "Tesouro", categoryId = category("asset.fixed_income"), investedDigits = "100000") }
+        assertTrue(vm.save())
+        vm.state.awaitUntil { it.done }
+        val asset = portfolio.data.first().assets.single()
+        assertEquals(null, asset.ticker)
+        assertEquals(settings.current().defaultCurrency, asset.currency)
+        assertEquals(null, asset.quantity)
     }
 
     @Test
