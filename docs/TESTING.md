@@ -83,7 +83,7 @@ Development is done without a device. The items below validate what only the dev
 
 ### 5c. Stock and crypto quotes
 - [ ] Create "NVDA" (Stocks, ticker NVDA) with a purchase dated before June 2024: the form shows the split note and today's share count (10× the shares bought); after saving, the asset shows the quote with its date.
-- [ ] Close the app and open it again more than 15 minutes later: today's quote refreshes (the fetch time in the caption changes). The date changes only once a new close exists: the next trading day for stocks, or after UTC midnight for crypto.
+- [ ] Close the app and open it again more than 15 minutes later: today's quote refreshes (the fetch time in the caption changes). The date changes only once a new close exists: the next trading day for stocks. Crypto is dated today and keeps moving through the evening: after 21:00 in Brasília (UTC midnight) the new UTC day's candle is shown under today's date, and the next day gets its own date after local midnight.
 - [ ] In airplane mode the app keeps the last quote with its date; *Settings → Currency and exchange rate → Stocks and crypto → Update now* shows an error and the last quote stays.
 - [ ] With *Fetch stock and crypto quotes* off, reopening the app (more than 15 minutes later) leaves "Last update" in Settings → Currency and exchange rate → Stocks and crypto unchanged; *Update now* still changes it.
 - [ ] Sell all on NVDA closes the position: value 0, listed under closed positions.

@@ -266,7 +266,7 @@ class PriceRepositoryTest {
         assertEquals(d("2024-06-10"), preview.price.date)
         assertEquals(0, BigDecimal("121.79").compareTo(preview.price.price))
         assertEquals(listOf(d("2024-06-10")), preview.splitsSince.map { it.date })
-        assertEquals(listOf("NVDA" to d("2024-06-03")), client.chartRequests)
+        assertEquals(listOf("NVDA" to d("2024-05-27")), client.chartRequests)
         assertTrue(market.listPrices().isEmpty())
         assertTrue(market.listSplits().isEmpty())
     }
@@ -275,6 +275,77 @@ class PriceRepositoryTest {
     fun preview_splitOnFromDate_isNotSince() = runBlocking {
         client.chart = { _, _ -> resource("nvda_three_bars.json") }
         assertTrue(repo.preview("NVDA", d("2024-06-10")).splitsSince.isEmpty())
+    }
+
+    @Test
+    fun preview_dayWithoutCandle_usesLastCloseBefore() = runBlocking {
+        // Saturday: Yahoo has no candle from the purchase date on, only before it.
+        time.set("2026-11-21")
+        client.chart = { s, from -> if (from <= d("2026-11-20")) chartJson(s, "2026-11-20" to "230.10") else resource("weekend.json") }
+        val preview = repo.preview("AAPL", d("2026-11-21"))
+        assertEquals(d("2026-11-20"), preview.price.date)
+        assertEquals(0, BigDecimal("230.1").compareTo(preview.price.price))
+        assertEquals(listOf("AAPL" to d("2026-11-14")), client.chartRequests)
+    }
+
+    /** A crypto chart (UTC dates) with one bar per (UTC date at 00:00, close). */
+    private fun cryptoJson(symbol: String, vararg bars: Pair<String, String>): String {
+        val timestamps = bars.joinToString(",") { LocalDate.parse(it.first).atStartOfDay(java.time.ZoneOffset.UTC).toEpochSecond().toString() }
+        val closes = bars.joinToString(",") { it.second }
+        return """{"chart":{"result":[{"meta":{"currency":"USD","symbol":"$symbol","instrumentType":"CRYPTOCURRENCY",""" +
+            """"exchangeTimezoneName":"UTC"},"timestamp":[$timestamps],"indicators":{"quote":[{"close":[$closes]}]}}],"error":null}}"""
+    }
+
+    @Test
+    fun cryptoCandleAheadOfLocalDate_storedUnderToday() = runBlocking {
+        track("BTC-USD", bought = "2026-11-02")
+        // 22:00 in São Paulo is already 01:00 UTC of the next day: the live candle is dated "tomorrow".
+        time.set("2026-11-23", "22:00")
+        client.chart = { s, _ -> cryptoJson(s, "2026-11-23" to "62000", "2026-11-24" to "63000") }
+        repo.refresh()
+        assertEquals(mapOf("2026-11-23" to "63000"), prices("BTC-USD"))
+        val data = io.github.luannamorim.myfinance.domain.market.MarketData(
+            mapOf(
+                "BTC-USD" to io.github.luannamorim.myfinance.domain.market.SymbolHistory(
+                    market.listPrices().map { io.github.luannamorim.myfinance.domain.market.PricePoint(LocalDate.ofEpochDay(it.date), BigDecimal(it.price)) },
+                    emptyList(),
+                ),
+            ),
+        )
+        assertEquals(0, BigDecimal("63000").compareTo(data.priceOn("BTC-USD", d("2026-11-23"))!!.price))
+
+        // After local midnight the days get their real dates back.
+        time.set("2026-11-24", "10:00")
+        client.chart = { s, _ -> cryptoJson(s, "2026-11-23" to "62500", "2026-11-24" to "63100") }
+        repo.refresh(force = true)
+        assertEquals(mapOf("2026-11-23" to "62500", "2026-11-24" to "63100"), prices("BTC-USD"))
+    }
+
+    @Test
+    fun farFutureBar_droppedAndNextWindowNormal() = runBlocking {
+        track("AAPL")
+        storePrice("AAPL", "2026-01-26", "200")
+        val seconds = LocalDate.parse("2026-11-11").atTime(9, 30).atZone(java.time.ZoneId.of("America/New_York")).toEpochSecond()
+        client.chart = { s, _ ->
+            """{"chart":{"result":[{"meta":{"currency":"USD","symbol":"$s","exchangeTimezoneName":"America/New_York"},""" +
+                """"timestamp":[$seconds,${seconds * 1000}],"indicators":{"quote":[{"close":[230.1,231]}]}}],"error":null}}"""
+        }
+        assertEquals(PriceRefreshResult.Updated(1), repo.refresh())
+        assertEquals(mapOf("2026-01-26" to "200", "2026-11-11" to "230.1"), prices("AAPL"))
+        client.chartRequests.clear()
+        repo.refresh(force = true)
+        assertEquals(listOf("AAPL" to d("2026-11-04")), client.chartRequests)
+    }
+
+    @Test
+    fun assetDeletedDuringRefresh_pricesPruned() = runBlocking {
+        val id = track("AAPL")
+        client.chart = { s, _ ->
+            db.openHelper.writableDatabase.execSQL("DELETE FROM asset WHERE id = $id")
+            chartJson(s, "2026-11-11" to "230.10")
+        }
+        repo.refresh()
+        assertTrue(market.listPrices().isEmpty())
     }
 
     @Test(expected = TickerNotFoundException::class)

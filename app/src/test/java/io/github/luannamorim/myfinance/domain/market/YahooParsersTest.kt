@@ -15,8 +15,8 @@ class YahooParsersTest {
 
     private fun resource(name: String) = javaClass.getResource("/yahoo/$name")!!.readText()
 
-    private fun found(json: String): ChartResult =
-        (YahooChartParser.parse(json) as ChartResponse.Found).result
+    private fun found(json: String, maxDate: java.time.LocalDate? = null): ChartResult =
+        (YahooChartParser.parse(json, maxDate) as ChartResponse.Found).result
 
     private fun assertPrice(expected: String, actual: BigDecimal) =
         assertEquals("expected $expected got $actual", 0, BigDecimal(expected).compareTo(actual))
@@ -107,6 +107,43 @@ class YahooParsersTest {
     fun chart_nullCloseSkipped() {
         val r = found(chartJson("America/New_York", "1717680600,1717767000,1718026200", "10,null,0"))
         assertEquals(listOf(d("2024-06-06")), r.prices.map { it.date })
+    }
+
+    @Test
+    fun chart_barAfterMaxDate_dropped() {
+        // 1795392000 is 2026-11-23 00:00 UTC; the second timestamp is the same instant in milliseconds.
+        val r = found(chartJson("UTC", "1795392000,1795392000000", "100,101"), maxDate = d("2026-11-24"))
+        assertEquals(listOf(d("2026-11-23")), r.prices.map { it.date })
+    }
+
+    @Test
+    fun chart_splitAfterMaxDate_droppedAndNotApplied() {
+        val r = found(
+            chartJson("UTC", "1795392000", "100", splits = """"1795392000000":{"date":1795392000000,"numerator":10,"denominator":1}"""),
+            maxDate = d("2026-11-24"),
+        )
+        assertTrue(r.splits.isEmpty())
+        assertPrice("100", r.prices.single().price)
+    }
+
+    @Test
+    fun chart_absurdCloseDropped() {
+        val r = found(chartJson("UTC", "1795046400,1795132800,1795219200", "10000000,10000100,5e9"))
+        assertEquals(listOf(d("2026-11-19")), r.prices.map { it.date })
+    }
+
+    @Test
+    fun chart_splitRatioOutOfRange_dropped() {
+        val splits = """"1795132800":{"date":1795132800,"numerator":1001,"denominator":1},""" +
+            """"1795219200":{"date":1795219200,"numerator":1000,"denominator":1}"""
+        val r = found(chartJson("UTC", "1795046400", "100", splits = splits))
+        assertEquals(listOf(d("2026-11-21")), r.splits.map { it.date })
+    }
+
+    @Test
+    fun chart_noLaterSplit_keepsExactCloseBeforeRounding() {
+        val r = found(chartJson("UTC", "1795046400", "1.234567890123e-08"))
+        assertPrice("0.00000001234568", r.prices.single().price)
     }
 
     @Test

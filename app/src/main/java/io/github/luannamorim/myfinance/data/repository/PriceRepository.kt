@@ -2,6 +2,7 @@ package io.github.luannamorim.myfinance.data.repository
 
 import androidx.room.withTransaction
 import io.github.luannamorim.myfinance.core.time.TimeSource
+import io.github.luannamorim.myfinance.core.time.today
 import io.github.luannamorim.myfinance.data.db.MyFinanceDatabase
 import io.github.luannamorim.myfinance.data.db.entity.AssetPriceEntity
 import io.github.luannamorim.myfinance.data.db.entity.AssetSplitEntity
@@ -44,7 +45,6 @@ data class QuotePreview(
     val name: String?,
     val price: PricePoint,
     val splitsSince: List<Split>,
-    val firstTradeDate: LocalDate?,
 )
 
 class TickerNotFoundException : IllegalArgumentException("Ticker not found")
@@ -131,13 +131,16 @@ class PriceRepository @Inject constructor(
     suspend fun search(query: String): List<TickerMatch> = YahooSearchParser.parse(client.search(query))
 
     /**
-     * The last close of [symbol] and its splits after [from], fetched from [from] to now; nothing is stored.
-     * Throws [TickerNotFoundException] for an unknown symbol; [IOException] and [QuoteFormatException] propagate.
+     * The last close of [symbol] up to now and its splits after [from]; nothing is stored. Fetched from a week before
+     * [from], so a weekend, a holiday or a day before the US open still has a close. Throws [TickerNotFoundException]
+     * for an unknown symbol; [IOException] and [QuoteFormatException] propagate.
      */
     suspend fun preview(symbol: String, from: LocalDate): QuotePreview {
-        val result = fetch(symbol, from, time.nowMs()) ?: throw TickerNotFoundException()
+        val result = fetch(symbol, from.minusDays(MARGIN_DAYS), time.nowMs()) ?: throw TickerNotFoundException()
         val last = result.prices.lastOrNull() ?: throw QuoteFormatException("No prices")
-        return QuotePreview(result.symbol, result.longName, last, result.splits.filter { it.date > from }, result.firstTradeDate)
+        val today = time.today()
+        val price = if (last.date > today) last.copy(date = today) else last
+        return QuotePreview(result.symbol, result.longName, price, result.splits.filter { it.date > from })
     }
 
     private suspend fun fetch(symbol: String, from: LocalDate, nowMs: Long): ChartResult? =
@@ -146,9 +149,12 @@ class PriceRepository @Inject constructor(
             ChartResponse.NotFound -> null
         }
 
-    /** Any unexpected parser failure (e.g. a `DateTimeException` from an absurd timestamp) is a bad response. */
+    /**
+     * Any unexpected parser failure (e.g. a `DateTimeException` from an absurd timestamp) is a bad response. Bars and
+     * splits dated after tomorrow are dropped (no exchange is a day ahead of the device).
+     */
     private fun parse(json: String): ChartResponse = try {
-        YahooChartParser.parse(json)
+        YahooChartParser.parse(json, maxDate = time.today().plusDays(1))
     } catch (e: QuoteFormatException) {
         throw e
     } catch (e: CancellationException) {
@@ -157,10 +163,18 @@ class PriceRepository @Inject constructor(
         throw QuoteFormatException(e.javaClass.simpleName)
     }
 
-    /** Stores [result] for [symbol]; returns the new rows (price days not stored before plus splits inserted). */
+    /**
+     * Stores [result] for [symbol]; returns the new rows (price days not stored before plus splits inserted). A candle
+     * dated after the device's today (a crypto candle in UTC, late in the evening west of Greenwich) is stored under
+     * today, replacing today's; the next fetch after local midnight rewrites both days with their real dates.
+     */
     private suspend fun save(symbol: String, result: ChartResult, nowMs: Long): Int = db.withTransaction {
+        val today = time.today()
+        val prices = result.prices.sortedBy { it.date }
+            .map { if (it.date > today) it.copy(date = today) else it }
+            .associateBy { it.date }.values
         val known = dao.priceDates(symbol).toSet()
-        val newPrices = result.prices.map { it.date.toEpochDay() }.distinct().count { it !in known }
+        val newPrices = prices.count { it.date.toEpochDay() !in known }
         val insertedSplits = dao.insertSplits(
             result.splits.map {
                 AssetSplitEntity(
@@ -171,7 +185,7 @@ class PriceRepository @Inject constructor(
             },
         ).count { it != -1L }
         dao.upsertPrices(
-            result.prices.map {
+            prices.map {
                 AssetPriceEntity(
                     symbol = symbol, date = it.date.toEpochDay(), price = it.price.stripTrailingZeros().toPlainString(),
                     source = PriceSource.YAHOO, fetchedAtMs = nowMs,
@@ -182,6 +196,8 @@ class PriceRepository @Inject constructor(
     }
 
     private suspend fun finish(nowMs: Long, newRows: Int, fetched: Boolean, error: PriceError?) {
+        // An asset deleted while this run was fetching leaves rows of a symbol nothing tracks.
+        dao.pruneUnused()
         if (newRows > 0) backup.onDataChanged()
         store.record(nowMs, fetched, error)
     }
