@@ -6,6 +6,8 @@ import androidx.room.Query
 import io.github.luannamorim.myfinance.data.db.entity.AssetCategoryEntity
 import io.github.luannamorim.myfinance.data.db.entity.AssetEntity
 import io.github.luannamorim.myfinance.data.db.entity.AssetFlowEntity
+import io.github.luannamorim.myfinance.data.db.entity.AssetPriceEntity
+import io.github.luannamorim.myfinance.data.db.entity.AssetSplitEntity
 import io.github.luannamorim.myfinance.data.db.entity.AssetValuationEntity
 import io.github.luannamorim.myfinance.data.db.entity.CashAdjustmentEntity
 import io.github.luannamorim.myfinance.data.db.entity.CategoryEntity
@@ -28,6 +30,8 @@ interface BackupDao {
     @Query("DELETE FROM asset") suspend fun clearAssets()
     @Query("DELETE FROM asset_category") suspend fun clearAssetCategories()
     @Query("DELETE FROM exchange_rate") suspend fun clearExchangeRates()
+    @Query("DELETE FROM asset_price") suspend fun clearAssetPrices()
+    @Query("DELETE FROM asset_split") suspend fun clearAssetSplits()
 
     @Insert suspend fun insertCategories(items: List<CategoryEntity>)
     @Insert suspend fun insertTemplates(items: List<TransactionTemplateEntity>)
@@ -38,4 +42,6 @@ interface BackupDao {
     @Insert suspend fun insertAssetFlows(items: List<AssetFlowEntity>)
     @Insert suspend fun insertValuations(items: List<AssetValuationEntity>)
     @Insert suspend fun insertExchangeRates(items: List<ExchangeRateEntity>)
+    @Insert suspend fun insertAssetPrices(items: List<AssetPriceEntity>)
+    @Insert suspend fun insertAssetSplits(items: List<AssetSplitEntity>)
 }

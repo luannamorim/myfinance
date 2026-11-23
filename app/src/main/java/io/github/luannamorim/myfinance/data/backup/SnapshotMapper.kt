@@ -5,6 +5,8 @@ import io.github.luannamorim.myfinance.data.db.MyFinanceDatabase
 import io.github.luannamorim.myfinance.data.db.entity.AssetCategoryEntity
 import io.github.luannamorim.myfinance.data.db.entity.AssetEntity
 import io.github.luannamorim.myfinance.data.db.entity.AssetFlowEntity
+import io.github.luannamorim.myfinance.data.db.entity.AssetPriceEntity
+import io.github.luannamorim.myfinance.data.db.entity.AssetSplitEntity
 import io.github.luannamorim.myfinance.data.db.entity.AssetValuationEntity
 import io.github.luannamorim.myfinance.data.db.entity.CashAdjustmentEntity
 import io.github.luannamorim.myfinance.data.db.entity.CategoryEntity
@@ -15,6 +17,8 @@ import io.github.luannamorim.myfinance.domain.backup.AdjustmentDto
 import io.github.luannamorim.myfinance.domain.backup.AssetCategoryDto
 import io.github.luannamorim.myfinance.domain.backup.AssetDto
 import io.github.luannamorim.myfinance.domain.backup.AssetFlowDto
+import io.github.luannamorim.myfinance.domain.backup.AssetPriceDto
+import io.github.luannamorim.myfinance.domain.backup.AssetSplitDto
 import io.github.luannamorim.myfinance.domain.backup.BackupDataV1
 import io.github.luannamorim.myfinance.domain.backup.BackupError
 import io.github.luannamorim.myfinance.domain.backup.CategoryDto
@@ -39,6 +43,8 @@ object SnapshotMapper {
         val assetFlows: List<AssetFlowEntity>,
         val valuations: List<AssetValuationEntity>,
         val exchangeRates: List<ExchangeRateEntity>,
+        val assetPrices: List<AssetPriceEntity>,
+        val assetSplits: List<AssetSplitEntity>,
     )
 
     suspend fun export(db: MyFinanceDatabase): BackupDataV1 = db.withTransaction {
@@ -52,6 +58,8 @@ object SnapshotMapper {
             assetFlows = db.portfolioDao().getAllFlows().map { it.toDto() },
             valuations = db.portfolioDao().getAllValuations().map { it.toDto() },
             exchangeRates = db.rateDao().getAll().map { it.toDto() },
+            assetPrices = db.marketDao().listPrices().map { it.toDto() },
+            assetSplits = db.marketDao().listSplits().map { it.toDto() },
         )
     }
 
@@ -66,6 +74,8 @@ object SnapshotMapper {
         assetFlows = data.assetFlows.map { it.toEntity() },
         valuations = data.valuations.map { it.toEntity() },
         exchangeRates = data.exchangeRates.map { it.toEntity() },
+        assetPrices = data.assetPrices.map { it.toEntity() },
+        assetSplits = data.assetSplits.map { it.toEntity() },
     )
 
     /** Replaces every table with [data] in a single transaction, preserving ids. */
@@ -84,6 +94,8 @@ object SnapshotMapper {
             dao.clearAssets()
             dao.clearAssetCategories()
             dao.clearExchangeRates()
+            dao.clearAssetPrices()
+            dao.clearAssetSplits()
 
             // Parents before children.
             dao.insertCategories(rows.categories)
@@ -95,6 +107,8 @@ object SnapshotMapper {
             dao.insertAssetFlows(rows.assetFlows)
             dao.insertValuations(rows.valuations)
             dao.insertExchangeRates(rows.exchangeRates)
+            dao.insertAssetPrices(rows.assetPrices)
+            dao.insertAssetSplits(rows.assetSplits)
         }
     }
 
@@ -141,6 +155,17 @@ object SnapshotMapper {
     private fun ExchangeRateEntity.toDto() = ExchangeRateDto(id, base.name, quote.name, date, rateMicros, source.name, fetchedAtMs)
     private fun ExchangeRateDto.toEntity() = ExchangeRateEntity(id, enumOf(base), enumOf(quote), date, rateMicros, enumOf(source), fetchedAtMs)
 
+    // Ids are left out of the file: Room assigns new ones on restore.
+    private fun AssetPriceEntity.toDto() = AssetPriceDto(symbol, date, price, source.name, fetchedAtMs)
+    private fun AssetPriceDto.toEntity() = AssetPriceEntity(
+        symbol = symbol(symbol), date = date, price = positiveDecimal(price), source = enumOf(source), fetchedAtMs = fetchedAtMs,
+    )
+
+    private fun AssetSplitEntity.toDto() = AssetSplitDto(symbol, date, numerator, denominator)
+    private fun AssetSplitDto.toEntity() = AssetSplitEntity(
+        symbol = symbol(symbol), date = date, numerator = positiveDecimal(numerator), denominator = positiveDecimal(denominator),
+    )
+
     /** Unknown values (e.g. a newer app's enum) reject the backup instead of storing rows the app can't read. */
     private inline fun <reified E : Enum<E>> enumOf(name: String): E =
         enumValues<E>().firstOrNull { it.name == name } ?: throw BackupError.Corrupted("unknown ${E::class.simpleName}")
@@ -148,6 +173,14 @@ object SnapshotMapper {
     /** A tracked symbol must be one the app can track, already in its normalized form. */
     private fun ticker(text: String?): String? {
         if (text != null && Ticker.normalize(text) != text) throw BackupError.Corrupted("invalid ticker")
+        return text
+    }
+
+    private fun symbol(text: String): String = Ticker.normalize(text)?.takeIf { it == text } ?: throw BackupError.Corrupted("invalid symbol")
+
+    private fun positiveDecimal(text: String): String {
+        val value = runCatching { BigDecimal(text) }.getOrNull()
+        if (value == null || value.signum() <= 0) throw BackupError.Corrupted("invalid decimal")
         return text
     }
 

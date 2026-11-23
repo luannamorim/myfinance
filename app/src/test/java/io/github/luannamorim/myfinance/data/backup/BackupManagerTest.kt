@@ -91,6 +91,8 @@ class BackupManagerTest {
         assertTrue("$result", result is RestoreResult.Success)
         assertEquals(before.counts(), (result as RestoreResult.Success).counts)
         assertEquals(before, SnapshotMapper.export(env.db))
+        assertEquals(1, before.assetPrices.size)
+        assertEquals(1, (result.counts["assetSplits"]))
         assertArrayEquals(photoBytes, images.file(path).readBytes())
         assertFalse("orphan image removed", images.file(orphan).exists())
         val settings = env.settings.current()

@@ -22,6 +22,9 @@ data class BackupDataV1(
     val assetFlows: List<AssetFlowDto> = emptyList(),
     val valuations: List<ValuationDto> = emptyList(),
     val exchangeRates: List<ExchangeRateDto> = emptyList(),
+    /** Since format 2 (stock quotes). */
+    val assetPrices: List<AssetPriceDto> = emptyList(),
+    val assetSplits: List<AssetSplitDto> = emptyList(),
 ) {
     /** Rows per table, written to the manifest and checked on restore. */
     fun counts(): Map<String, Int> = mapOf(
@@ -34,7 +37,17 @@ data class BackupDataV1(
         "assetFlows" to assetFlows.size,
         "valuations" to valuations.size,
         "exchangeRates" to exchangeRates.size,
-    )
+    ).let { base ->
+        // Only when present, so a backup without quotes keeps the nine keys an older app checks.
+        base + listOfNotNull(
+            ("assetPrices" to assetPrices.size).takeIf { assetPrices.isNotEmpty() },
+            ("assetSplits" to assetSplits.size).takeIf { assetSplits.isNotEmpty() },
+        )
+    }
+
+    /** 2 when the data holds tickers or quotes (an app that only knows format 1 can't represent them), else 1. */
+    fun requiredFormatVersion(): Int =
+        if (assets.any { it.ticker != null } || assetPrices.isNotEmpty() || assetSplits.isNotEmpty()) 2 else 1
 
     /** Every image path referenced by the data (relative to filesDir). */
     fun referencedImages(): Set<String> = assets.mapNotNull { it.imagePath }.toSet()
@@ -102,3 +115,11 @@ data class ValuationDto(val id: Long, val assetId: Long, val date: Long, val val
 data class ExchangeRateDto(
     val id: Long, val base: String, val quote: String, val date: Long, val rateMicros: Long, val source: String, val fetchedAtMs: Long,
 )
+
+/** Since format 2: a stored daily close (price is a plain decimal string). */
+@Serializable
+data class AssetPriceDto(val symbol: String, val date: Long, val price: String, val source: String, val fetchedAtMs: Long)
+
+/** Since format 2: each share becomes numerator ÷ denominator shares (decimal strings). */
+@Serializable
+data class AssetSplitDto(val symbol: String, val date: Long, val numerator: String, val denominator: String)

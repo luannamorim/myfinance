@@ -5,6 +5,8 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.test.core.app.ApplicationProvider
 import io.github.luannamorim.myfinance.core.time.FakeTimeSource
 import io.github.luannamorim.myfinance.data.backup.BackupManager
+import io.github.luannamorim.myfinance.data.db.entity.AssetPriceEntity
+import io.github.luannamorim.myfinance.data.db.entity.AssetSplitEntity
 import io.github.luannamorim.myfinance.data.images.ImageStore
 import io.github.luannamorim.myfinance.data.prefs.RateStateStore
 import io.github.luannamorim.myfinance.data.repository.AssetDraft
@@ -19,6 +21,7 @@ import io.github.luannamorim.myfinance.domain.model.AssetGroup
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.EntryKind
 import io.github.luannamorim.myfinance.domain.model.FlowKind
+import io.github.luannamorim.myfinance.domain.model.PriceSource
 import io.github.luannamorim.myfinance.domain.model.RecurrenceUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -65,10 +68,10 @@ class BackupEnv {
 }
 
 /**
- * Fills all 9 tables through the real repositories: custom and archived (still unnamed) seed categories, both
+ * Fills all 11 tables through the real repositories: custom and archived (still unnamed) seed categories, both
  * openings and an adjustment, an active and an inactive recurring template with confirmed, cancelled and edited
  * occurrences, one-time transactions in BRL and USD, assets in both currencies with every kind of flow and
- * valuation (one with [assetImage]), a personal asset, and BCB plus MANUAL exchange rates.
+ * valuation (one with [assetImage]), a personal asset, a tracked stock with a quote and a split, and BCB plus MANUAL exchange rates.
  */
 suspend fun BackupEnv.populateEverything(assetImage: String? = null) {
     // Categories: a custom one of each kind; a predefined one archived without ever being renamed (name stays NULL).
@@ -129,6 +132,19 @@ suspend fun BackupEnv.populateEverything(assetImage: String? = null) {
         brl("3000.00"),
     )
     portfolio.addFlow(painting, FlowKind.FULL_DISPOSAL, d("2026-11-11"), brl("3500.00"))
+
+    // A tracked stock: the shares live in the flows, with one stored close and one split of its symbol.
+    val apple = portfolio.createAsset(
+        AssetDraft(
+            name = "Apple", categoryId = seedAssetCategory("asset.stocks"), currency = Currency.USD, acquisitionDate = d("2026-05-04"),
+            quantity = BigDecimal("2"), ticker = "AAPL",
+        ),
+        usd("400.00"),
+        null,
+    )
+    portfolio.addFlow(apple, FlowKind.CONTRIBUTION, d("2026-06-10"), usd("210.00"), quantityDelta = BigDecimal("1"))
+    db.marketDao().upsertPrices(listOf(AssetPriceEntity(symbol = "AAPL", date = d("2026-11-11").toEpochDay(), price = "231.1234", source = PriceSource.YAHOO, fetchedAtMs = time.nowMs())))
+    db.marketDao().insertSplits(listOf(AssetSplitEntity(symbol = "AAPL", date = d("2026-08-31").toEpochDay(), numerator = "10", denominator = "1")))
 
     // Rates: fetched PTAX (BCB) and a manual rate on a date that also has a BCB one.
     rates.refresh(force = true)

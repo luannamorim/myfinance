@@ -83,6 +83,28 @@ class BackupArchiveTest {
     }
 
     @Test
+    fun counts_marketKeysOnlyWhenPresent() {
+        assertFalse(BackupDataV1().counts().keys.any { it == "assetPrices" || it == "assetSplits" })
+        val withPrices = BackupDataV1(assetPrices = listOf(AssetPriceDto("AAPL", 20_400, "231.12", "YAHOO", 0)))
+        assertEquals(1, withPrices.counts()["assetPrices"])
+        assertFalse(withPrices.counts().containsKey("assetSplits"))
+        val withSplits = BackupDataV1(assetSplits = listOf(AssetSplitDto("AAPL", 20_400, "10", "1")))
+        assertEquals(1, withSplits.counts()["assetSplits"])
+        assertFalse(withSplits.counts().containsKey("assetPrices"))
+    }
+
+    @Test
+    fun formatVersion_oneWithoutQuotes_twoWithTicker() {
+        assertEquals(1, data.requiredFormatVersion())
+        assertEquals(2, data.copy(assets = listOf(data.assets[0].copy(ticker = "AAPL"))).requiredFormatVersion())
+        assertEquals(2, data.copy(assetSplits = listOf(AssetSplitDto("AAPL", 1, "2", "1"))).requiredFormatVersion())
+        val v2 = data.copy(assets = listOf(data.assets[0].copy(ticker = "AAPL", imagePath = null)))
+        val file = tmp.newFile("v2.zip")
+        file.outputStream().use { BackupArchive.write(it, v2, "{}", emptyMap(), meta) }
+        assertEquals(2, BackupArchive.read(file, staging()).manifest.formatVersion)
+    }
+
+    @Test
     fun hashMismatch_rejected() = assertFails<BackupError.Corrupted> {
         val bad = rewrite(archive(), { name, b -> if (name == "images/assets/b.jpg") name to b.copyOf().also { it[10] = (it[10] + 1).toByte() } else name to b })
         BackupArchive.read(bad, staging())
@@ -128,7 +150,7 @@ class BackupArchiveTest {
     @Test
     fun newerFormatVersion_rejected() = assertFails<BackupError.UnsupportedVersion> {
         BackupArchive.read(
-            rewrite(archive(), { n, b -> if (n == BackupArchive.MANIFEST) n to b.decodeToString().replace("\"formatVersion\":1", "\"formatVersion\":2").toByteArray() else n to b }),
+            rewrite(archive(), { n, b -> if (n == BackupArchive.MANIFEST) n to b.decodeToString().replace("\"formatVersion\":1", "\"formatVersion\":3").toByteArray() else n to b }),
             staging(),
         )
     }

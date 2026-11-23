@@ -17,7 +17,7 @@ data class ManifestEntry(val path: String, val size: Long, val sha256: String)
 
 @Serializable
 data class BackupManifest(
-    val formatVersion: Int = FORMAT_VERSION,
+    val formatVersion: Int = 1,
     val appVersionName: String,
     val appVersionCode: Int,
     val createdAtMs: Long,
@@ -26,7 +26,7 @@ data class BackupManifest(
     val entries: List<ManifestEntry>,
 ) {
     companion object {
-        const val FORMAT_VERSION = 1
+        const val FORMAT_VERSION = 2
     }
 }
 
@@ -88,6 +88,7 @@ object BackupArchive {
             val manifest = BackupManifest(
                 appVersionName = meta.appVersionName,
                 appVersionCode = meta.appVersionCode,
+                formatVersion = data.requiredFormatVersion(),
                 createdAtMs = meta.createdAtMs,
                 dbSchemaVersion = meta.dbSchemaVersion,
                 counts = data.counts(),
