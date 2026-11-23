@@ -92,6 +92,8 @@ data class Asset(
     val quantity: BigDecimal?,
     val notes: String?,
     val imagePath: String?,
+    /** Yahoo Finance symbol of a tracked US stock, ETF or crypto; its value follows quantity × quoted price. */
+    val ticker: String? = null,
 )
 
 data class AssetFlow(
