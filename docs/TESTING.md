@@ -83,12 +83,12 @@ Development is done without a device. The items below validate what only the dev
 
 ### 5c. Stock and crypto quotes
 - [ ] Create "NVDA" (Stocks, ticker NVDA) with a purchase dated before June 2024: the form shows the split note and today's share count (10× the shares bought); after saving, the asset shows the quote with its date.
-- [ ] Close the app and open it again (more than 15 minutes later): the quote and its date change.
+- [ ] Close the app and open it again more than 15 minutes later: today's quote refreshes (the fetch time in the caption changes). The date changes only once a new close exists: the next trading day for stocks, or after UTC midnight for crypto.
 - [ ] In airplane mode the app keeps the last quote with its date; *Settings → Currency and exchange rate → Stocks and crypto → Update now* shows an error and the last quote stays.
-- [ ] Turning off *Fetch stock and crypto quotes* stops automatic requests; *Update now* still fetches.
+- [ ] With *Fetch stock and crypto quotes* off, reopening the app (more than 15 minutes later) leaves "Last update" in Settings → Currency and exchange rate → Stocks and crypto unchanged; *Update now* still changes it.
 - [ ] Sell all on NVDA closes the position: value 0, listed under closed positions.
-- [ ] With US$ and R$ shown, the R$ value of the asset matches quantity × quote × the PTAX of the day.
-- [ ] Create "BTC-USD" with 0,05 and a price: the asset shows "0,05 BTC × US$ …".
+- [ ] Switch the Overview flag to R$: the asset's value matches its US$ value × the PTAX shown in Settings → Currency and exchange rate.
+- [ ] Create "BTC-USD" with 0,05 and a price: the asset detail caption under the value shows "0,05 BTC × US$ … · today's quote" (the flow rows show the units and price of each purchase).
 
 ### 6. Overview
 - [ ] Net worth = cash + investments + personal assets, with the composition shown; tapping the flag in the header (right of "+") switches Brazil ⇄ USA, converts everything and shows the rate date.

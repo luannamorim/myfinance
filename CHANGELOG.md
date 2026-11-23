@@ -12,7 +12,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Changed
 - Backups that hold tracked assets or quotes use backup format 2 and are refused by older versions of the app; backups without them stay readable by those versions.
-- The privacy text and the security notes name the second destination, Yahoo Finance, and what is sent to it: only the tickers you hold.
+- The privacy text and the security notes name the second destination, Yahoo Finance, and what is sent to it: the tickers you hold, or the text you type in the ticker search.
 
 ## [1.4.1] - 2026-11-18
 

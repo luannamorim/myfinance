@@ -48,7 +48,7 @@ Updates are signed with the same key, so `adb install -r` (or installing over) k
 ## Privacy
 
 - Your data stays on the phone: no account, no server, no analytics, no ads.
-- The network requests are HTTPS GETs. One fetches the public USD/BRL rate from `api.bcb.gov.br`, carrying only a date range; turn it off in *Settings → Currency and exchange rate*. The other, only if you hold a stock or crypto, fetches its daily quotes from Yahoo Finance (`finance.yahoo.com`), sending only the tickers you hold; turn it off in *Settings → Currency and exchange rate → Stocks and crypto*. *Update now* then fetches only when you tap it.
+- The network requests are HTTPS GETs. One fetches the public USD/BRL rate from `api.bcb.gov.br`, carrying only a date range; turn it off in *Settings → Currency and exchange rate*. The other, only if you hold a stock or crypto, fetches its daily quotes from Yahoo Finance (`finance.yahoo.com`), sending only the tickers you hold, or the text you type in the ticker search; turn it off in *Settings → Currency and exchange rate → Stocks and crypto*. *Update now* then fetches only when you tap it.
 - Backups are encrypted before they leave the app. The local database relies on Android's app sandbox and file-based encryption. Details in [`docs/SECURITY.md`](docs/SECURITY.md).
 
 ## Backup to Google Drive (or any cloud)

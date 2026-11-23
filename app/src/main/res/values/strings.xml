@@ -560,7 +560,7 @@
     <string name="privacy_storage_title">Your data stays on this phone</string>
     <string name="privacy_storage">Transactions, balances, assets, valuations, rates and settings are stored only in MyFinance\'s private storage, protected by Android\'s app sandbox and file encryption. There is no account and no server.</string>
     <string name="privacy_network_title">Two network requests</string>
-    <string name="privacy_network">To convert dollars, MyFinance asks the Banco Central do Brasil (api.bcb.gov.br) for the public PTAX rate of a range of dates, over HTTPS. Nothing about you or your money is sent. If you hold stocks or crypto, it also asks Yahoo Finance (finance.yahoo.com) for their daily quotes, sending only the tickers you hold (e.g. NVDA, BTC-USD). You can turn automatic fetching off in Currency and exchange rate.</string>
+    <string name="privacy_network">To convert dollars, MyFinance asks the Banco Central do Brasil (api.bcb.gov.br) for the public PTAX rate of a range of dates, over HTTPS. Nothing about you or your money is sent. If you hold stocks or crypto, it also asks Yahoo Finance (finance.yahoo.com) for their daily quotes, sending only the tickers you hold, or the text you type in the ticker search (e.g. NVDA, BTC-USD). You can turn automatic fetching off in Currency and exchange rate.</string>
     <string name="privacy_backup_title">Encrypted backups</string>
     <string name="privacy_backup">Backups are encrypted with AES-256 and a key derived from your recovery password before they leave the app. The password is never stored. CSV exports are not encrypted.</string>
     <string name="privacy_tracking_title">No tracking</string>
@@ -639,7 +639,7 @@
     <string name="cashflow_result_of">of %1$s expected</string>
     <string name="stocks_title">Stocks and crypto</string>
     <string name="stocks_auto">Fetch stock and crypto quotes</string>
-    <string name="stocks_auto_hint">Yahoo Finance (finance.yahoo.com). Only the tickers you hold are sent (e.g. NVDA, BTC-USD).</string>
+    <string name="stocks_auto_hint">Yahoo Finance (finance.yahoo.com). Only the tickers you hold, or the text you type in the search, are sent (e.g. NVDA, BTC-USD).</string>
     <string name="stocks_none">No asset follows a quote yet.</string>
     <string name="stocks_error_network">Couldn\'t reach Yahoo Finance. The last quotes stay in use.</string>
     <string name="stocks_error_format">Yahoo Finance answered something unexpected. The last quotes stay in use.</string>

@@ -122,7 +122,7 @@ MyFinance is a single-user app where the user enters everything by hand, sees ca
 
 ## Non-functional requirements
 
-- **Offline-first:** every feature works without internet. The network use is fetching public exchange rates from `api.bcb.gov.br` and, only when an asset follows a quote, daily closes from Yahoo Finance (`query1`/`query2.finance.yahoo.com`), over HTTPS; automatic fetching can be turned off for each ("Update" still fetches on demand) and requests carry only a date range or the tickers held.
+- **Offline-first:** every feature works without internet. The network use is fetching public exchange rates from `api.bcb.gov.br` and, only when an asset follows a quote, daily closes from Yahoo Finance (`query1`/`query2.finance.yahoo.com`), over HTTPS; automatic fetching can be turned off for each ("Update" still fetches on demand) and requests carry only a date range, the tickers held or the text typed in the ticker search.
 - **Privacy:** no analytics, no account, no financial data leaves the device except in the user's own encrypted backups and explicit CSV exports. Amounts, names and notes are never logged.
 - **Correctness:** money in integer minor units (`Long`) with an explicit currency; conversions and percentages in `BigDecimal` with `HALF_EVEN`, rounded once per total. All financial calculations live in the pure `domain` layer and are unit tested.
 - **History:** historical records are never silently modified; the database has tested migrations from v1 on; restore is all-or-nothing.
