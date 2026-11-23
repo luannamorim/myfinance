@@ -36,6 +36,12 @@ object DataModule {
 
     @Provides
     @Singleton
+    @Named("price_state")
+    fun providePriceStateDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
+        PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("price_state") }
+
+    @Provides
+    @Singleton
     @Named("backup_key")
     fun provideBackupKeyDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
         PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("backup_key") }

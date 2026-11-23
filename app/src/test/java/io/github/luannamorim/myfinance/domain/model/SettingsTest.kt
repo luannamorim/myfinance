@@ -6,6 +6,13 @@ import org.junit.Test
 class SettingsTest {
 
     @Test
+    fun importJson_withoutAutoFetchPrices_defaultsOn() {
+        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+        val s = json.decodeFromString(AppSettings.serializer(), """{"themeMode":"DARK"}""")
+        assertEquals(true, s.autoFetchPrices)
+    }
+
+    @Test
     fun turningOffTheLastCurrency_isRefused() {
         val onlyBrl = AppSettings(enabledCurrencies = setOf(Currency.BRL))
         assertEquals(onlyBrl, onlyBrl.withCurrencyEnabled(Currency.BRL, false))

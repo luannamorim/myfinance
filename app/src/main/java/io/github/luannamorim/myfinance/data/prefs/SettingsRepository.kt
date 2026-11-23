@@ -32,6 +32,7 @@ class SettingsRepository @Inject constructor(
         val displayCurrency = stringPreferencesKey("display_currency")
         val enabledCurrencies = stringSetPreferencesKey("enabled_currencies")
         val autoFetchRates = booleanPreferencesKey("auto_fetch_rates")
+        val autoFetchPrices = booleanPreferencesKey("auto_fetch_prices")
         val autoBackup = booleanPreferencesKey("auto_backup")
     }
 
@@ -51,6 +52,7 @@ class SettingsRepository @Inject constructor(
             prefs[Keys.displayCurrency] = next.displayCurrency.name
             prefs[Keys.enabledCurrencies] = next.enabledCurrencies.map { it.name }.toSet()
             prefs[Keys.autoFetchRates] = next.autoFetchRates
+            prefs[Keys.autoFetchPrices] = next.autoFetchPrices
             prefs[Keys.autoBackup] = next.autoBackup
         }
     }
@@ -72,6 +74,7 @@ class SettingsRepository @Inject constructor(
             displayCurrency = this[Keys.displayCurrency]?.let { enumValueOrNull<Currency>(it) } ?: defaults.displayCurrency,
             enabledCurrencies = this[Keys.enabledCurrencies]?.mapNotNull { enumValueOrNull<Currency>(it) }?.toSet()?.takeIf { it.isNotEmpty() } ?: defaults.enabledCurrencies,
             autoFetchRates = this[Keys.autoFetchRates] ?: defaults.autoFetchRates,
+            autoFetchPrices = this[Keys.autoFetchPrices] ?: defaults.autoFetchPrices,
             autoBackup = this[Keys.autoBackup] ?: defaults.autoBackup,
         )
     }

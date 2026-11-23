@@ -34,6 +34,7 @@ class SettingsRepositoryTest {
             defaultCurrency = Currency.USD,
             displayCurrency = Currency.USD,
             autoFetchRates = false,
+            autoFetchPrices = false,
             autoBackup = false,
         )
         repo.update { changed }

@@ -23,6 +23,8 @@ data class AppSettings(
     val enabledCurrencies: Set<Currency> = Currency.entries.toSet(),
     /** Fetch USD/BRL PTAX rates from the Banco Central automatically. */
     val autoFetchRates: Boolean = true,
+    /** Fetch US stock, ETF and crypto quotes from Yahoo Finance automatically. */
+    val autoFetchPrices: Boolean = true,
     val autoBackup: Boolean = true,
 )
 
