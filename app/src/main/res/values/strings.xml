@@ -343,6 +343,27 @@
     <string name="asset_photo">Photo</string>
     <string name="asset_photo_add">Add photo</string>
     <string name="asset_photo_remove">Remove photo</string>
+    <string name="asset_mode">Value</string>
+    <string name="asset_mode_manual">Typed in</string>
+    <string name="asset_mode_quote">From quote</string>
+    <string name="asset_ticker">Ticker</string>
+    <string name="asset_ticker_hint">e.g. AAPL, VOO, BTC</string>
+    <string name="asset_ticker_change">Change</string>
+    <string name="asset_ticker_stock">Stock</string>
+    <string name="asset_ticker_etf">ETF</string>
+    <string name="asset_ticker_crypto">Crypto</string>
+    <string name="asset_ticker_search_error">No connection: can\'t search tickers now.</string>
+    <string name="asset_ticker_required">Pick a ticker</string>
+    <string name="asset_shares">Quantity</string>
+    <string name="asset_price_per_share">Price per share</string>
+    <string name="asset_price_per_coin">Price per %1$s</string>
+    <string name="asset_price_required">Enter the price you paid</string>
+    <string name="asset_number_invalid">Enter a number like %1$s</string>
+    <string name="asset_total_paid">= %1$s</string>
+    <string name="asset_today_value">Today: %1$s × %2$s = %3$s</string>
+    <string name="asset_quote_unavailable">Couldn\'t get today\'s quote. You can save anyway; it\'s fetched later.</string>
+    <string name="units_shares">%1$s shares</string>
+    <string name="asset_split_note">Includes a %1$s split on %2$s. Enter the quantity and price as of the purchase date.</string>
 
     <!-- Asset detail -->
     <string name="asset_value">Estimated value</string>

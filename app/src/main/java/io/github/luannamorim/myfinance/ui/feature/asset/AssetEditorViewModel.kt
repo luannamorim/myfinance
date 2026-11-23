@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.luannamorim.myfinance.core.format.AmountInput
+import io.github.luannamorim.myfinance.core.format.DecimalInput
 import io.github.luannamorim.myfinance.core.time.TimeSource
 import io.github.luannamorim.myfinance.core.time.today
 import io.github.luannamorim.myfinance.data.images.ImageKind
@@ -16,23 +17,36 @@ import io.github.luannamorim.myfinance.data.repository.AssetDraft
 import io.github.luannamorim.myfinance.data.repository.CategoryRepository
 import io.github.luannamorim.myfinance.data.repository.ExchangeRateRepository
 import io.github.luannamorim.myfinance.data.repository.PortfolioRepository
+import io.github.luannamorim.myfinance.data.repository.PriceRepository
+import io.github.luannamorim.myfinance.data.repository.QuotePreview
+import io.github.luannamorim.myfinance.di.ApplicationScope
 import io.github.luannamorim.myfinance.domain.fx.ExchangeRates
+import io.github.luannamorim.myfinance.domain.market.Ticker
+import io.github.luannamorim.myfinance.domain.market.TickerMatch
+import io.github.luannamorim.myfinance.domain.market.TickerType
 import io.github.luannamorim.myfinance.domain.model.AssetCategory
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.Money
+import io.github.luannamorim.myfinance.domain.model.NumberFormatStyle
+import io.github.luannamorim.myfinance.domain.portfolio.Holdings
 import io.github.luannamorim.myfinance.ui.common.ActionError
 import io.github.luannamorim.myfinance.ui.common.cashLinkAmount
 import io.github.luannamorim.myfinance.ui.common.toActionError
 import io.github.luannamorim.myfinance.ui.navigation.AssetEditorRoute
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.IOException
 import java.math.BigDecimal
 import java.time.LocalDate
 import javax.inject.Inject
@@ -77,23 +91,67 @@ data class AssetEditorUiState(
     val cashDigits: String? = null,
     val rates: ExchangeRates = ExchangeRates.EMPTY,
     val error: ActionError? = null,
-)
+    /** New assets only: valued "from quote" (a ticker, a quantity and a price per unit, in USD) instead of typed in. */
+    val tracked: Boolean = false,
+    val query: String = "",
+    val matches: List<TickerMatch> = emptyList(),
+    val searching: Boolean = false,
+    val searchError: Boolean = false,
+    val ticker: TickerMatch? = null,
+    /** Price per unit as typed in [numberFormat]; tracked mode also reads [quantity] in that format. */
+    val priceText: String = "",
+    val preview: QuotePreview? = null,
+    val previewError: Boolean = false,
+    val tickerError: Boolean = false,
+    val priceError: Boolean = false,
+    val numberFormat: NumberFormatStyle = NumberFormatStyle.COMMA_DECIMAL,
+) {
+    /** Tracked mode: the typed quantity when it is a number above zero. */
+    val trackedQuantity: BigDecimal? get() = DecimalInput.parse(quantity, numberFormat).getOrNull()?.takeIf { it.signum() > 0 }
+
+    /** Tracked mode: the typed price per unit (USD) when it is a number above zero. */
+    val unitPrice: BigDecimal? get() = DecimalInput.parse(priceText, numberFormat).getOrNull()?.takeIf { it.signum() > 0 }
+
+    /** What was paid: quantity × price per unit, rounded once. */
+    val cost: Money?
+        get() {
+            if (ticker == null) return null
+            val q = trackedQuantity ?: return null
+            val p = unitPrice ?: return null
+            return Holdings.cost(q, p, Currency.USD)
+        }
+
+    /** The typed quantity rescaled by the splits after the purchase, up to the last close. */
+    val todayQuantity: BigDecimal?
+        get() {
+            val p = preview ?: return null
+            val q = trackedQuantity ?: return null
+            return Holdings.adjust(q, p.splitsSince, acquisitionDate, p.price.date)
+        }
+
+    /** What the typed quantity is worth at the last close. */
+    val todayValue: Money? get() = preview?.let { p -> todayQuantity?.let { Money.of(it.multiply(p.price.price), Currency.USD) } }
+}
 
 @HiltViewModel
 class AssetEditorViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val portfolio: PortfolioRepository,
-    categories: CategoryRepository,
+    private val categories: CategoryRepository,
     private val settings: SettingsRepository,
     private val images: ImageStore,
     rates: ExchangeRateRepository,
     time: TimeSource,
+    private val prices: PriceRepository,
+    @ApplicationScope private val appScope: CoroutineScope,
 ) : ViewModel() {
 
     private val id = savedStateHandle.toRoute<AssetEditorRoute>().assetId
     private val form = MutableStateFlow(AssetEditorUiState(isNew = id == 0L, acquisitionDate = time.today(), today = time.today()))
     private var originalImage: String? = null
     private var saved = false
+    private var searchJob: Job? = null
+    private var previewJob: Job? = null
 
     val state: StateFlow<AssetEditorUiState> = combine(form, categories.observeAssetCategories(includeArchived = true), rates.rates) { f, cats, r ->
         f.copy(categories = cats.filter { !it.archived || it.id == f.categoryId }, imageFile = f.imagePath?.let(images::file), rates = r)
@@ -102,7 +160,8 @@ class AssetEditorViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             if (id == 0L) {
-                form.update { it.copy(loading = false, currency = settings.current().defaultCurrency) }
+                val current = settings.current()
+                form.update { it.copy(loading = false, currency = current.defaultCurrency, numberFormat = current.numberFormat) }
             } else {
                 val asset = portfolio.asset(id) ?: return@launch form.update { it.copy(done = true) }
                 originalImage = asset.imagePath
@@ -117,8 +176,69 @@ class AssetEditorViewModel @Inject constructor(
         }
     }
 
-    fun edit(transform: (AssetEditorUiState) -> AssetEditorUiState) =
-        form.update { transform(it).copy(nameError = false, categoryError = false, quantityError = false) }
+    fun edit(transform: (AssetEditorUiState) -> AssetEditorUiState) {
+        val before = form.value
+        form.update { transform(it).copy(nameError = false, categoryError = false, quantityError = false, tickerError = false, priceError = false) }
+        val after = form.value
+        // The splits since the purchase depend on its date.
+        if (after.ticker != null && after.acquisitionDate != before.acquisitionDate) loadPreview(after.ticker.symbol, after.acquisitionDate)
+    }
+
+    /** Ticker search, 300 ms after the last keystroke. */
+    fun onQuery(text: String) {
+        form.update { it.copy(query = text, tickerError = false) }
+        searchJob?.cancel()
+        if (text.isBlank()) {
+            form.update { it.copy(matches = emptyList(), searching = false, searchError = false) }
+            return
+        }
+        searchJob = viewModelScope.launch {
+            delay(SEARCH_DEBOUNCE_MS)
+            form.update { it.copy(searching = true, searchError = false) }
+            val result = runCatching { prices.search(text.trim()) }
+            result.exceptionOrNull()?.let { e -> if (e is CancellationException) throw e }
+            // Offline is reported; an odd answer just finds nothing.
+            form.update {
+                it.copy(searching = false, matches = result.getOrDefault(emptyList()), searchError = result.exceptionOrNull() is IOException)
+            }
+        }
+    }
+
+    /** Picks [match]: USD, and name, description and category from it unless already filled in; loads its quote. */
+    fun pickTicker(match: TickerMatch) {
+        form.update {
+            it.copy(
+                ticker = match, currency = Currency.USD, preview = null, previewError = false, tickerError = false,
+                name = it.name.ifBlank { Ticker.unitCode(match.symbol) ?: match.symbol },
+                description = it.description.ifBlank { match.name.removeSuffix(" USD") },
+            )
+        }
+        loadPreview(match.symbol, form.value.acquisitionDate)
+        viewModelScope.launch {
+            val key = when (match.type) {
+                TickerType.STOCK -> "asset.stocks"
+                TickerType.ETF -> "asset.etfs"
+                TickerType.CRYPTO -> "asset.cryptocurrencies"
+            }
+            val category = categories.observeAssetCategories(includeArchived = false).first().firstOrNull { it.seedKey == key } ?: return@launch
+            form.update { if (it.ticker == match) it.copy(categoryId = category.id, categoryError = false) else it }
+        }
+    }
+
+    fun clearTicker() {
+        previewJob?.cancel()
+        form.update { it.copy(ticker = null, preview = null, previewError = false) }
+    }
+
+    private fun loadPreview(symbol: String, from: LocalDate) {
+        previewJob?.cancel()
+        form.update { it.copy(preview = null, previewError = false) }
+        previewJob = viewModelScope.launch {
+            val result = runCatching { prices.preview(symbol, from) }
+            result.exceptionOrNull()?.let { e -> if (e is CancellationException) throw e }
+            form.update { if (it.ticker?.symbol == symbol) it.copy(preview = result.getOrNull(), previewError = result.isFailure) else it }
+        }
+    }
 
     /** Imports the picked photo right away (picker grants are temporary); a replaced unsaved photo is deleted. */
     fun setPhoto(uri: Uri) {
@@ -138,6 +258,7 @@ class AssetEditorViewModel @Inject constructor(
 
     fun save(): Boolean {
         val s = form.value
+        if (s.isNew && s.tracked) return saveTracked(s)
         val quantity = QuantityInput.parse(s.quantity)
         val nameError = s.name.isBlank()
         val categoryError = s.categoryId == null
@@ -168,7 +289,44 @@ class AssetEditorViewModel @Inject constructor(
         return true
     }
 
+    private fun saveTracked(s: AssetEditorUiState): Boolean {
+        val quantityError = s.trackedQuantity == null
+        val priceError = s.unitPrice == null
+        val nameError = s.name.isBlank()
+        val categoryError = s.categoryId == null
+        val tickerError = s.ticker == null
+        val cost = s.cost
+        if (tickerError || quantityError || priceError || nameError || categoryError || cost == null) {
+            form.update {
+                it.copy(tickerError = tickerError, quantityError = quantityError, priceError = priceError, nameError = nameError, categoryError = categoryError)
+            }
+            return false
+        }
+        val draft = AssetDraft(
+            name = s.name, categoryId = s.categoryId!!, currency = Currency.USD, description = s.description, institution = s.institution,
+            acquisitionDate = s.acquisitionDate, quantity = s.trackedQuantity, notes = s.notes, imagePath = s.imagePath, ticker = s.ticker!!.symbol,
+        )
+        val cash = cashLinkAmount(s.fromCash, cost, s.acquisitionDate, s.cashCurrency ?: Currency.USD, s.cashDigits, state.value.rates)
+        saved = true
+        viewModelScope.launch {
+            val result = runCatching { portfolio.createAsset(draft, cost, null, fromCash = cash) }
+            result.exceptionOrNull()?.let { e -> if (e is CancellationException) throw e }
+            if (result.isSuccess) {
+                // On the application scope: the first fetch still happens when the editor closes right away.
+                appScope.launch { prices.refresh(force = true) }
+                form.update { it.copy(done = true) }
+            } else {
+                form.update { it.copy(error = result.exceptionOrNull()?.toActionError()) }
+            }
+        }
+        return true
+    }
+
     fun dismissError() = form.update { it.copy(error = null) }
+
+    private companion object {
+        const val SEARCH_DEBOUNCE_MS = 300L
+    }
 
     override fun onCleared() {
         // A photo picked but never saved would be orphaned.

@@ -346,6 +346,27 @@
     <string name="asset_photo">Foto</string>
     <string name="asset_photo_add">Adicionar foto</string>
     <string name="asset_photo_remove">Remover foto</string>
+    <string name="asset_mode">Valor</string>
+    <string name="asset_mode_manual">À mão</string>
+    <string name="asset_mode_quote">Pela cotação</string>
+    <string name="asset_ticker">Código</string>
+    <string name="asset_ticker_hint">ex.: AAPL, VOO, BTC</string>
+    <string name="asset_ticker_change">Trocar</string>
+    <string name="asset_ticker_stock">Ação</string>
+    <string name="asset_ticker_etf">ETF</string>
+    <string name="asset_ticker_crypto">Cripto</string>
+    <string name="asset_ticker_search_error">Sem conexão: não dá para buscar o código agora.</string>
+    <string name="asset_ticker_required">Escolha um código</string>
+    <string name="asset_shares">Quantidade</string>
+    <string name="asset_price_per_share">Preço por ação</string>
+    <string name="asset_price_per_coin">Preço por %1$s</string>
+    <string name="asset_price_required">Informe o preço que você pagou</string>
+    <string name="asset_number_invalid">Informe um número como %1$s</string>
+    <string name="asset_total_paid">= %1$s</string>
+    <string name="asset_today_value">Hoje: %1$s × %2$s = %3$s</string>
+    <string name="asset_quote_unavailable">Não deu para buscar a cotação de hoje. Dá para salvar mesmo assim; ela é buscada depois.</string>
+    <string name="units_shares">%1$s ações</string>
+    <string name="asset_split_note">Inclui desdobramento %1$s em %2$s. Informe a quantidade e o preço da data da compra.</string>
 
     <!-- Asset detail -->
     <string name="asset_value">Valor estimado</string>

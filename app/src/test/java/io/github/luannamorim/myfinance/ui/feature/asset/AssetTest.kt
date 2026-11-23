@@ -25,6 +25,7 @@ import io.github.luannamorim.myfinance.data.repository.ExchangeRateRepository
 import io.github.luannamorim.myfinance.data.repository.PortfolioRepository
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.FlowKind
+import io.github.luannamorim.myfinance.testutil.FakeQuoteClient
 import io.github.luannamorim.myfinance.testutil.MainDispatcherRule
 import io.github.luannamorim.myfinance.testutil.PHONE_TALL
 import io.github.luannamorim.myfinance.testutil.awaitUntil
@@ -32,6 +33,7 @@ import io.github.luannamorim.myfinance.testutil.brl
 import io.github.luannamorim.myfinance.testutil.d
 import io.github.luannamorim.myfinance.testutil.inMemoryDb
 import io.github.luannamorim.myfinance.testutil.snapBothThemes
+import io.github.luannamorim.myfinance.testutil.testPrices
 import io.github.luannamorim.myfinance.testutil.testSettings
 import io.github.luannamorim.myfinance.testutil.usd
 import io.github.luannamorim.myfinance.ui.navigation.AssetDetailRoute
@@ -42,6 +44,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.TestScope
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -80,8 +83,15 @@ class AssetTest {
 
     private fun category(key: String) = runBlocking { db.categoryDao().getAllAssetCategories().first { it.seedKey == key }.id }
 
+    private val quotes = FakeQuoteClient(
+        chart = { _, _ -> javaClass.getResource("/yahoo/nvda_three_bars.json")!!.readText() },
+        search = { javaClass.getResource("/yahoo/search_nvd.json")!!.readText() },
+    )
+    private val prices = testPrices(db, settings, time, quotes)
+    private val appScope = TestScope()
+
     private fun editor(route: AssetEditorRoute = AssetEditorRoute()) =
-        AssetEditorViewModel(SavedStateHandle(route = route), portfolio, categories, settings, images, rates, time)
+        AssetEditorViewModel(SavedStateHandle(route = route), portfolio, categories, settings, images, rates, time, prices, appScope)
 
     private fun detail(id: Long) = AssetDetailViewModel(SavedStateHandle(route = AssetDetailRoute(id)), portfolio, rates, settings, images, time)
 
@@ -101,6 +111,33 @@ class AssetTest {
         assertEquals("Tesouro Selic", asset.name)
         assertEquals(brl("5000.00"), data.flowsOf(asset).single().amount)
         assertEquals(brl("5120.00"), data.valuationsOf(asset).single().value)
+    }
+
+    @Test
+    fun createTracked_viaUi() {
+        val vm = editor()
+        compose.setContent { FinanceTheme { AssetEditorScreen(onClose = {}, viewModel = vm) } }
+        compose.waitUntil(5_000) { vm.state.value.categories.isNotEmpty() && !vm.state.value.loading }
+        compose.onNodeWithText("From quote").performClick()
+        compose.onNodeWithText("Ticker").performTextInput("nvd")
+        main.dispatcher.scheduler.advanceTimeBy(300)
+        main.dispatcher.scheduler.runCurrent()
+        compose.waitUntil(5_000) { vm.state.value.matches.isNotEmpty() }
+        compose.onNodeWithText("NVDA").performClick()
+        compose.waitUntil(5_000) { vm.state.value.categoryId != null }
+        compose.onNodeWithText("Quantity").performTextInput("10")
+        compose.onNodeWithText("Price per share").performTextInput("121,28")
+        compose.onNodeWithText("Save").performClick()
+        compose.waitUntil(5_000) { vm.state.value.done }
+        val data = runBlocking { portfolio.data.first() }
+        val asset = data.assets.single()
+        assertEquals("NVDA", asset.ticker)
+        assertEquals(Currency.USD, asset.currency)
+        assertEquals(category("asset.stocks"), asset.categoryId)
+        val initial = data.flowsOf(asset).single()
+        assertEquals(FlowKind.INITIAL, initial.kind)
+        assertEquals(usd("1212.80"), initial.amount)
+        assertEquals(BigDecimal("10"), initial.quantityDelta)
     }
 
     @Test
