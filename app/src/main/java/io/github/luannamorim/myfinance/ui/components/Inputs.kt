@@ -33,12 +33,14 @@ fun FinanceTextField(
     suffix: String? = null,
     prefix: String? = null,
     visualTransformation: VisualTransformation = VisualTransformation.None,
+    enabled: Boolean = true,
 ) {
     val c = FinanceTheme.colors
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier.fillMaxWidth(),
+        enabled = enabled,
         label = { Text(label) },
         placeholder = placeholder?.let { { Text(it, color = c.textTertiary) } },
         isError = isError,
@@ -62,6 +64,11 @@ fun FinanceTextField(
             errorBorderColor = c.danger,
             errorLabelColor = c.danger,
             errorSupportingTextColor = c.danger,
+            disabledContainerColor = c.surface,
+            disabledBorderColor = c.outline,
+            disabledLabelColor = c.textTertiary,
+            disabledTextColor = c.textSecondary,
+            disabledPrefixColor = c.textTertiary,
         ),
     )
 }

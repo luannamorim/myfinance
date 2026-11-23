@@ -2,6 +2,7 @@ package io.github.luannamorim.myfinance.ui.feature.asset
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -16,17 +17,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import io.github.luannamorim.myfinance.R
 import io.github.luannamorim.myfinance.core.format.AmountInput
+import io.github.luannamorim.myfinance.core.format.DecimalInput
 import io.github.luannamorim.myfinance.domain.fx.ExchangeRates
+import io.github.luannamorim.myfinance.domain.market.Ticker
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.FlowKind
 import io.github.luannamorim.myfinance.domain.model.Money
+import io.github.luannamorim.myfinance.domain.portfolio.Holdings
 import io.github.luannamorim.myfinance.ui.common.CashLinkFields
+import io.github.luannamorim.myfinance.ui.common.LocalFormats
 import io.github.luannamorim.myfinance.ui.common.cashLinkAmount
+import io.github.luannamorim.myfinance.ui.common.unitsLabel
 import io.github.luannamorim.myfinance.ui.components.ChoiceRow
 import io.github.luannamorim.myfinance.ui.components.CurrencyInput
 import io.github.luannamorim.myfinance.ui.components.DateSelector
@@ -158,6 +165,116 @@ fun FlowSheet(
                 onSave(kind, date, Money(minor, currency), quantityResult.getOrNull(), note.ifBlank { null }, newValue, cash)
             },
             enabled = minor > 0 && quantityResult.isSuccess && (!linked || cash != null),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/**
+ * Buy or sell shares or coins of a tracked asset: quantity × price per unit, in USD. Selling more than [held] on
+ * the chosen date ([heldOn]) is blocked here; a back-dated sale that leaves a later one short is refused by the
+ * repository. Selling everything passes a null quantity: the repository counts what is held.
+ */
+@Composable
+fun TradeSheet(
+    sell: Boolean,
+    ticker: String,
+    held: BigDecimal,
+    today: LocalDate,
+    minDate: LocalDate?,
+    onSave: (FlowKind, LocalDate, Money, BigDecimal?, String?, Money?) -> Unit,
+    onDismiss: () -> Unit,
+    rates: ExchangeRates,
+    heldOn: (LocalDate) -> BigDecimal = { held },
+) {
+    val c = FinanceTheme.colors
+    val money = LocalFormats.current.money
+    val currency = Currency.USD
+    var kind by rememberSaveable { mutableStateOf(if (sell) FlowKind.PARTIAL_DISPOSAL else FlowKind.CONTRIBUTION) }
+    var quantityText by rememberSaveable { mutableStateOf("") }
+    var priceText by rememberSaveable { mutableStateOf("") }
+    var date by rememberSaveable { mutableStateOf(today) }
+    var linked by rememberSaveable { mutableStateOf(false) }
+    var cashCurrency by rememberSaveable { mutableStateOf<Currency>(currency) }
+    var cashDigits by rememberSaveable { mutableStateOf<String?>(null) }
+    var note by rememberSaveable { mutableStateOf("") }
+
+    val all = kind == FlowKind.FULL_DISPOSAL
+    val heldThen = heldOn(date)
+    val quantityParsed = DecimalInput.parse(quantityText, money.style)
+    val priceParsed = DecimalInput.parse(priceText, money.style)
+    val quantity = if (all) heldThen else quantityParsed.getOrNull()?.takeIf { it.signum() > 0 }
+    val price = priceParsed.getOrNull()?.takeIf { it.signum() > 0 }
+    val over = sell && !all && quantity != null && quantity > heldThen
+    val total = if (quantity != null && price != null) Holdings.cost(quantity, price, currency).takeIf { it.minor > 0 } else null
+    val example = DecimalInput.example(money.style)
+    val coin = Ticker.unitCode(ticker)
+
+    Sheet(stringResource(if (sell) R.string.trade_title_sell else R.string.trade_title_buy), onDismiss) {
+        if (sell) {
+            ChoiceRow(
+                "",
+                listOf(
+                    FlowKind.PARTIAL_DISPOSAL to stringResource(R.string.trade_sell_some),
+                    FlowKind.FULL_DISPOSAL to stringResource(R.string.trade_sell_all),
+                ),
+                kind,
+                { kind = it },
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.Top) {
+            FinanceTextField(
+                value = if (all) money.formatQuantity(heldThen) else quantityText,
+                onValueChange = { quantityText = it },
+                label = stringResource(R.string.asset_shares),
+                modifier = Modifier.weight(1f),
+                keyboardType = KeyboardType.Decimal,
+                isError = over || quantityParsed.isFailure,
+                supportingText = if (!all && quantityParsed.isFailure) stringResource(R.string.asset_number_invalid, example) else null,
+                enabled = !all,
+            )
+            FinanceTextField(
+                value = priceText,
+                onValueChange = { priceText = it },
+                label = if (coin != null) stringResource(R.string.asset_price_per_coin, coin) else stringResource(R.string.asset_price_per_share),
+                modifier = Modifier.weight(1f),
+                keyboardType = KeyboardType.Decimal,
+                prefix = currency.symbol + " ",
+                isError = priceParsed.isFailure,
+                supportingText = if (priceParsed.isFailure) stringResource(R.string.asset_number_invalid, example) else null,
+            )
+        }
+        val totalText = total?.let { stringResource(R.string.asset_total_paid, money.format(it)) }
+        if (over) {
+            Text(stringResource(R.string.trade_held_exceeded, unitsLabel(heldThen, ticker)), style = FinanceTheme.type.caption, color = c.danger)
+        } else {
+            val held = when {
+                !sell -> null
+                all -> stringResource(R.string.trade_sell_all_hint, unitsLabel(heldThen, ticker))
+                else -> stringResource(R.string.trade_held, unitsLabel(heldThen, ticker), LocalFormats.current.dates.date(date))
+            }
+            val caption = listOfNotNull(held, totalText).joinToString(" · ")
+            if (caption.isNotEmpty()) Text(caption, style = FinanceTheme.type.caption, color = c.textSecondary)
+        }
+        DateSelector(stringResource(R.string.flow_date), date, { date = it }, maxDate = today, minDate = minDate)
+        CashLinkFields(
+            linked = linked,
+            onLinked = { linked = it },
+            inflow = !sell,
+            assetAmount = total,
+            date = date,
+            cashCurrency = cashCurrency,
+            onCashCurrency = { cashCurrency = it; cashDigits = null },
+            cashDigits = cashDigits,
+            onCashDigits = { cashDigits = it },
+            rates = rates,
+        )
+        FinanceTextField(value = note, onValueChange = { note = it }, label = stringResource(R.string.confirm_note))
+        val cash = total?.let { cashLinkAmount(linked, it, date, cashCurrency, cashDigits, rates) }
+        PrimaryButton(
+            stringResource(R.string.action_save),
+            onClick = { if (total != null) onSave(kind, date, total, if (all) null else quantity, note.ifBlank { null }, cash) },
+            enabled = total != null && !over && (!linked || cash != null),
             modifier = Modifier.fillMaxWidth(),
         )
     }

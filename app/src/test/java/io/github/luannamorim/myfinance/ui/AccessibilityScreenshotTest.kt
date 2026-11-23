@@ -5,10 +5,14 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.luannamorim.myfinance.core.time.FakeTimeSource
 import io.github.luannamorim.myfinance.domain.cash.CashLedger
 import io.github.luannamorim.myfinance.domain.cash.HistoryFilter
 import io.github.luannamorim.myfinance.domain.cash.RecurrenceRule
 import io.github.luannamorim.myfinance.domain.fx.ExchangeRates
+import io.github.luannamorim.myfinance.domain.market.MarketData
+import io.github.luannamorim.myfinance.domain.market.PricePoint
+import io.github.luannamorim.myfinance.domain.market.SymbolHistory
 import io.github.luannamorim.myfinance.domain.model.Asset
 import io.github.luannamorim.myfinance.domain.model.AssetCategory
 import io.github.luannamorim.myfinance.domain.model.AssetFlow
@@ -54,6 +58,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import java.math.BigDecimal
 import java.time.YearMonth
 
 /** Large fonts on a small phone, and the tablet layout: nothing clipped, amounts readable aloud. */
@@ -130,6 +135,25 @@ class AccessibilityScreenshotTest {
     fun assetDetail_largeFont() {
         compose.snapBothThemes("a11y_asset_detail_font150") {
             AssetDetailContent(assetDetailState(portfolio, tesouro.id, rates, Currency.BRL, today) { null }, AssetDetailActions())
+        }
+    }
+
+    @Test
+    fun assetDetailQuote_largeFont() {
+        val nvda = Asset(12, "NVDA", 3, Currency.USD, null, "Avenue", d("2026-03-02"), null, null, null, ticker = "NVDA")
+        val data = PortfolioData(
+            assets = listOf(nvda),
+            flows = mapOf(
+                nvda.id to listOf(
+                    AssetFlow(5, nvda.id, FlowKind.INITIAL, d("2026-03-02"), usd("17700.00"), BigDecimal("100"), null),
+                    AssetFlow(6, nvda.id, FlowKind.CONTRIBUTION, d("2026-09-15"), usd("3540.00"), BigDecimal("20"), null),
+                ),
+            ),
+            categories = listOf(AssetCategory(3, null, AssetGroup.INVESTMENT, "show_chart", "asset.stocks", false, 0)),
+            market = MarketData(mapOf("NVDA" to SymbolHistory(listOf(PricePoint(d("2026-11-12"), BigDecimal("182.40"), FakeTimeSource.at("2026-11-12", "12:05"))), emptyList()))),
+        )
+        compose.snapBothThemes("a11y_asset_detail_quote_font150") {
+            AssetDetailContent(assetDetailState(data, nvda.id, rates, Currency.BRL, today, FakeTimeSource.SAO_PAULO) { null }, AssetDetailActions())
         }
     }
 

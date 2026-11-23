@@ -33,11 +33,13 @@ import io.github.luannamorim.myfinance.domain.fx.Total
 import io.github.luannamorim.myfinance.domain.model.AssetFlow
 import io.github.luannamorim.myfinance.domain.model.FlowKind
 import io.github.luannamorim.myfinance.domain.model.Money
+import io.github.luannamorim.myfinance.domain.portfolio.AssetSnapshot
 import io.github.luannamorim.myfinance.ui.common.ActionErrorDialog
 import io.github.luannamorim.myfinance.ui.common.CategoryIcons
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
 import io.github.luannamorim.myfinance.ui.common.StoredImage
 import io.github.luannamorim.myfinance.ui.common.displayName
+import io.github.luannamorim.myfinance.ui.common.unitsLabel
 import io.github.luannamorim.myfinance.ui.components.AdaptiveRow
 import io.github.luannamorim.myfinance.ui.components.AmountDisplay
 import io.github.luannamorim.myfinance.ui.components.AmountTone
@@ -55,7 +57,11 @@ import io.github.luannamorim.myfinance.ui.theme.FinanceShapes
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import io.github.luannamorim.myfinance.ui.theme.Spacing
 import java.math.BigDecimal
+import java.math.MathContext
+import java.math.RoundingMode
+import java.time.Instant
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 data class AssetDetailActions(
     val onBack: () -> Unit = {},
@@ -100,6 +106,17 @@ fun FlowKind.label(): String = stringResource(
     },
 )
 
+/** Flow titles of a tracked asset: buys and sales. */
+@Composable
+fun FlowKind.tradeLabel(): String = stringResource(
+    when (this) {
+        FlowKind.INITIAL -> R.string.flow_buy_initial
+        FlowKind.CONTRIBUTION -> R.string.flow_buy
+        FlowKind.WITHDRAWAL, FlowKind.PARTIAL_DISPOSAL -> R.string.flow_sell
+        FlowKind.FULL_DISPOSAL -> R.string.flow_sell_all
+    },
+)
+
 @Composable
 fun AssetDetailContent(state: AssetDetailUiState, actions: AssetDetailActions) {
     val c = FinanceTheme.colors
@@ -132,13 +149,14 @@ fun AssetDetailContent(state: AssetDetailUiState, actions: AssetDetailActions) {
             Text(
                 when {
                     s.closed -> stringResource(R.string.asset_closed)
+                    state.tracked -> quoteCaption(state, s)
                     s.lastValuationDate != null -> stringResource(R.string.asset_last_valuation, formats.dates.date(s.lastValuationDate))
                     else -> stringResource(R.string.asset_no_valuation)
                 },
                 style = FinanceTheme.type.caption,
                 color = c.textSecondary,
             )
-            if (s.carriedForward) Text(stringResource(R.string.asset_carried), style = FinanceTheme.type.caption, color = c.textTertiary)
+            if (s.carriedForward && !state.tracked) Text(stringResource(R.string.asset_carried), style = FinanceTheme.type.caption, color = c.textTertiary)
             Spacer(Modifier.height(Spacing.m))
             Line(stringResource(R.string.asset_invested_net), s.netInvested)
             Line(stringResource(R.string.asset_contributed), s.contributed)
@@ -164,6 +182,11 @@ fun AssetDetailContent(state: AssetDetailUiState, actions: AssetDetailActions) {
 
         if (s.closed) {
             Text(stringResource(R.string.asset_closed_hint), style = FinanceTheme.type.caption, color = c.textSecondary)
+        } else if (state.tracked) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                PrimaryButton(stringResource(R.string.asset_buy), onClick = { actions.onOpenSheet(AssetSheet.CONTRIBUTE) }, modifier = Modifier.weight(1f))
+                SecondaryButton(stringResource(R.string.asset_sell), onClick = { actions.onOpenSheet(AssetSheet.WITHDRAW) }, modifier = Modifier.weight(1f))
+            }
         } else {
             PrimaryButton(stringResource(R.string.asset_update_value), onClick = { actions.onOpenSheet(AssetSheet.VALUATION) }, modifier = Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -192,7 +215,7 @@ fun AssetDetailContent(state: AssetDetailUiState, actions: AssetDetailActions) {
             }
         }
 
-        if (state.valuations.isNotEmpty()) {
+        if (!state.tracked && state.valuations.isNotEmpty()) {
             SectionHeader(stringResource(R.string.asset_valuations), Modifier.padding(top = Spacing.s))
             state.valuations.forEach { row ->
                 FinanceCard(Modifier.fillMaxWidth(), contentPadding = Spacing.m) {
@@ -221,14 +244,28 @@ fun AssetDetailContent(state: AssetDetailUiState, actions: AssetDetailActions) {
             }
         }
 
-        SectionHeader(stringResource(R.string.asset_flows), Modifier.padding(top = Spacing.s))
-        state.flows.forEach { flow -> AssetFlowRow(flow, actions.onDeleteFlow) }
+        SectionHeader(stringResource(if (state.tracked) R.string.asset_trades else R.string.asset_flows), Modifier.padding(top = Spacing.s))
+        state.flows.forEach { flow -> AssetFlowRow(flow, asset.ticker, actions.onDeleteFlow) }
     }
 
     val s = state.snapshot
     if (asset != null && s != null) {
         val minDate = state.flows.firstOrNull { it.kind == FlowKind.INITIAL }?.date
-        when (state.sheet) {
+        val ticker = asset.ticker
+        val trade = state.sheet == AssetSheet.CONTRIBUTE || state.sheet == AssetSheet.WITHDRAW
+        if (ticker != null && trade) {
+            TradeSheet(
+                sell = state.sheet == AssetSheet.WITHDRAW,
+                ticker = ticker,
+                held = state.held ?: BigDecimal.ZERO,
+                today = state.today,
+                minDate = minDate,
+                onSave = { kind, date, amount, quantity, note, cash -> actions.onAddFlow(kind, date, amount, quantity, note, null, cash) },
+                onDismiss = { actions.onOpenSheet(null) },
+                rates = state.rates,
+                heldOn = state::heldOn,
+            )
+        } else when (state.sheet) {
             AssetSheet.VALUATION -> ValuationSheet(asset.currency, state.today, minDate, state.valuationDates, actions.onAddValuation) { actions.onOpenSheet(null) }
             AssetSheet.CONTRIBUTE -> FlowSheet(false, asset.currency, state.today, minDate, s.value, actions.onAddFlow, { actions.onOpenSheet(null) }, state.rates)
             AssetSheet.WITHDRAW -> FlowSheet(true, asset.currency, state.today, minDate, s.value, actions.onAddFlow, { actions.onOpenSheet(null) }, state.rates)
@@ -247,6 +284,24 @@ fun AssetDetailContent(state: AssetDetailUiState, actions: AssetDetailActions) {
         )
     }
 }
+
+/** "120 shares × US$ 182.40 · today's quote, 12:05", "… · close of 21/11/2026", or waiting for the first quote. */
+@Composable
+private fun quoteCaption(state: AssetDetailUiState, s: AssetSnapshot): String {
+    val formats = LocalFormats.current
+    val price = s.price
+    val quantity = s.quantity
+    val ticker = s.asset.ticker
+    if (price == null || quantity == null || ticker == null) return stringResource(R.string.asset_quote_waiting)
+    val units = unitsLabel(quantity, ticker)
+    val unitPrice = formats.money.formatUnitPrice(price.price, s.asset.currency)
+    if (price.date != state.today) return stringResource(R.string.asset_quote_close, units, unitPrice, formats.dates.date(price.date))
+    val time = price.fetchedAtMs?.let { Instant.ofEpochMilli(it).atZone(state.zone).format(TIME) }
+    // Without the fetch time, "…today's quote, " loses its dangling comma.
+    return stringResource(R.string.asset_quote_today, units, unitPrice, time.orEmpty()).let { if (time == null) it.trimEnd(',', ' ') else it }
+}
+
+private val TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 @Composable
 private fun Line(label: String, money: Money, tone: AmountTone = AmountTone.NEUTRAL, signed: Boolean = false) {
@@ -267,7 +322,7 @@ private fun TotalLine(label: String, total: Total, tone: AmountTone = AmountTone
 }
 
 @Composable
-private fun AssetFlowRow(flow: AssetFlow, onDelete: (Long) -> Unit) {
+private fun AssetFlowRow(flow: AssetFlow, ticker: String?, onDelete: (Long) -> Unit) {
     val c = FinanceTheme.colors
     val formats = LocalFormats.current
     var confirmDelete by rememberSaveable(flow.id) { mutableStateOf(false) }
@@ -277,9 +332,15 @@ private fun AssetFlowRow(flow: AssetFlow, onDelete: (Long) -> Unit) {
             AdaptiveRow(
                 main = {
                     Column {
-                        Text(flow.kind.label(), style = FinanceTheme.type.bodyStrong, color = c.textPrimary)
+                        Text(if (ticker != null) flow.kind.tradeLabel() else flow.kind.label(), style = FinanceTheme.type.bodyStrong, color = c.textPrimary)
                         val cash = if (linked) stringResource(if (flow.kind.inflow) R.string.flow_from_cash else R.string.flow_to_cash) else null
-                        Text(listOfNotNull(formats.dates.date(flow.date), cash, flow.note).joinToString(" · "), style = FinanceTheme.type.caption, color = c.textSecondary)
+                        val quantity = flow.quantityDelta?.takeIf { it.signum() > 0 }
+                        val units = if (ticker == null || quantity == null) null else quantity.let { q ->
+                            // Price per unit to 7 significant digits, like quotes: a coin worth US$ 0.0000041 keeps its digits.
+                            val unitPrice = flow.amount.toBigDecimal().divide(q, MathContext(7, RoundingMode.HALF_EVEN))
+                            stringResource(R.string.flow_units_row, unitsLabel(q, ticker), formats.money.formatUnitPrice(unitPrice, flow.amount.currency))
+                        }
+                        Text(listOfNotNull(formats.dates.date(flow.date), units, cash, flow.note).joinToString(" · "), style = FinanceTheme.type.caption, color = c.textSecondary)
                     }
                 },
                 trailing = { AmountDisplay(if (flow.kind.inflow) flow.amount else -flow.amount, signed = flow.kind.inflow) },

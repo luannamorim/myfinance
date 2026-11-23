@@ -13,6 +13,7 @@ import io.github.luannamorim.myfinance.data.repository.ExchangeRateRepository
 import io.github.luannamorim.myfinance.data.repository.PortfolioRepository
 import io.github.luannamorim.myfinance.domain.fx.Converter
 import io.github.luannamorim.myfinance.domain.fx.ExchangeRates
+import io.github.luannamorim.myfinance.domain.market.Split
 import io.github.luannamorim.myfinance.domain.model.Asset
 import io.github.luannamorim.myfinance.domain.model.AssetCategory
 import io.github.luannamorim.myfinance.domain.model.AssetFlow
@@ -21,6 +22,7 @@ import io.github.luannamorim.myfinance.domain.model.FlowKind
 import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.domain.portfolio.AssetSnapshot
 import io.github.luannamorim.myfinance.domain.portfolio.ConvertedSnapshot
+import io.github.luannamorim.myfinance.domain.portfolio.Holdings
 import io.github.luannamorim.myfinance.domain.portfolio.Period
 import io.github.luannamorim.myfinance.domain.portfolio.PortfolioCalculator
 import io.github.luannamorim.myfinance.domain.portfolio.PortfolioData
@@ -41,8 +43,10 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.math.BigDecimal
 import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 
+/** CONTRIBUTE and WITHDRAW are "Buy" and "Sell" for a tracked asset. */
 enum class AssetSheet { VALUATION, CONTRIBUTE, WITHDRAW }
 
 data class AssetDetailUiState(
@@ -63,13 +67,32 @@ data class AssetDetailUiState(
     val gone: Boolean = false,
     val rates: ExchangeRates = ExchangeRates.EMPTY,
     val error: ActionError? = null,
+    /** A quoted asset ([Asset.ticker]): buys and sells by quantity, no valuations. */
+    val tracked: Boolean = false,
+    /** Shares or coins held today (tracked assets); null when unknown. */
+    val held: BigDecimal? = null,
+    /** Splits of the ticker, to know what was held on a past date. */
+    val splits: List<Split> = emptyList(),
+    /** The device zone, for the time of today's quote. */
+    val zone: ZoneId = ZoneId.systemDefault(),
 ) {
     val closed: Boolean get() = snapshot?.closed == true
     val valuationDates: Set<LocalDate> get() = valuations.map { it.valuation.date }.toSet()
+
+    /** Shares or coins held at the end of [date]; [held] when the flows don't say. */
+    fun heldOn(date: LocalDate): BigDecimal = Holdings.quantityAt(flows, splits, date) ?: held ?: BigDecimal.ZERO
 }
 
-fun assetDetailState(data: PortfolioData, assetId: Long, rates: ExchangeRates, display: Currency, today: LocalDate, imageFile: (String) -> File?): AssetDetailUiState {
-    val asset = data.assets.firstOrNull { it.id == assetId } ?: return AssetDetailUiState(loading = false, gone = true, today = today)
+fun assetDetailState(
+    data: PortfolioData,
+    assetId: Long,
+    rates: ExchangeRates,
+    display: Currency,
+    today: LocalDate,
+    zone: ZoneId = ZoneId.systemDefault(),
+    imageFile: (String) -> File?,
+): AssetDetailUiState {
+    val asset = data.assets.firstOrNull { it.id == assetId } ?: return AssetDetailUiState(loading = false, gone = true, today = today, zone = zone)
     val flows = data.flowsOf(asset)
     val valuations = data.valuationsOf(asset)
     val converter = Converter(rates)
@@ -88,6 +111,10 @@ fun assetDetailState(data: PortfolioData, assetId: Long, rates: ExchangeRates, d
         imageFile = asset.imagePath?.let(imageFile),
         today = today,
         rates = rates,
+        tracked = asset.ticker != null,
+        held = snapshot?.quantity,
+        splits = asset.ticker?.let(data.market::splitsOf).orEmpty(),
+        zone = zone,
     )
 }
 
@@ -106,7 +133,7 @@ class AssetDetailViewModel @Inject constructor(
     private val error = MutableStateFlow<ActionError?>(null)
 
     val state: StateFlow<AssetDetailUiState> = combine(portfolio.data, rates.rates, settings.settings, sheet, error) { data, r, s, open, e ->
-        assetDetailState(data, id, r, s.displayCurrency, time.today(), images::file).copy(sheet = open, error = e)
+        assetDetailState(data, id, r, s.displayCurrency, time.today(), time.zone(), images::file).copy(sheet = open, error = e)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AssetDetailUiState())
 
     fun open(value: AssetSheet?) {
@@ -118,7 +145,10 @@ class AssetDetailViewModel @Inject constructor(
         perform { portfolio.addValuation(id, date, value, note) }
     }
 
-    /** [cash]: what left cash (a contribution) or entered it (a withdrawal), recorded as a transfer. */
+    /**
+     * [cash]: what left cash (a contribution) or entered it (a withdrawal), recorded as a transfer. A tracked asset
+     * passes the quantity bought or sold (null for selling everything) and no [newValue].
+     */
     fun addFlow(kind: FlowKind, date: LocalDate, amount: Money, quantity: BigDecimal?, note: String?, newValue: Money?, cash: Money?) {
         sheet.update { null }
         perform { portfolio.addFlow(id, kind, date, amount, quantity, note, newValue, cash) }

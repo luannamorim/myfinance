@@ -1,6 +1,9 @@
 package io.github.luannamorim.myfinance.ui.feature.asset
 
 import android.content.Context
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -14,7 +17,10 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.navigation.testing.invoke
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.github.takahirom.roborazzi.captureScreenRoboImage
+import io.github.luannamorim.myfinance.core.format.Formats
 import io.github.luannamorim.myfinance.core.time.FakeTimeSource
+import io.github.luannamorim.myfinance.data.db.entity.AssetPriceEntity
 import io.github.luannamorim.myfinance.data.images.ImageStore
 import io.github.luannamorim.myfinance.data.prefs.RateStateStore
 import io.github.luannamorim.myfinance.data.rates.RateClient
@@ -23,11 +29,16 @@ import io.github.luannamorim.myfinance.data.repository.BackupTrigger
 import io.github.luannamorim.myfinance.data.repository.CategoryRepository
 import io.github.luannamorim.myfinance.data.repository.ExchangeRateRepository
 import io.github.luannamorim.myfinance.data.repository.PortfolioRepository
+import io.github.luannamorim.myfinance.domain.model.AppSettings
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.FlowKind
+import io.github.luannamorim.myfinance.domain.model.Money
+import io.github.luannamorim.myfinance.domain.model.NumberFormatStyle
+import io.github.luannamorim.myfinance.domain.model.PriceSource
 import io.github.luannamorim.myfinance.testutil.FakeQuoteClient
 import io.github.luannamorim.myfinance.testutil.MainDispatcherRule
 import io.github.luannamorim.myfinance.testutil.PHONE_TALL
+import io.github.luannamorim.myfinance.testutil.SCREENSHOT_DIR
 import io.github.luannamorim.myfinance.testutil.awaitUntil
 import io.github.luannamorim.myfinance.testutil.brl
 import io.github.luannamorim.myfinance.testutil.d
@@ -36,6 +47,7 @@ import io.github.luannamorim.myfinance.testutil.snapBothThemes
 import io.github.luannamorim.myfinance.testutil.testPrices
 import io.github.luannamorim.myfinance.testutil.testSettings
 import io.github.luannamorim.myfinance.testutil.usd
+import io.github.luannamorim.myfinance.ui.common.LocalFormats
 import io.github.luannamorim.myfinance.ui.navigation.AssetDetailRoute
 import io.github.luannamorim.myfinance.ui.navigation.AssetEditorRoute
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
@@ -54,6 +66,7 @@ import org.robolectric.annotation.GraphicsMode
 import java.io.File
 import java.math.BigDecimal
 import java.nio.file.Files
+import java.util.Locale
 
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -212,5 +225,121 @@ class AssetTest {
         compose.snapBothThemes("asset_editor") {
             AssetEditorContent(state.copy(name = "VOO", categoryId = category("asset.etfs"), currency = Currency.USD, investedDigits = "100000", institution = "Avenue"), AssetEditorActions())
         }
+    }
+
+    // Tracked assets: quantity × quote.
+
+    private fun tracked(symbol: String = "AAPL", quantity: String = "2.5", date: String = "2026-11-02", paid: String = "800.00", category: String = "asset.stocks") = runBlocking {
+        portfolio.createAsset(AssetDraft(symbol, category(category), Currency.USD, acquisitionDate = d(date), quantity = BigDecimal(quantity), ticker = symbol), usd(paid), null)
+    }
+
+    private fun price(symbol: String, date: String, price: String, fetchedAtMs: Long = 1) = runBlocking {
+        db.marketDao().upsertPrices(listOf(AssetPriceEntity(symbol = symbol, date = d(date).toEpochDay(), price = price, source = PriceSource.YAHOO, fetchedAtMs = fetchedAtMs)))
+    }
+
+    /** "2.5 shares × US$ 347.19": the 1,234.56 number format, in English. */
+    @Composable
+    private fun DotFormat(content: @Composable () -> Unit) =
+        CompositionLocalProvider(LocalFormats provides Formats.from(AppSettings(numberFormat = NumberFormatStyle.DOT_DECIMAL), Locale.US), content = content)
+
+    private fun showDetail(vm: AssetDetailViewModel) {
+        compose.setContent { FinanceTheme { DotFormat { AssetDetailScreen(onBack = {}, onEdit = {}, viewModel = vm) } } }
+        compose.waitUntil(5_000) { vm.state.value.snapshot != null }
+    }
+
+    @Test
+    fun tracked_detailShowsQuoteCaption() {
+        val id = tracked()
+        price("AAPL", "2026-11-10", "347.19")
+        val vm = detail(id)
+        showDetail(vm)
+        compose.waitUntil(5_000) { vm.state.value.snapshot?.price != null }
+        compose.onNodeWithText("2.5 shares × US$\u00a0347.19 · close of ", substring = true).assertExists()
+        assertEquals(BigDecimal("2.5"), vm.state.value.held?.stripTrailingZeros())
+        assertEquals(true, vm.state.value.tracked)
+    }
+
+    @Test
+    fun tracked_crypto_captionUsesCoinCode() {
+        val id = tracked("BTC-USD", "0.05", paid = "3000.00", category = "asset.cryptocurrencies")
+        price("BTC-USD", "2026-11-10", "63336.84")
+        val vm = detail(id)
+        showDetail(vm)
+        compose.waitUntil(5_000) { vm.state.value.snapshot?.price != null }
+        compose.onNodeWithText("0.05 BTC × US$\u00a063,336.84", substring = true).assertExists()
+    }
+
+    @Test
+    fun tracked_buy_updatesValue() {
+        val id = tracked()
+        price("AAPL", "2026-11-10", "347.19")
+        val vm = detail(id)
+        showDetail(vm)
+        compose.onNodeWithText("Buy").performClick()
+        compose.onNode(hasText("Quantity") and hasSetTextAction()).performTextInput("1")
+        compose.onNode(hasText("Price per share") and hasSetTextAction()).performTextInput("300.00")
+        compose.onNodeWithText("= US$\u00a0300.00", substring = true).assertExists()
+        compose.onAllNodesWithText("Save").onLast().performClick()
+        compose.waitUntil(5_000) { vm.state.value.flows.size == 2 }
+        val s = vm.state.value.snapshot!!
+        assertEquals(BigDecimal("3.5"), s.quantity?.stripTrailingZeros())
+        assertEquals(Money.of(BigDecimal("3.5").multiply(BigDecimal("347.19")), Currency.USD), s.value)
+        val buy = vm.state.value.flows.first()
+        assertEquals(FlowKind.CONTRIBUTION, buy.kind)
+        assertEquals(usd("300.00"), buy.amount)
+    }
+
+    @Test
+    fun tracked_sellTooMany_blocksSave() {
+        val id = tracked()
+        price("AAPL", "2026-11-10", "347.19")
+        val vm = detail(id)
+        showDetail(vm)
+        compose.onNodeWithText("Sell").performClick()
+        compose.onNodeWithText("Sell some").assertExists()
+        compose.onNodeWithText("You hold 2.5 shares on ", substring = true).assertExists()
+        compose.onNode(hasText("Quantity") and hasSetTextAction()).performTextInput("3")
+        compose.onNode(hasText("Price per share") and hasSetTextAction()).performTextInput("300")
+        compose.onNodeWithText("You only hold 2.5 shares on that date").assertExists()
+        compose.onAllNodesWithText("Save").onLast().assertIsNotEnabled()
+        captureScreenRoboImage("$SCREENSHOT_DIR/asset_trade_sell_over.png")
+    }
+
+    @Test
+    fun tracked_backdatedSell_showsError() {
+        val id = tracked()
+        runBlocking { portfolio.addFlow(id, FlowKind.PARTIAL_DISPOSAL, d("2026-11-10"), usd("600.00"), quantityDelta = BigDecimal("2")) }
+        val vm = detail(id)
+        showDetail(vm)
+        vm.addFlow(FlowKind.PARTIAL_DISPOSAL, d("2026-11-05"), usd("300.00"), BigDecimal("1"), null, null, null)
+        compose.waitUntil(5_000) { vm.state.value.error != null }
+        compose.onNodeWithText("That's more shares than you held on that date.").assertExists()
+        assertEquals(2, vm.state.value.flows.size)
+    }
+
+    @Test
+    fun tracked_hidesValuationActions() {
+        val id = tracked()
+        price("AAPL", "2026-11-10", "347.19")
+        val vm = detail(id)
+        showDetail(vm)
+        compose.onNodeWithText("Buys and sells", ignoreCase = true).assertExists()
+        compose.onNodeWithText("First buy").assertExists()
+        compose.onNodeWithText("Update value").assertDoesNotExist()
+        compose.onNodeWithText("Contribute").assertDoesNotExist()
+        compose.onNodeWithText("Withdraw").assertDoesNotExist()
+        compose.onNodeWithText("Valuation history").assertDoesNotExist()
+    }
+
+    @Test
+    fun screenshot_trackedDetail() {
+        val id = tracked("NVDA", "100", "2026-03-02", "17700.00")
+        runBlocking { portfolio.addFlow(id, FlowKind.CONTRIBUTION, d("2026-09-15"), usd("3540.00"), quantityDelta = BigDecimal("20")) }
+        price("NVDA", "2026-06-30", "158.20")
+        price("NVDA", "2026-09-30", "171.50")
+        price("NVDA", "2026-11-12", "182.40", FakeTimeSource.at("2026-11-12", "12:05"))
+        rates.let { runBlocking { it.setManual(d("2026-03-02"), BigDecimal("5.4000")); it.setManual(d("2026-09-15"), BigDecimal("5.3000")); it.setManual(d("2026-11-12"), BigDecimal("5.6143")) } }
+        val state = runBlocking { detail(id).state.awaitUntil { it.flows.size == 2 && it.snapshot?.price?.date == d("2026-11-12") && it.converted?.value?.incomplete == false } }
+        compose.snapBothThemes("asset_detail_quote") { AssetDetailContent(state, AssetDetailActions()) }
     }
 }
