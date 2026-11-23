@@ -1,0 +1,59 @@
+{
+ "quotes": [
+  {
+   "symbol": "NVD",
+   "quoteType": "ETF",
+   "longname": "Graniteshares 2x Short NVDA Daily ETF",
+   "shortname": "GraniteShares 2x Short NVDA Dai",
+   "exchDisp": "NASDAQ",
+   "exchange": "NGM"
+  },
+  {
+   "symbol": "NVDA",
+   "quoteType": "EQUITY",
+   "longname": "NVIDIA Corporation",
+   "shortname": "NVIDIA Corporation",
+   "exchDisp": "NASDAQ",
+   "exchange": "NMS"
+  },
+  {
+   "symbol": "NVDL",
+   "quoteType": "ETF",
+   "longname": "GraniteShares 2x Long NVDA Daily ETF",
+   "shortname": "GraniteShares 2x Long NVDA Dail",
+   "exchDisp": "NASDAQ",
+   "exchange": "NGM"
+  },
+  {
+   "symbol": "NVDX",
+   "quoteType": "ETF",
+   "shortname": "T-Rex 2X Long NVIDIA Daily Targ",
+   "exchDisp": "BATS Trading",
+   "exchange": "BTS"
+  },
+  {
+   "symbol": "NVD.DE",
+   "quoteType": "EQUITY",
+   "longname": "NVIDIA Corporation",
+   "shortname": "NVIDIA CORP.                  R",
+   "exchDisp": "XETRA",
+   "exchange": "GER"
+  },
+  {
+   "symbol": "NVDU",
+   "quoteType": "ETF",
+   "longname": "Direxion Daily Nvda Bull 2X Shares",
+   "shortname": "Direxion Daily NVDA Bull 2X ETF",
+   "exchDisp": "NASDAQ",
+   "exchange": "NGM"
+  },
+  {
+   "symbol": "NVDY",
+   "quoteType": "ETF",
+   "longname": "YieldMax NVDA Option Income Strategy ETF",
+   "shortname": "YieldMax NVDA Option Income Str",
+   "exchDisp": "NYSEArca",
+   "exchange": "PCX"
+  }
+ ]
+}

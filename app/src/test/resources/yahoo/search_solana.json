@@ -1,0 +1,59 @@
+{
+ "quotes": [
+  {
+   "symbol": "SOL-USD",
+   "quoteType": "CRYPTOCURRENCY",
+   "longname": "Solana USD",
+   "shortname": "Solana USD",
+   "exchDisp": "CCC",
+   "exchange": "CCC"
+  },
+  {
+   "symbol": "BSOL",
+   "quoteType": "ETF",
+   "longname": "Bitwise Solana Staking ETF",
+   "shortname": "Bitwise Solana Staking ETF",
+   "exchDisp": "NYSEArca",
+   "exchange": "PCX"
+  },
+  {
+   "symbol": "SOLT",
+   "quoteType": "ETF",
+   "longname": "2x Solana ETF",
+   "shortname": "2x Solana ETF",
+   "exchDisp": "NASDAQ",
+   "exchange": "NGM"
+  },
+  {
+   "symbol": "FSOL",
+   "quoteType": "ETF",
+   "shortname": "Fidelity Solana Fund",
+   "exchDisp": "NYSEArca",
+   "exchange": "PCX"
+  },
+  {
+   "symbol": "SLON",
+   "quoteType": "ETF",
+   "longname": "ProShares Ultra Solana ETF",
+   "shortname": "ProShares Ultra Solana ETF",
+   "exchDisp": "NYSEArca",
+   "exchange": "PCX"
+  },
+  {
+   "symbol": "SOL-CAD",
+   "quoteType": "CRYPTOCURRENCY",
+   "longname": "Solana CAD",
+   "shortname": "Solana CAD",
+   "exchDisp": "CCC",
+   "exchange": "CCC"
+  },
+  {
+   "symbol": "SOL-GBP",
+   "quoteType": "CRYPTOCURRENCY",
+   "longname": "Solana GBP",
+   "shortname": "Solana GBP",
+   "exchDisp": "CCC",
+   "exchange": "CCC"
+  }
+ ]
+}

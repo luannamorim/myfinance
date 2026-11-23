@@ -1,0 +1,56 @@
+{
+ "quotes": [
+  {
+   "symbol": "BTC-USD",
+   "quoteType": "CRYPTOCURRENCY",
+   "longname": "Bitcoin USD",
+   "shortname": "Bitcoin USD",
+   "exchDisp": "CCC",
+   "exchange": "CCC"
+  },
+  {
+   "symbol": "BCH-USD",
+   "quoteType": "CRYPTOCURRENCY",
+   "longname": "Bitcoin Cash USD",
+   "shortname": "Bitcoin Cash USD",
+   "exchDisp": "CCC",
+   "exchange": "CCC"
+  },
+  {
+   "symbol": "BTC=F",
+   "quoteType": "FUTURE",
+   "shortname": "Bitcoin Futures,Nov-2026",
+   "exchDisp": "Chicago Mercantile Exchange",
+   "exchange": "CME"
+  },
+  {
+   "symbol": "IBIT",
+   "quoteType": "ETF",
+   "longname": "iShares Bitcoin Trust ETF",
+   "shortname": "iShares Bitcoin Trust ETF",
+   "exchDisp": "NASDAQ",
+   "exchange": "NGM"
+  },
+  {
+   "symbol": "MBT=F",
+   "quoteType": "FUTURE",
+   "shortname": "Micro Bitcoin Futures,Nov-2026",
+   "exchDisp": "Chicago Mercantile Exchange",
+   "exchange": "CME"
+  },
+  {
+   "symbol": "BFF=F",
+   "quoteType": "FUTURE",
+   "shortname": "Bitcoin Friday Futures,Oct-2026",
+   "exchDisp": "Chicago Mercantile Exchange",
+   "exchange": "CME"
+  },
+  {
+   "symbol": "QBTC=F",
+   "quoteType": "FUTURE",
+   "shortname": "Spot-Equivalent Priced Bitcoin ",
+   "exchDisp": "Chicago Mercantile Exchange",
+   "exchange": "CME"
+  }
+ ]
+}

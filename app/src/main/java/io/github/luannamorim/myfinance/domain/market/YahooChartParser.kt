@@ -1,0 +1,104 @@
+package io.github.luannamorim.myfinance.domain.market
+
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import java.math.BigDecimal
+import java.math.MathContext
+import java.math.RoundingMode
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+
+/** A Yahoo response wasn't the expected JSON (or was for another currency). */
+class QuoteFormatException(message: String) : Exception(message)
+
+/** One symbol's chart: raw (not split-adjusted) closes and its splits. */
+data class ChartResult(
+    val symbol: String,
+    val instrumentType: String?,
+    val longName: String?,
+    val firstTradeDate: LocalDate?,
+    val prices: List<PricePoint>,
+    val splits: List<Split>,
+)
+
+sealed interface ChartResponse {
+    data class Found(val result: ChartResult) : ChartResponse
+    data object NotFound : ChartResponse
+}
+
+/**
+ * Parses the Yahoo v8 chart response. Closes are read from their JSON literal (never a Double) and,
+ * because Yahoo returns split-adjusted closes, multiplied back by every split after the bar's date,
+ * then rounded to 7 significant digits.
+ */
+object YahooChartParser {
+    private val DEFAULT_ZONE = ZoneId.of("America/New_York")
+    private val SEVEN_DIGITS = MathContext(7, RoundingMode.HALF_EVEN)
+
+    fun parse(json: String): ChartResponse {
+        val root = try {
+            Json.parseToJsonElement(json)
+        } catch (e: Exception) {
+            throw QuoteFormatException("Not JSON")
+        }
+        val chart = (root as? JsonObject)?.get("chart") as? JsonObject ?: throw QuoteFormatException("No chart")
+        val error = chart["error"] as? JsonObject
+        if (error != null && text(error["code"]) == "Not Found") return ChartResponse.NotFound
+        val result = ((chart["result"] as? JsonArray)?.firstOrNull() as? JsonObject)
+            ?: throw QuoteFormatException("No chart result")
+        val meta = result["meta"] as? JsonObject ?: throw QuoteFormatException("No meta")
+        if (text(meta["currency"]) != "USD") throw QuoteFormatException("Not a USD quote")
+        val symbol = text(meta["symbol"]) ?: throw QuoteFormatException("No symbol")
+        val zone = text(meta["exchangeTimezoneName"])?.let { runCatching { ZoneId.of(it) }.getOrNull() } ?: DEFAULT_ZONE
+
+        val splits = splitsOf(result, zone)
+        val prices = pricesOf(result, zone, splits)
+        val firstTrade = (meta["firstTradeDate"] as? JsonPrimitive)?.content?.toLongOrNull()
+            ?.let { dateOf(it, zone) }
+        return ChartResponse.Found(
+            ChartResult(symbol, text(meta["instrumentType"]), text(meta["longName"]), firstTrade, prices, splits),
+        )
+    }
+
+    private fun text(e: JsonElement?): String? = (e as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content
+
+    private fun dateOf(epochSeconds: Long, zone: ZoneId): LocalDate =
+        Instant.ofEpochSecond(epochSeconds).atZone(zone).toLocalDate()
+
+    private fun splitsOf(result: JsonObject, zone: ZoneId): List<Split> {
+        val map = ((result["events"] as? JsonObject)?.get("splits") as? JsonObject) ?: return emptyList()
+        return map.values.mapNotNull { element ->
+            val obj = element as? JsonObject ?: return@mapNotNull null
+            val seconds = text(obj["date"])?.toLongOrNull() ?: return@mapNotNull null
+            val numerator = text(obj["numerator"])?.toBigDecimalOrNull() ?: return@mapNotNull null
+            val denominator = text(obj["denominator"])?.toBigDecimalOrNull() ?: return@mapNotNull null
+            if (numerator.signum() <= 0 || denominator.signum() <= 0) return@mapNotNull null
+            Split(dateOf(seconds, zone), numerator, denominator)
+        }.sortedBy { it.date }
+    }
+
+    private fun pricesOf(result: JsonObject, zone: ZoneId, splits: List<Split>): List<PricePoint> {
+        val timestamps = result["timestamp"] as? JsonArray ?: return emptyList()
+        val closes = (((result["indicators"] as? JsonObject)?.get("quote") as? JsonArray)
+            ?.firstOrNull() as? JsonObject)?.get("close") as? JsonArray ?: return emptyList()
+        return timestamps.mapIndexedNotNull { i, t ->
+            val seconds = text(t)?.toLongOrNull() ?: return@mapIndexedNotNull null
+            val close = text(closes.getOrNull(i))?.toBigDecimalOrNull() ?: return@mapIndexedNotNull null
+            if (close.signum() <= 0) return@mapIndexedNotNull null
+            val date = dateOf(seconds, zone)
+            var numerator = close
+            var denominator = BigDecimal.ONE
+            splits.filter { it.date > date }.forEach {
+                numerator = numerator.multiply(it.numerator)
+                denominator = denominator.multiply(it.denominator)
+            }
+            val raw = numerator.divide(denominator, 10, RoundingMode.HALF_EVEN).round(SEVEN_DIGITS)
+            PricePoint(date, raw)
+        }
+    }
+}
