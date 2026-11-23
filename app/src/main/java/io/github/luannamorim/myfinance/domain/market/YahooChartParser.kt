@@ -36,14 +36,20 @@ sealed interface ChartResponse {
  * because Yahoo returns split-adjusted closes, multiplied back by every split after the bar's date,
  * then rounded to 7 significant digits.
  *
- * Bounds: bars and splits dated after `maxDate` (e.g. a timestamp in milliseconds instead of seconds), closes above
- * [MAX_CLOSE] and split ratios outside (0, [MAX_SPLIT_RATIO]] are dropped.
+ * Bounds: bars and splits dated after `maxDate` (e.g. a timestamp in milliseconds instead of seconds), closes outside
+ * [[MIN_CLOSE], [MAX_CLOSE]] (or with more than [MAX_PRICE_SCALE] decimals once rounded), split terms above
+ * [MAX_SPLIT_TERM] or with more than [MAX_TERM_SCALE] decimals, and split ratios outside [1/1000, 1000] are dropped.
+ * Literals are range-checked before any arithmetic, so an absurd exponent (`1e-999999999`) never reaches it.
  */
 object YahooChartParser {
     private val DEFAULT_ZONE = ZoneId.of("America/New_York")
     private val SEVEN_DIGITS = MathContext(7, RoundingMode.HALF_EVEN)
     private val MAX_CLOSE = BigDecimal(10_000_000)
+    private val MIN_CLOSE = BigDecimal("1e-12")
+    private const val MAX_PRICE_SCALE = 20
     private val MAX_SPLIT_RATIO = BigDecimal(1000)
+    private val MAX_SPLIT_TERM = BigDecimal(1_000_000)
+    private const val MAX_TERM_SCALE = 10
 
     /** [maxDate]: the last plausible bar or split date (the caller passes "tomorrow"); null keeps every date. */
     fun parse(json: String, maxDate: LocalDate? = null): ChartResponse {
@@ -83,11 +89,17 @@ object YahooChartParser {
             val seconds = text(obj["date"])?.toLongOrNull() ?: return@mapNotNull null
             val numerator = text(obj["numerator"])?.toBigDecimalOrNull() ?: return@mapNotNull null
             val denominator = text(obj["denominator"])?.toBigDecimalOrNull() ?: return@mapNotNull null
-            if (numerator.signum() <= 0 || denominator.signum() <= 0) return@mapNotNull null
-            if (numerator > denominator.multiply(MAX_SPLIT_RATIO)) return@mapNotNull null
+            if (!plausibleTerm(numerator) || !plausibleTerm(denominator)) return@mapNotNull null
+            if (numerator > denominator.multiply(MAX_SPLIT_RATIO) || denominator > numerator.multiply(MAX_SPLIT_RATIO)) {
+                return@mapNotNull null
+            }
             Split(dateOf(seconds, zone), numerator, denominator)
         }.sortedBy { it.date }
     }
+
+    /** A split numerator or denominator: positive, at most [MAX_SPLIT_TERM], at most [MAX_TERM_SCALE] decimals. */
+    private fun plausibleTerm(term: BigDecimal): Boolean =
+        term.signum() > 0 && term <= MAX_SPLIT_TERM && term.stripTrailingZeros().scale() <= MAX_TERM_SCALE
 
     private fun pricesOf(result: JsonObject, zone: ZoneId, splits: List<Split>): List<PricePoint> {
         val timestamps = result["timestamp"] as? JsonArray ?: return emptyList()
@@ -96,7 +108,7 @@ object YahooChartParser {
         return timestamps.mapIndexedNotNull { i, t ->
             val seconds = text(t)?.toLongOrNull() ?: return@mapIndexedNotNull null
             val close = text(closes.getOrNull(i))?.toBigDecimalOrNull() ?: return@mapIndexedNotNull null
-            if (close.signum() <= 0) return@mapIndexedNotNull null
+            if (close < MIN_CLOSE || close > MAX_CLOSE.multiply(MAX_SPLIT_RATIO)) return@mapIndexedNotNull null
             val date = dateOf(seconds, zone)
             val later = splits.filter { it.date > date }
             val raw = if (later.isEmpty()) {
@@ -110,7 +122,7 @@ object YahooChartParser {
                 }
                 numerator.divide(denominator, 10, RoundingMode.HALF_EVEN).round(SEVEN_DIGITS)
             }
-            if (raw > MAX_CLOSE) return@mapIndexedNotNull null
+            if (raw < MIN_CLOSE || raw > MAX_CLOSE || raw.scale() > MAX_PRICE_SCALE) return@mapIndexedNotNull null
             PricePoint(date, raw)
         }
     }

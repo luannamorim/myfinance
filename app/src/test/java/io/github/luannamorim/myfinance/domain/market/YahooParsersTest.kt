@@ -141,6 +141,34 @@ class YahooParsersTest {
     }
 
     @Test
+    fun chart_closeWithHugeNegativeExponent_dropped() {
+        val r = found(chartJson("UTC", "1795046400,1795132800", "1e-999999999,5"))
+        assertEquals(listOf(d("2026-11-20")), r.prices.map { it.date })
+    }
+
+    @Test
+    fun chart_closeBelowOneTrillionth_dropped() {
+        val r = found(chartJson("UTC", "1795046400,1795132800", "1e-13,1e-12"))
+        assertEquals(listOf(d("2026-11-20")), r.prices.map { it.date })
+    }
+
+    @Test
+    fun chart_splitOneToAMillion_dropped() {
+        val splits = """"1795132800":{"date":1795132800,"numerator":1,"denominator":1000000},""" +
+            """"1795219200":{"date":1795219200,"numerator":1,"denominator":1000}"""
+        val r = found(chartJson("UTC", "1795046400", "100", splits = splits))
+        assertEquals(listOf(d("2026-11-21")), r.splits.map { it.date })
+    }
+
+    @Test
+    fun chart_splitWithAbsurdLiterals_dropped() {
+        val splits = """"1795132800":{"date":1795132800,"numerator":1e-999999999,"denominator":1e-999999999},""" +
+            """"1795219200":{"date":1795219200,"numerator":2e7,"denominator":1e7}"""
+        val r = found(chartJson("UTC", "1795046400", "100", splits = splits))
+        assertTrue(r.splits.isEmpty())
+    }
+
+    @Test
     fun chart_noLaterSplit_keepsExactCloseBeforeRounding() {
         val r = found(chartJson("UTC", "1795046400", "1.234567890123e-08"))
         assertPrice("0.00000001234568", r.prices.single().price)
