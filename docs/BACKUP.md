@@ -21,9 +21,11 @@ streaming AES-256-GCM-HKDF (Tink, 1 MiB segments, the whole header as associated
 
 ### `data.json` (BackupDataV1)
 
-Flat lists mirroring the tables: `categories`, `templates`, `occurrences`, `adjustments`, `assetCategories`, `assets`, `assetFlows`, `valuations`, `exchangeRates`. IDs are kept; money is `Long` minor units plus a currency code (flows and valuations use their asset's currency); calendar dates are epoch days (`Long`); instants are epoch milliseconds (`Long`); exchange rates are `rateMicros` (`Long`, rate × 10⁶); quantities are decimal strings; enums are stored by name; predefined categories that were never renamed keep a `null` name.
+Flat lists mirroring the tables: `categories`, `templates`, `occurrences`, `adjustments`, `assetCategories`, `assets`, `assetFlows`, `valuations`, `exchangeRates`, and, since format 2, `assetPrices` and `assetSplits`. IDs are kept; money is `Long` minor units plus a currency code (flows and valuations use their asset's currency); calendar dates are epoch days (`Long`); instants are epoch milliseconds (`Long`); exchange rates are `rateMicros` (`Long`, rate × 10⁶); quantities, quote prices and split ratios are decimal strings; enums are stored by name; predefined categories that were never renamed keep a `null` name.
 
 Field names are part of the file format: they are never renamed. New fields are added as optional with defaults, so older backups keep restoring.
+
+**Format 2 (stock quotes).** `assets` gained an optional `ticker`, and `assetPrices` (symbol, date, price, source, fetchedAtMs) and `assetSplits` (symbol, date, numerator, denominator) hold the stored quotes. `formatVersion` is 2 only when the data has a ticker, a price or a split, otherwise 1, so a backup without tracked assets still restores in an app that only knows format 1; one with them is refused there as an unsupported version. The manifest counts for `assetPrices` and `assetSplits` are written only when those lists are not empty, so a backup without quotes keeps the same nine counts as before. A format 1 backup (e.g. from 1.4.1) restores as is, with no tickers and no quotes.
 
 Added in app 1.1.0 (transfers), all optional: `assetId` on templates and occurrences (a transfer's asset), `occurrenceId` on asset flows (the transfer a flow belongs to); `categoryId` became optional on templates and occurrences (transfers have none). A 1.0.0 backup restores as is. Restore inserts asset categories and assets before transactions, and flows after them, because transfers point at both.
 
@@ -68,7 +70,7 @@ If the app dies at any point, the database is either the old one or the new one,
 
 ## CSV export
 
-*Settings → Export CSV* writes a zip with `transactions.csv`, `cash_adjustments.csv` (opening balances and adjustments), `assets.csv`, `asset_flows.csv`, `valuations.csv` and `exchange_rates.csv`:
+*Settings → Export CSV* writes a zip with `transactions.csv`, `cash_adjustments.csv` (opening balances and adjustments), `assets.csv` (with a `ticker` column), `asset_flows.csv`, `valuations.csv`, `exchange_rates.csv`, `asset_prices.csv` (`date`, `symbol`, `price`, `source`) and `asset_splits.csv` (`date`, `symbol`, `numerator`, `denominator`):
 
 - UTF-8, comma separated, header row, RFC 4180 quoting.
 - Dates in ISO-8601 (`2026-11-12`), amounts as plain decimals with a dot (`2500.00`) and currency columns (`transactions.csv` has `currency` for the expected amount and `actual_currency` for the actual one).

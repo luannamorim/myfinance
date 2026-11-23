@@ -21,7 +21,7 @@ MyFinance is a single-user app where the user enters everything by hand, sees ca
 
 ## Non-goals
 
-- No bank, card or broker integration, no Open Finance, no market price feeds.
+- No bank, card or broker integration, no Open Finance. Market prices are limited to the daily closes of US stocks, ETFs and crypto (FR 37).
 - No account, login, server or sync service.
 - No budgeting envelopes, goals, gamification or financial advice.
 - No ads, analytics or telemetry.
@@ -84,7 +84,7 @@ MyFinance is a single-user app where the user enters everything by hand, sees ca
 ### Portfolio
 
 17. MUST provide asset categories — investments: Fixed Income, Stocks, ETFs, REITs, Investment Funds, Cryptocurrencies, Other Investments; personal assets: Business Ownership, Startup Equity, Real Estate, Vehicles, Loans Receivable, Other Assets — and allow custom categories.
-18. Each asset MUST support: name, category, currency, description, institution or company, acquisition date, initial invested amount, current estimated value, optional quantity, notes and an optional image. Quantity and market price MUST NOT be required.
+18. Each asset MUST support: name, category, currency, description, institution or company, acquisition date, initial invested amount, current estimated value, optional quantity, notes and an optional image. Quantity and market price MUST NOT be required, except for an asset that follows a quote (FR 37).
 19. MUST record contributions (initial and additional), withdrawals, partial disposals and full disposals as separate cash-flow records, never as performance.
 20. MUST record valuations as a history (date, value, note), never overwriting earlier dates (a second valuation on the same date replaces that day's, after a warning), and show for each valuation the invested amount, gain/loss and return at that date.
 21. The Portfolio tab MUST show total value, total invested, gain/loss, simple return, last valuation date and a donut chart with the total in the centre, allocation percentages, a category legend and category selection; and allow drilling down into each asset.
@@ -93,7 +93,7 @@ MyFinance is a single-user app where the user enters everything by hand, sees ca
 
 ### Currency and exchange rates
 
-24. MUST support BRL and USD for every monetary record (an asset's flows and valuations use the asset's currency) and convert using the USD→BRL PTAX (sell) rate from the Banco Central do Brasil public API, fetched automatically when the app comes to the foreground (at most every 6 hours, unless turned off; no background job) and on demand ("Update"), with manual entry as a fallback; MUST show the date of the rate used and MUST NOT invent a rate. Totals that include an unconvertible amount MUST be marked as incomplete.
+24. MUST support BRL and USD for every monetary record (an asset's flows and valuations use the asset's currency) and convert using the USD→BRL PTAX (sell) rate from the Banco Central do Brasil public API, fetched automatically when the app comes to the foreground (at most every 6 hours, unless turned off; no background job; stock quotes follow their own switch and a 15-minute throttle, FR 37) and on demand ("Update"), with manual entry as a fallback; MUST show the date of the rate used and MUST NOT invent a rate. Totals that include an unconvertible amount MUST be marked as incomplete.
 25. Current values MUST use the latest rate; historical values MUST use the rate of their own date (last published rate on or before it).
 
 ### Settings
@@ -116,9 +116,13 @@ MyFinance is a single-user app where the user enters everything by hand, sees ca
 35. Cash Flow charts MUST offer 3, 6 and 12 months; the balance line MUST start at the first record, so it shows from the first month of use.
 36. The Overview's upcoming list MUST show only overdue commitments and those due this month.
 
+### US stock and ETF quotes
+
+37. MUST let the user add a US stock, ETF or crypto (USD, from Yahoo Finance) by ticker, quantity and price per unit. The value is quantity × the latest daily close on or before the date, converted like any US$ asset; splits rescale quantities, so a purchase dated before a split is entered with today's share count and the form says so. Buy and Sell record the shares (with or without cash); Sell all closes the position. Prices are fetched when the app comes to the foreground (at most every 15 minutes, unless turned off; no background job) and on demand; on failure the last price and its date stay and the error is shown in Settings. Backups and the CSV export include the quotes. Spin-offs appear as fractional splits and dividends are not tracked.
+
 ## Non-functional requirements
 
-- **Offline-first:** every feature works without internet. The only network use is fetching public exchange rates from `api.bcb.gov.br` over HTTPS; automatic fetching can be turned off ("Update" still fetches on demand) and requests carry only a date range.
+- **Offline-first:** every feature works without internet. The network use is fetching public exchange rates from `api.bcb.gov.br` and, only when an asset follows a quote, daily closes from Yahoo Finance (`query1`/`query2.finance.yahoo.com`), over HTTPS; automatic fetching can be turned off for each ("Update" still fetches on demand) and requests carry only a date range or the tickers held.
 - **Privacy:** no analytics, no account, no financial data leaves the device except in the user's own encrypted backups and explicit CSV exports. Amounts, names and notes are never logged.
 - **Correctness:** money in integer minor units (`Long`) with an explicit currency; conversions and percentages in `BigDecimal` with `HALF_EVEN`, rounded once per total. All financial calculations live in the pure `domain` layer and are unit tested.
 - **History:** historical records are never silently modified; the database has tested migrations from v1 on; restore is all-or-nothing.

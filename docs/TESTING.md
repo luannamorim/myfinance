@@ -14,10 +14,10 @@ GitHub Actions runs `testDebugUnitTest lintDebug assembleDebug` on every push an
 
 | Layer | Tool | What it proves |
 |---|---|---|
-| Pure domain | JUnit | recurrence (monthly, weekly, biweekly, quarterly, annual, leap years, month ends, end dates, horizons), statuses and day boundaries, cash balances and projections without double counting, expected vs. actual, opening balance, portfolio contributions, withdrawals, disposals, valuations, gains, returns, allocation and series, conversion and rate lookup, PTAX parsing, net worth, money formatting and input, backup crypto, archive and retention |
-| Data | Robolectric + in-memory Room | constraints (RESTRICT, CASCADE, unique), the v1 → v2 migration (`MigrationTest`), transfers and their asset flows (`TransferTest`), idempotent occurrence generation, template edits, confirmations, adjustments, repositories, snapshot round trip, backup create/restore/wrong password/corrupted archive, rate refresh with a fake client |
+| Pure domain | JUnit | recurrence (monthly, weekly, biweekly, quarterly, annual, leap years, month ends, end dates, horizons), statuses and day boundaries, cash balances and projections without double counting, expected vs. actual, opening balance, portfolio contributions, withdrawals, disposals, valuations, gains, returns, allocation and series, conversion and rate lookup, PTAX parsing, Yahoo chart and search parsing against captured responses (splits, tiny crypto prices, exchange time zones), tickers, share counts across splits, tracked-asset values, net worth, money formatting and input, backup crypto, archive and retention |
+| Data | Robolectric + in-memory Room | constraints (RESTRICT, CASCADE, unique), the v1 → v2 → v3 migrations (`MigrationTest`), transfers and their asset flows (`TransferTest`), idempotent occurrence generation, template edits, confirmations, adjustments, repositories, snapshot round trip, backup create/restore/wrong password/corrupted archive, rate and price refresh with fake clients (windows, throttle, splits, closed positions) |
 | Platform | Robolectric + work-testing | backup worker (dirty/skip/failure mapping, debounce) |
-| UI flows | Compose test + Robolectric | create income, create expense, confirm payment, confirm receipt, create asset, update valuation, navigate between tabs, change settings, backup and restore |
+| UI flows | Compose test + Robolectric | create income, create expense, confirm payment, confirm receipt, create asset, create and buy or sell a tracked asset, update valuation, navigate between tabs, change settings, backup and restore |
 | Visual | Roborazzi | every screen in dark and light, 1.5× font and tablet; component and icon catalog |
 
 Conventions:
@@ -81,6 +81,15 @@ Development is done without a device. The items below validate what only the dev
 - [ ] Cash Flow → Transfers shows the amount on its title line and "to investment" underneath; History lists the transfer in its month; the CSV export has it with the asset name.
 - [ ] Portfolio → All shows "Cash" (slice and card); tapping the card opens Cash Flow; Value/Invested/Gain don't include it.
 
+### 5c. Stock and crypto quotes
+- [ ] Create "NVDA" (Stocks, ticker NVDA) with a purchase dated before June 2024: the form shows the split note and today's share count (10× the shares bought); after saving, the asset shows the quote with its date.
+- [ ] Close the app and open it again (more than 15 minutes later): the quote and its date change.
+- [ ] In airplane mode the app keeps the last quote with its date; *Settings → Currency and exchange rate → Stocks and crypto → Update now* shows an error and the last quote stays.
+- [ ] Turning off *Fetch stock and crypto quotes* stops automatic requests; *Update now* still fetches.
+- [ ] Sell all on NVDA closes the position: value 0, listed under closed positions.
+- [ ] With US$ and R$ shown, the R$ value of the asset matches quantity × quote × the PTAX of the day.
+- [ ] Create "BTC-USD" with 0,05 and a price: the asset shows "0,05 BTC × US$ …".
+
 ### 6. Overview
 - [ ] Net worth = cash + investments + personal assets, with the composition shown; tapping the flag in the header (right of "+") switches Brazil ⇄ USA, converts everything and shows the rate date.
 - [ ] *Settings → Currency → Currencies in use*: turn US$ off: the flag stays on Brazil and a tap does nothing; the last switch on can't be turned off. Turn US$ back on.
@@ -101,5 +110,9 @@ Development is done without a device. The items below validate what only the dev
 - [ ] Installing a newer version over the old one keeps all data.
 
 ## Known limitations
+- Yahoo Finance is an unofficial source: if it blocks or changes its answer, the last quote and its date stay and the error is shown in *Settings → Currency and exchange rate*. The history is in the backup.
+- Spin-offs appear as fractional splits, so the value stays continuous as if the spun-off shares were folded into the holding.
+- Dividends are not tracked: the gain of a tracked asset understates the total return.
+- Editing a done cash transfer created by a tracked asset's Buy or Sell with cash is refused; undo or delete it instead.
 - The day's PTAX is published around 13:00 BRT on business days; before that the previous business day's rate is used.
 - The folder picker may not list Google Drive directly; use a local folder kept in sync by a sync app.

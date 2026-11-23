@@ -11,7 +11,7 @@ MyFinance stores highly sensitive information. This document states exactly what
 | Cloud copies of app data | Android auto backup and device-to-device transfer are disabled (`allowBackup="false"`, extraction rules exclude everything). |
 | Someone obtaining a backup file (cloud folder, shared drive) | Backups are encrypted and authenticated with a key derived from the user's recovery password. |
 | Tampered or corrupted backup | Authenticated encryption, SHA-256 per entry, strict validation before restore; local data is untouched on failure. |
-| Network observers | The only request is an HTTPS GET for public exchange rates; it carries a date range and nothing about the user. Cleartext traffic is disabled. |
+| Network observers | The requests are HTTPS GETs: public exchange rates (a date range) and, only if an asset follows a quote, daily prices from Yahoo Finance (only the tickers held, or the text typed in the ticker search). Nothing else about the user is sent. Cleartext traffic is disabled. |
 | Data leaking through logs | Amounts, names and notes are never logged; R8 strips `android.util.Log` calls from release builds. |
 
 Out of scope: a compromised or rooted device, malware with accessibility or root privileges, someone with the unlocked phone in hand. MyFinance does not add an app lock or an encrypted local database (see "Decisions").
@@ -38,10 +38,12 @@ The recovery password itself is never stored. Losing both the device and the pas
 
 ## Network
 
-- Permissions declared by the app: `INTERNET` (exchange rates) and `POST_NOTIFICATIONS` (backup failure). Merged from WorkManager: `ACCESS_NETWORK_STATE`, `WAKE_LOCK`, `RECEIVE_BOOT_COMPLETED`, `FOREGROUND_SERVICE`; merged from AndroidX: the app-private `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. The release checklist verifies this exact list.
-- Destination: `https://api.bcb.gov.br/dados/serie/bcdata.sgs.1/dados` only. The request contains `formato=json`, `dataInicial` and `dataFinal`, a generic `User-Agent: MyFinance` and no identifiers, cookies or financial data.
-- `network_security_config.xml` disables cleartext traffic. Responses are size-limited (1 MiB), parsed strictly and range-checked; invalid data is ignored and never replaces manual rates.
-- Automatic fetching can be turned off in *Settings → Currency*; the app then makes no request on its own, and fetches only when the user taps *Update*. Manual rates always work.
+- Permissions declared by the app: `INTERNET` (exchange rates and stock quotes; no new permission for quotes) and `POST_NOTIFICATIONS` (backup failure). Merged from WorkManager: `ACCESS_NETWORK_STATE`, `WAKE_LOCK`, `RECEIVE_BOOT_COMPLETED`, `FOREGROUND_SERVICE`; merged from AndroidX: the app-private `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. The release checklist verifies this exact list.
+- Destinations, two in all:
+  - `https://api.bcb.gov.br/dados/serie/bcdata.sgs.1/dados`. The request contains `formato=json`, `dataInicial` and `dataFinal`, a generic `User-Agent: MyFinance` and no identifiers, cookies or financial data.
+  - Yahoo Finance, only when an asset has a ticker: `https://query1.finance.yahoo.com/v8/finance/chart/<TICKER>` (period dates, `interval=1d`, `events=split`) for prices, and `https://query2.finance.yahoo.com/v1/finance/search` (the typed text and result counts) for the ticker search in the asset editor. They carry the ticker (or the search text) and no quantities, amounts, names or identifiers; the `User-Agent` is the same generic one. Yahoo can see the device's IP address and the tickers held, which the app states in its privacy text. Yahoo Finance is unofficial and keyless.
+- `network_security_config.xml` disables cleartext traffic. Requests use 10 s timeouts and follow no redirects. Responses are size-limited (rates 1 MiB, Yahoo charts 4 MiB, Yahoo search 256 KiB), parsed strictly and range-checked; invalid data is ignored and never replaces manual rates or stored prices.
+- Automatic fetching can be turned off for each source (*Settings → Currency and exchange rate*, one switch for rates and one for stocks and crypto); the app then makes no request on its own, and fetches only when the user taps *Update now*. Manual rates always work, and a failed quote fetch keeps the last stored price.
 
 ## Imported files
 
@@ -56,7 +58,7 @@ The recovery password itself is never stored. Losing both the device and the pas
 
 ## Secrets and repository hygiene
 
-- No API keys are needed (the BCB API is keyless).
+- No API keys are needed (the BCB API and Yahoo Finance are keyless).
 - Release signing credentials are read from `~/.gradle/gradle.properties` (`MYFINANCE_*`) and never committed; `*.jks`, `*.keystore`, backup archives (`*.myfinance`), databases and exports are git-ignored.
 - Screenshots and fixtures use synthetic data only.
 

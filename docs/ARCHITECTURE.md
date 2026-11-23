@@ -2,14 +2,14 @@
 
 ## Overview
 
-Native Android app, single module (`:app`), MVVM, offline-first. Room is the source of truth. The only network traffic is the public exchange-rate request to the Banco Central do Brasil; nothing else leaves the device except the encrypted backups and CSV exports the user writes to a folder.
+Native Android app, single module (`:app`), MVVM, offline-first. Room is the source of truth. The only network traffic is the public exchange-rate request to the Banco Central do Brasil and, for assets that follow a quote, the price requests to Yahoo Finance; nothing else leaves the device except the encrypted backups and CSV exports the user writes to a folder.
 
 ```
 ui/        Compose: screens + ViewModels (Hilt), design system, navigation
   │  observes StateFlow, calls actions
-domain/    pure Kotlin: money, recurrence, cash, portfolio, exchange rates, net worth, export, backup format
+domain/    pure Kotlin: money, recurrence, cash, portfolio, exchange rates, market quotes, net worth, export, backup format
   ▲  used by
-data/      Room, DataStore, ImageStore, repositories, BCB client, BackupManager, SAF destination
+data/      Room, DataStore, ImageStore, repositories, BCB and Yahoo clients, BackupManager, SAF destination
 platform/  WorkManager workers (backup, rates), notifications
 ```
 
@@ -23,13 +23,15 @@ Dependency rule: `domain` knows nothing about Android (it uses only the JDK, kot
 | `domain/cash` | `RecurrenceRule`, `Recurrence`, `CashLedger`, `OccurrenceStatus`, `CashCalculator`, `MonthSummary`, history filter |
 | `domain/fx` | `ExchangeRates`, `Converter`, `Total`, `PtaxParser` |
 | `domain/portfolio` | `PortfolioData`, `PortfolioCalculator`, `AssetSnapshot`, `Allocation`, `Period`, `Series` |
+| `domain/market` | `MarketData` (ticker rules), `YahooChartParser`, `YahooSearchParser`, `Split`, `PricePoint` |
 | `domain/networth` | `NetWorthCalculator` |
 | `domain/export` | `Csv` |
 | `domain/backup` | v1 DTOs, header and encryption, zip + manifest, retention |
 | `data/db` | entities, DAOs, `MyFinanceDatabase`, `Migrations`, seeds |
-| `data/repository` | categories, cash (templates, occurrences, adjustments), portfolio, exchange rates, export |
+| `data/repository` | categories, cash (templates, occurrences, adjustments), portfolio, exchange rates, market prices (`PriceRepository`), export |
 | `data/rates` | `BcbRateClient` (HTTPS GET) |
-| `data/prefs` | `SettingsRepository`, `RateStateStore`, `BackupStateStore` |
+| `data/market` | `YahooQuoteClient` (HTTPS GET) |
+| `data/prefs` | `SettingsRepository`, `RateStateStore`, `PriceStateStore`, `BackupStateStore` |
 | `data/backup` | `BackupManager`, `BackupKeyStore`, destinations (SAF/file), `FolderBackupWriter` |
 | `platform` | `BackupScheduler` + workers (`BackupWork.kt`), `RateRefreshWorker`, backup failure notification |
 
@@ -38,7 +40,7 @@ Dependency rule: `domain` knows nothing about Android (it uses only the JDK, kot
 - `Money(minor: Long, currency: Currency)`; `Currency` is an enum (`BRL`, `USD`) carrying ISO code, symbol (`R$`, `US$`) and fraction digits (2). Adding a currency means adding an enum entry, rates for it and strings; no schema change.
 - Entities store `amount` as `Long` minor units. Every table with money has a `currency` column, except asset flows and valuations, which are always in their asset's currency (the asset currency cannot change after creation). `Double` is never used for money.
 - Conversions and ratios use `BigDecimal` with **scale 10** and `RoundingMode.HALF_EVEN` for intermediate values. Sums are accumulated in `BigDecimal` and rounded to minor units (HALF_EVEN) once, at the end of each total. Percentages are rounded to two decimals only when displayed.
-- Asset quantity is an optional `BigDecimal` stored as TEXT (`toPlainString()`), informational only.
+- Asset quantity is an optional `BigDecimal` stored as TEXT (`toPlainString()`), informational only; for a tracked asset (with a ticker) it is NULL and the share count comes from the flows (see "Market prices"). Raw quote prices are also `BigDecimal` TEXT, never `Double`.
 - Formatting (`MoneyFormatter`) is the only place that turns money into text: symbol + no-break space + number in the chosen format (`R$ 1.234,56` or `R$ 1,234.56`), a true minus sign (`−`) for negatives, and an explicit `+` only where a signed delta is shown.
 
 ## Data
@@ -51,6 +53,7 @@ asset_category ── asset ─┬─< asset_flow ── (occurrenceId) ── t
                          ├─< asset_valuation
                          └─< transaction_template / transaction_occurrence (assetId, transfers)
 exchange_rate              (USD→BRL per date and source)
+asset_price, asset_split   (daily closes and splits per Yahoo symbol; joined to asset.ticker by value, no foreign key)
 ```
 
 Conventions (same as MyFit): `id Long` auto-generated; enums stored as TEXT names; calendar dates as `epochDay: Long`; instants as `*Ms: Long`; no TypeConverters.
@@ -62,17 +65,19 @@ Conventions (same as MyFit): `id Long` auto-generated; enums stored as TEXT name
 | `transaction_occurrence` | `templateId?`, `scheduledDate?`, `dueDate`, `name`, `categoryId?`, `kind`, `currency`, `expectedAmount`, `description?`, `state` (PENDING/CONFIRMED/CANCELLED), `actualAmount?`, `actualCurrency?`, `actualDate?`, `note?`, `confirmedAtMs?`, `customized`, `createdAtMs`, `updatedAtMs`, `assetId?` | `templateId` SET NULL; `categoryId` RESTRICT; `assetId` SET NULL; unique (`templateId`, `scheduledDate`); indices on `dueDate`, `actualDate`, `state`, `categoryId`, `assetId`. |
 | `cash_adjustment` | `kind` (OPENING/ADJUSTMENT), `currency`, `date`, `amount` (signed), `note?`, `createdAtMs` | At most one OPENING per currency (enforced by the repository, tested). |
 | `asset_category` | `name?`, `assetGroup` (INVESTMENT/PERSONAL), `icon`, `seedKey?`, `archived`, `position` | unique `seedKey`. Same delete/archive rule as `category`. |
-| `asset` | `name`, `categoryId`, `currency`, `description?`, `institution?`, `acquisitionDate`, `quantity?` (TEXT), `notes?`, `imagePath?`, `createdAtMs`, `updatedAtMs` | `categoryId` RESTRICT. Currency locked after creation. Deleting requires confirmation; closing the position is the normal path. |
+| `asset` | `name`, `categoryId`, `currency`, `description?`, `institution?`, `acquisitionDate`, `quantity?` (TEXT), `notes?`, `imagePath?`, `ticker?`, `createdAtMs`, `updatedAtMs` | `categoryId` RESTRICT. Currency locked after creation. `ticker` (NULL for ordinary assets) is also fixed after creation; see "Market prices". Deleting requires confirmation; closing the position is the normal path. |
 | `asset_flow` | `assetId`, `kind` (INITIAL/CONTRIBUTION/WITHDRAWAL/PARTIAL_DISPOSAL/FULL_DISPOSAL), `date`, `amount`, `quantityDelta?` (TEXT), `note?`, `createdAtMs`, `occurrenceId?` | `assetId` CASCADE; `occurrenceId` SET NULL, unique (the transfer it belongs to); index (`assetId`, `date`). `amount > 0`, except INITIAL which may be 0 (inherited or granted assets). At most one INITIAL and one FULL_DISPOSAL per asset. |
 | `asset_valuation` | `assetId`, `date`, `value` (≥ 0), `note?`, `createdAtMs` | `assetId` CASCADE; unique (`assetId`, `date`): a second valuation on the same day replaces it, after a warning. |
 | `exchange_rate` | `base` (USD), `quote` (BRL), `date`, `rateMicros` (rate × 10⁶), `source` (BCB/MANUAL), `fetchedAtMs` | unique (`base`, `quote`, `date`, `source`): a fetched and a manual rate can coexist on the same date; the manual one wins. |
+| `asset_price` | `symbol`, `date`, `price` (TEXT, plain decimal, raw), `source` (YAHOO), `fetchedAtMs` | unique (`symbol`, `date`). Shared by every asset with that ticker; no foreign key, so it survives deleting the asset. |
+| `asset_split` | `symbol`, `date`, `numerator` (TEXT), `denominator` (TEXT) | unique (`symbol`, `date`); each share becomes numerator ÷ denominator shares. |
 
 - **Standalone occurrence** = `templateId IS NULL`: one-time transactions, and rows kept after their template was deleted. Only standalone occurrences can be deleted; generated ones are cancelled instead.
 - **Closed asset** = an asset with a FULL_DISPOSAL flow (derived, not stored). New flows and valuations after the disposal date are blocked until the disposal is deleted.
 - Occurrences keep a snapshot of `name`, `kind`, `currency` and `description`, so editing or deleting a template never rewrites history. Category names are referenced, not copied: renaming a category is meant to apply to history.
-- Settings (theme, number and date formats, default and display currency, currencies in use, automatic rate fetching, automatic backup) live in DataStore and travel in the backup's `settings.json`. Rate fetch state (`lastFetchMs`, last error) and backup state live in their own DataStores.
+- Settings (theme, number and date formats, default and display currency, currencies in use, automatic rate fetching, automatic backup) live in DataStore and travel in the backup's `settings.json`. Rate fetch state (`lastFetchMs`, last error), price fetch state (`PriceStateStore`: last attempt, last success, last error) and backup state live in their own DataStores. The "Fetch stock and crypto quotes" switch is a setting (`autoFetchPrices`).
 - Images (optional asset photo) live in `filesDir/images/assets/<uuid>.jpg`, EXIF stripped, downscaled to 1600 px (JPEG 85). The database stores only the relative path; paths that escape `images/` never resolve.
-- Schema exported to `app/schemas`. Every change after v1 needs a migration with a `MigrationTest` case. **v2 (1.1.0, transfers):** nullable `categoryId` and `assetId` on templates and occurrences, `occurrenceId` on flows; `MIGRATION_1_2` rebuilds the three tables (SQLite can't change nullability) with foreign keys off, as Room's auto-migrations do, and adds the predefined categories introduced in 1.1.0 (Credit Card and Loans for expenses, Loans Receivable for personal assets). `MigrationTest` builds a v1 database from `1.json`, migrates it and lets Room validate v2.
+- Schema exported to `app/schemas`. Every change after v1 needs a migration with a `MigrationTest` case. **v2 (1.1.0, transfers):** nullable `categoryId` and `assetId` on templates and occurrences, `occurrenceId` on flows; `MIGRATION_1_2` rebuilds the three tables (SQLite can't change nullability) with foreign keys off, as Room's auto-migrations do, and adds the predefined categories introduced in 1.1.0 (Credit Card and Loans for expenses, Loans Receivable for personal assets). `MigrationTest` builds a v1 database from `1.json`, migrates it and lets Room validate v2. **v3 (US stock and crypto quotes):** `asset.ticker` (NULL for every existing asset) and the empty `asset_price` and `asset_split` tables with their unique indices; only additions, so `MIGRATION_2_3` rebuilds nothing, and `MigrationTest` checks it against `3.json`.
 - Seeds (`CategorySeed`) insert the predefined categories on database creation, with stable `seedKey`s frozen in `app/src/test/resources/seed-keys.txt`. A predefined category that was never renamed has `name = NULL` and is shown with the localized string for its `seedKey` (English or Portuguese); renaming stores the user's text. Backups keep `NULL`; CSV export resolves it to the English seed name.
 
 ## Recurrence
@@ -139,6 +144,21 @@ Confirming stores `actualAmount`, `actualCurrency` (defaults to the occurrence c
   - Failures never block the UI: the last known rate stays in use and the error is shown.
 - `BcbRateClient` uses `HttpsURLConnection` (10 s timeouts, `GET`, `Accept: application/json`, generic `User-Agent: MyFinance`), refuses non-HTTPS, and reads at most 1 MiB. `network_security_config.xml` disables cleartext.
 
+## Market prices
+
+An asset with a `ticker` follows a US stock, ETF or crypto quote (a *tracked* asset). It is USD only, and ticker and currency never change after creation.
+
+- **Source:** Yahoo Finance, unofficial and keyless. Chart: `https://query1.finance.yahoo.com/v8/finance/chart/{SYM}?period1=&period2=&interval=1d&events=split`. Search (ticker picker in the asset editor): `https://query2.finance.yahoo.com/v1/finance/search?q=&quotesCount=10&newsCount=0&listsCount=0`, keeping EQUITY, ETF and CRYPTOCURRENCY (crypto only with the `-USD` suffix). `YahooQuoteClient` uses `HttpsURLConnection` (10 s timeouts, GET, no redirects, `Accept: application/json`, `User-Agent: MyFinance`) and reads at most 4 MiB (chart) or 256 KiB (search).
+- **Tickers** (after trim and uppercase, `MarketData`): stock or ETF `^[A-Z0-9]{1,6}(-[A-Z]{1,2})?$`, crypto `^[A-Z0-9]{1,12}-USD$`. Only `currency == "USD"` answers are accepted.
+- **Raw prices and splits.** Yahoo returns split-adjusted closes. `YahooChartParser` multiplies each close back by every split after its date, so `asset_price` holds the price as it was traded that day, rounded to 7 significant digits (`HALF_EVEN`) and stored as a plain decimal string. Closes are read from their JSON text, never through `Double` (a tiny crypto price can arrive as `3.789999936998356e-06`). A candle's date is the date in `meta.exchangeTimezoneName` (UTC for crypto, `America/New_York` for stocks, which is also the default), so a late-evening UTC bar keeps its New York date.
+- **Share counts.** Flows carry the shares of the day they were made. `Holdings.quantityAt(flows, splits, d)` rescales them by the splits on or before `d` (scale 10, `HALF_EVEN`), so entering an old purchase with today's split-adjusted count gives the right value on every date. The asset editor shows the split note and today's count before saving, and Sell is refused when it would take the position below zero.
+- **Value at `d`** (`PortfolioCalculator`): closed → 0; quantity known and a stored price on or before `d` → `Money.of(quantity × price)`; otherwise net invested. Gain and return use the same capital-recovery basis as other assets, and the value is converted with the PTAX of `d` like any US$ asset. Tracked assets take no valuations and no withdrawals.
+- **Refresh** (`PriceRepository.refresh`): runs on foreground (`MainActivity`) when the switch is on, at most every 15 minutes counted from the last attempt; *Update now* and creating a tracked asset (on the application scope, so leaving the editor does not cancel it) fetch regardless of both. No request is made when no asset has a ticker. Positions are fetched per symbol, in sorted order, serialized by a mutex. A network error stops the run; an unknown symbol or an unexpected answer skips that symbol; the first error is kept in `PriceStateStore` and shown in Settings, while the last price and its date stay in use.
+- **Windows.** Every request ends at "now", with no chunking. The first fetch of a symbol starts 7 days before the earliest flow of the assets that hold it (so a date always has a close on or before it). Later fetches start 7 days before the last stored close, unless a flow predates the first stored price (an older purchase added later), which fetches the full window again. If the answer holds a split that is not stored yet, the run fetches the full window once more, because earlier raw prices change. A symbol whose assets are all closed, with a close stored on or after the last disposal, is skipped.
+- **Storage:** closes and splits are written in one transaction (`INSERT OR REPLACE` for prices, ignore for splits); a change schedules a backup. Both tables travel in backups (format 2) and in the CSV export.
+- **Buy and Sell** on a tracked asset record flows with a share count; with cash they create the usual confirmed transfer, whose asset side is kept in sync. Editing such a done transfer from Cash Flow is refused (`TrackedAssetTransferException`): undo or delete it instead.
+- **Known limitations.** Spin-offs appear as fractional splits, so the value stays continuous, as if the spun-off shares were folded into the holding. Dividends are not tracked, so the gain understates total return. Yahoo may change or block its answers (cookies, 429): the effect is a stale price with its date and an error in Settings; the stored history is in the backup.
+
 ## Transfers
 
 A transfer moves money between cash and an asset (1.1.0, user request). It is the only link between Cash and the Portfolio; everything else stays separate.
@@ -176,6 +196,7 @@ Same design as MyFit, adapted. Full format and recovery process in [`BACKUP.md`]
 - `.myfinance` file: `"MYFINBAK"` header + Tink streaming AES-256-GCM-HKDF (1 MiB segments, header as associated data) over a zip with `manifest.json`, `data.json` (`BackupDataV1`), `settings.json` and `images/assets/*`.
 - Key from PBKDF2-HMAC-SHA256 (600k iterations, NFKC) of the recovery password, kept wrapped by an Android Keystore AES key.
 - Folder via SAF, 7 kept; the new file is fully decrypted and validated (`BackupManager.verify`) before older ones are deleted. Daily run, 10-minute debounce after changes, "Back up now". Without a folder or password, automatic runs are skipped silently (not an error).
+- Format 2 (stock quotes) adds `assets.ticker`, `assetPrices` and `assetSplits`; the version is 2 only when a backup holds a ticker, a price or a split, and their manifest counts are written only when present (see [`BACKUP.md`](BACKUP.md)).
 - Restore validates everything before touching data and replaces all tables in one Room transaction; then regenerates the occurrence horizon.
 
 ## Navigation and UI
@@ -189,10 +210,10 @@ Same design as MyFit, adapted. Full format and recovery process in [`BACKUP.md`]
 
 | Layer | Tool | Examples |
 |---|---|---|
-| Pure domain | JUnit | recurrence tables, statuses, cash balances and projections, portfolio gains and series, conversion, PTAX parsing, net worth, money formatting, CSV, crypto, zip, retention |
-| Data | Robolectric + in-memory Room | DAOs and constraints, idempotent generation, template edits, repositories, snapshot round trip, backup create/restore/corrupt, rate refresh with a fake client |
+| Pure domain | JUnit | recurrence tables, statuses, cash balances and projections, portfolio gains and series, conversion, PTAX parsing, Yahoo chart and search parsing (captured responses), tickers, share counts across splits, tracked-asset values, net worth, money formatting, CSV, crypto, zip, retention |
+| Data | Robolectric + in-memory Room | DAOs and constraints, idempotent generation, template edits, repositories, snapshot round trip, backup create/restore/corrupt, rate refresh with a fake client, price refresh with a fake Yahoo client (windows, throttle, splits, closed positions), v2 → v3 migration |
 | Platform | Robolectric + work-testing | backup worker, rate worker |
-| UI | Compose test + Robolectric | create income/expense, confirm payment/receipt, create asset, update valuation, navigation, settings, backup and restore |
+| UI | Compose test + Robolectric | create income/expense, confirm payment/receipt, create asset, create a tracked asset by ticker, buy and sell shares, update valuation, navigation, settings, backup and restore |
 | Visual | Roborazzi | every screen in dark and light, 1.5× font and tablet |
 
 Commands and the on-device checklist are in [`TESTING.md`](TESTING.md).
@@ -203,6 +224,8 @@ Commands and the on-device checklist are in [`TESTING.md`](TESTING.md).
 - **One cash balance per currency** (user decision): no accounts; a USD account is the USD cash balance. Transfers only go between cash and assets.
 - **Transfers as occurrences** over a separate table: they get recurrence, confirmation, projections, history and backup for free; the price is two new kinds that every income/expense rule must handle (`cashInflow`, `isTransfer`).
 - **BCB PTAX over other rate APIs:** official, free, keyless, stable for years. AwesomeAPI (intraday, unofficial) and Frankfurter (ECB) were considered and rejected.
+- **Yahoo Finance over keyed APIs (user decision):** a free, keyless source with daily closes and splits for US stocks, ETFs and crypto, and no account or key to store. The cost is that it is unofficial and may change or block: prices go stale with their date and an error in Settings, never an invented value. Alpha Vantage, Twelve Data and similar need a key and tight free limits.
+- **Raw prices plus a splits table over adjusted closes:** adjusted closes change after every new split, which would rewrite history; raw prices with the split ratios keep stored data stable and make a split a visible event.
 - **`HttpsURLConnection` over Retrofit/OkHttp:** a single GET does not justify the dependencies.
 - **Materialized occurrences (12-month horizon) over virtual ones:** history, filters and confirmation work on real rows; the unique index makes duplicates impossible.
 - **No backfill of past occurrences:** a recurring transaction created with a past first due date starts in the current month, so the projection is not polluted by bills the user never tracked.
