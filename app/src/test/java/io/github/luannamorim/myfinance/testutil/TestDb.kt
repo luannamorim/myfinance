@@ -43,5 +43,8 @@ fun occurrence(categoryId: Long, templateId: Long?, scheduled: String?, due: Str
         createdAtMs = 0, updatedAtMs = 0,
     )
 
-fun asset(categoryId: Long, name: String = "Tesouro Selic", currency: Currency = Currency.BRL) =
-    AssetEntity(name = name, categoryId = categoryId, currency = currency, acquisitionDate = day("2026-01-10"), createdAtMs = 0, updatedAtMs = 0)
+fun asset(categoryId: Long, name: String = "Tesouro Selic", currency: Currency = Currency.BRL, ticker: String? = null) =
+    AssetEntity(
+        name = name, categoryId = categoryId, currency = currency, acquisitionDate = day("2026-01-10"), createdAtMs = 0, updatedAtMs = 0,
+        ticker = ticker,
+    )

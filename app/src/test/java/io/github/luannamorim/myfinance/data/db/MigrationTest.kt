@@ -7,8 +7,10 @@ import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.luannamorim.myfinance.data.db.entity.AssetPriceEntity
 import io.github.luannamorim.myfinance.domain.model.EntryKind
 import io.github.luannamorim.myfinance.domain.model.OccurrenceState
+import io.github.luannamorim.myfinance.domain.model.PriceSource
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
@@ -123,6 +125,33 @@ class MigrationTest {
             val expenses = room.categoryDao().getAll().filter { it.kind == EntryKind.EXPENSE }.associateBy { it.seedKey }
             assertTrue(expenses.keys.containsAll(listOf("expense.rent", "expense.credit_card", "expense.loans")))
 
+            room.openHelper.writableDatabase.query("PRAGMA foreign_key_check").use { assertEquals(0, it.count) }
+        } finally {
+            room.close()
+        }
+    }
+
+    @Test
+    fun v2_to_v3_addsTickerAndMarketTables() = runBlocking<Unit> {
+        createVersion(2) { db ->
+            db.execSQL("INSERT INTO asset_category (id, name, assetGroup, icon, seedKey, archived, position, createdAtMs) VALUES (3, NULL, 'INVESTMENT', 'receipt_long', 'asset.fixed_income', 0, 0, 0)")
+            db.execSQL(
+                "INSERT INTO asset (id, name, categoryId, currency, description, institution, acquisitionDate, quantity, notes, imagePath, createdAtMs, updatedAtMs) " +
+                    "VALUES (5, 'Tesouro Selic', 3, 'BRL', NULL, NULL, 20000, NULL, NULL, NULL, 0, 0)",
+            )
+        }
+        val room = Room.databaseBuilder(context, MyFinanceDatabase::class.java, name)
+            .addMigrations(*Migrations.ALL)
+            .allowMainThreadQueries()
+            .build()
+        try {
+            val asset = room.portfolioDao().getAsset(5)!!
+            assertEquals("Tesouro Selic", asset.name)
+            assertNull(asset.ticker)
+            fun price(p: String) = AssetPriceEntity(symbol = "AAPL", date = 20_000, price = p, source = PriceSource.YAHOO, fetchedAtMs = 1)
+            room.marketDao().upsertPrices(listOf(price("100.5")))
+            room.marketDao().upsertPrices(listOf(price("101.25")))
+            assertEquals(listOf("101.25"), room.marketDao().listPrices().map { it.price })
             room.openHelper.writableDatabase.query("PRAGMA foreign_key_check").use { assertEquals(0, it.count) }
         } finally {
             room.close()

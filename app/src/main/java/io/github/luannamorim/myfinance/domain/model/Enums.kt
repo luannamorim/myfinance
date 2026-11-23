@@ -37,5 +37,8 @@ enum class FlowKind(val inflow: Boolean) {
     FULL_DISPOSAL(false),
 }
 
+/** Where a stock or crypto price came from. */
+enum class PriceSource { YAHOO }
+
 /** Where an exchange rate came from. A MANUAL rate wins over a BCB rate on the same date. */
 enum class RateSource { BCB, MANUAL }

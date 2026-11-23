@@ -89,4 +89,23 @@ class SnapshotMapperTest {
         } catch (e: BackupError.Corrupted) {
         }
     }
+
+    @Test
+    fun ticker_roundTrips() = runBlocking {
+        val category = env.db.categoryDao().getAllAssetCategories().first().id
+        env.db.portfolioDao().insertAsset(io.github.luannamorim.myfinance.testutil.asset(category, "Apple", io.github.luannamorim.myfinance.domain.model.Currency.USD, ticker = "AAPL"))
+        val exported = SnapshotMapper.export(env.db)
+        assertEquals("AAPL", exported.assets.single { it.name == "Apple" }.ticker)
+        assertEquals("AAPL", SnapshotMapper.toRows(exported).assets.single { it.name == "Apple" }.ticker)
+    }
+
+    @Test
+    fun invalidTicker_rejected() {
+        val data = BackupDataV1(assets = listOf(io.github.luannamorim.myfinance.domain.backup.AssetDto(1, "X", 1, "USD", acquisitionDate = 0, createdAtMs = 0, updatedAtMs = 0, ticker = "NVD.DE")))
+        try {
+            SnapshotMapper.toRows(data)
+            fail("expected Corrupted")
+        } catch (e: BackupError.Corrupted) {
+        }
+    }
 }

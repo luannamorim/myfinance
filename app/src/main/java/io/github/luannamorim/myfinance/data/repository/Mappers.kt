@@ -3,6 +3,8 @@ package io.github.luannamorim.myfinance.data.repository
 import io.github.luannamorim.myfinance.data.db.entity.AssetCategoryEntity
 import io.github.luannamorim.myfinance.data.db.entity.AssetEntity
 import io.github.luannamorim.myfinance.data.db.entity.AssetFlowEntity
+import io.github.luannamorim.myfinance.data.db.entity.AssetPriceEntity
+import io.github.luannamorim.myfinance.data.db.entity.AssetSplitEntity
 import io.github.luannamorim.myfinance.data.db.entity.AssetValuationEntity
 import io.github.luannamorim.myfinance.data.db.entity.CashAdjustmentEntity
 import io.github.luannamorim.myfinance.data.db.entity.CategoryEntity
@@ -10,6 +12,10 @@ import io.github.luannamorim.myfinance.data.db.entity.ExchangeRateEntity
 import io.github.luannamorim.myfinance.data.db.entity.OccurrenceEntity
 import io.github.luannamorim.myfinance.data.db.entity.TransactionTemplateEntity
 import io.github.luannamorim.myfinance.domain.cash.RecurrenceRule
+import io.github.luannamorim.myfinance.domain.market.MarketData
+import io.github.luannamorim.myfinance.domain.market.PricePoint
+import io.github.luannamorim.myfinance.domain.market.Split
+import io.github.luannamorim.myfinance.domain.market.SymbolHistory
 import io.github.luannamorim.myfinance.domain.model.Asset
 import io.github.luannamorim.myfinance.domain.model.AssetCategory
 import io.github.luannamorim.myfinance.domain.model.AssetFlow
@@ -78,12 +84,17 @@ internal fun AssetEntity.toDomain() = Asset(
     quantity = quantity?.let(::BigDecimal),
     notes = notes,
     imagePath = imagePath,
+    ticker = ticker,
 )
 
 internal fun AssetFlowEntity.toDomain(currency: Currency) =
     AssetFlow(id, assetId, kind, date.toDate(), Money(amount, currency), quantityDelta?.let(::BigDecimal), note, occurrenceId)
 
 internal fun AssetValuationEntity.toDomain(currency: Currency) = Valuation(id, assetId, date.toDate(), Money(value, currency), note)
+
+internal fun AssetPriceEntity.toDomain() = PricePoint(date.toDate(), BigDecimal(price), fetchedAtMs)
+
+internal fun AssetSplitEntity.toDomain() = Split(date.toDate(), BigDecimal(numerator), BigDecimal(denominator))
 
 internal fun ExchangeRateEntity.toDomain() = ExchangeRate(date.toDate(), BigDecimal.valueOf(rateMicros, 6), source)
 
@@ -96,6 +107,8 @@ internal fun portfolioData(
     flows: List<AssetFlowEntity>,
     valuations: List<AssetValuationEntity>,
     categories: List<AssetCategoryEntity>,
+    prices: List<AssetPriceEntity>,
+    splits: List<AssetSplitEntity>,
 ): PortfolioData {
     val domainAssets = assets.map { it.toDomain() }
     val currency = domainAssets.associate { it.id to it.currency }
@@ -104,5 +117,16 @@ internal fun portfolioData(
         flows = flows.filter { it.assetId in currency }.groupBy { it.assetId }.mapValues { (id, list) -> list.map { it.toDomain(currency.getValue(id)) } },
         valuations = valuations.filter { it.assetId in currency }.groupBy { it.assetId }.mapValues { (id, list) -> list.map { it.toDomain(currency.getValue(id)) } },
         categories = categories.map { it.toDomain() },
+        market = marketData(prices, splits),
+    )
+}
+
+private fun marketData(prices: List<AssetPriceEntity>, splits: List<AssetSplitEntity>): MarketData {
+    val pricesBySymbol = prices.groupBy { it.symbol }
+    val splitsBySymbol = splits.groupBy { it.symbol }
+    return MarketData(
+        (pricesBySymbol.keys + splitsBySymbol.keys).associateWith { symbol ->
+            SymbolHistory(pricesBySymbol[symbol].orEmpty().map { it.toDomain() }, splitsBySymbol[symbol].orEmpty().map { it.toDomain() })
+        },
     )
 }

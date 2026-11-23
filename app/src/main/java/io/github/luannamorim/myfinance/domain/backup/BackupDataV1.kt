@@ -83,6 +83,8 @@ data class AssetDto(
     val id: Long, val name: String, val categoryId: Long, val currency: String, val description: String? = null,
     val institution: String? = null, val acquisitionDate: Long, val quantity: String? = null, val notes: String? = null,
     val imagePath: String? = null, val createdAtMs: Long, val updatedAtMs: Long,
+    /** Since the stock quotes feature: symbol of a tracked stock or crypto. */
+    val ticker: String? = null,
 )
 
 @Serializable

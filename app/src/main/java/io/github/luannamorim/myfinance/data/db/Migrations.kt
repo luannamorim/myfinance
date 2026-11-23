@@ -94,7 +94,21 @@ object Migrations {
         }
     }
 
-    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2)
+    /**
+     * 2 → 3 (US stock and crypto quotes): `asset.ticker` (NULL for every existing asset) and the `asset_price`
+     * and `asset_split` tables, which start empty. Only additions, so no table is rebuilt.
+     */
+    val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `asset` ADD COLUMN `ticker` TEXT")
+            db.execSQL("CREATE TABLE IF NOT EXISTS `asset_price` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `symbol` TEXT NOT NULL, `date` INTEGER NOT NULL, `price` TEXT NOT NULL, `source` TEXT NOT NULL, `fetchedAtMs` INTEGER NOT NULL)")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_asset_price_symbol_date` ON `asset_price` (`symbol`, `date`)")
+            db.execSQL("CREATE TABLE IF NOT EXISTS `asset_split` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `symbol` TEXT NOT NULL, `date` INTEGER NOT NULL, `numerator` TEXT NOT NULL, `denominator` TEXT NOT NULL)")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_asset_split_symbol_date` ON `asset_split` (`symbol`, `date`)")
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
 
     /** Copies [columns] (those that exist before and after) into the rebuilt [table]; new columns start NULL. */
     private fun rebuild(db: SupportSQLiteDatabase, table: String, create: String, columns: String, indices: List<String>) {

@@ -5,12 +5,16 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.luannamorim.myfinance.core.time.FakeTimeSource
 import io.github.luannamorim.myfinance.data.db.entity.AssetFlowEntity
+import io.github.luannamorim.myfinance.data.db.entity.AssetPriceEntity
 import io.github.luannamorim.myfinance.data.db.entity.AssetValuationEntity
 import io.github.luannamorim.myfinance.data.images.ImageStore
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.FlowKind
 import io.github.luannamorim.myfinance.domain.portfolio.PortfolioData
+import io.github.luannamorim.myfinance.domain.model.PriceSource
+import io.github.luannamorim.myfinance.testutil.asset
 import io.github.luannamorim.myfinance.testutil.brl
+import io.github.luannamorim.myfinance.testutil.day
 import io.github.luannamorim.myfinance.testutil.d
 import io.github.luannamorim.myfinance.testutil.inMemoryDb
 import kotlinx.coroutines.Dispatchers
@@ -75,7 +79,18 @@ class PortfolioDataTest {
             flows = listOf(AssetFlowEntity(assetId = 9, kind = FlowKind.INITIAL, date = 0, amount = 100, createdAtMs = 0)),
             valuations = listOf(AssetValuationEntity(assetId = 9, date = 0, value = 100, createdAtMs = 0)),
             categories = emptyList(),
+            prices = emptyList(),
+            splits = emptyList(),
         )
         assertTrue(data.flows.isEmpty() && data.valuations.isEmpty())
+    }
+
+    @Test
+    fun market_carriesStoredPrices() = runBlocking {
+        val category = db.categoryDao().getAllAssetCategories().first { it.seedKey == "asset.fixed_income" }.id
+        db.portfolioDao().insertAsset(asset(category, "Apple", Currency.USD, ticker = "AAPL"))
+        db.marketDao().upsertPrices(listOf(AssetPriceEntity(symbol = "AAPL", date = day("2026-11-20"), price = "347.19", source = PriceSource.YAHOO, fetchedAtMs = 1)))
+        val market = portfolio.data.first().market
+        assertEquals(0, java.math.BigDecimal("347.19").compareTo(market.priceOn("AAPL", d("2026-11-23"))?.price))
     }
 }

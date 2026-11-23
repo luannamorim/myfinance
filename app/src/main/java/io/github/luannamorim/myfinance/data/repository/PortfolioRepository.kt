@@ -62,12 +62,15 @@ class PortfolioRepository @Inject constructor(
      * without the deleted one while its flows were still there, which crashed every screen observing this.
      */
     val data: Flow<PortfolioData> = db.invalidationTracker
-        .createFlow("asset", "asset_flow", "asset_valuation", "asset_category")
+        .createFlow("asset", "asset_flow", "asset_valuation", "asset_category", "asset_price", "asset_split")
         .conflate()
         .map { snapshot() }
 
     private suspend fun snapshot(): PortfolioData = db.withTransaction {
-        portfolioData(dao.listAssets(), dao.listFlows(), dao.listValuations(), db.categoryDao().listAssetCategories(includeArchived = true))
+        portfolioData(
+            dao.listAssets(), dao.listFlows(), dao.listValuations(), db.categoryDao().listAssetCategories(includeArchived = true),
+            db.marketDao().listPrices(), db.marketDao().listSplits(),
+        )
     }
 
     suspend fun asset(id: Long): Asset? = dao.getAsset(id)?.toDomain()
@@ -94,7 +97,7 @@ class PortfolioRepository @Inject constructor(
                     name = draft.name.trim(), categoryId = draft.categoryId, currency = draft.currency, description = draft.description.clean(),
                     institution = draft.institution.clean(), acquisitionDate = draft.acquisitionDate.toEpochDay(),
                     quantity = draft.quantity?.stripTrailingZeros()?.toPlainString(), notes = draft.notes.clean(), imagePath = draft.imagePath,
-                    createdAtMs = now, updatedAtMs = now,
+                    createdAtMs = now, updatedAtMs = now, ticker = null,
                 ),
             )
             val transfer = fromCash?.let { insertTransfer(EntryKind.TRANSFER_OUT, id, draft.name.trim(), it, draft.acquisitionDate, null, now) }

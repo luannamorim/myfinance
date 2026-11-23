@@ -22,6 +22,7 @@ import io.github.luannamorim.myfinance.domain.backup.ExchangeRateDto
 import io.github.luannamorim.myfinance.domain.backup.OccurrenceDto
 import io.github.luannamorim.myfinance.domain.backup.TemplateDto
 import io.github.luannamorim.myfinance.domain.backup.ValuationDto
+import io.github.luannamorim.myfinance.domain.market.Ticker
 import java.math.BigDecimal
 
 /** Converts the whole database to/from the versioned backup DTOs. */
@@ -125,10 +126,10 @@ object SnapshotMapper {
     private fun AssetCategoryDto.toEntity() = AssetCategoryEntity(id, name, enumOf(assetGroup), icon, seedKey, archived, position, createdAtMs)
 
     private fun AssetEntity.toDto() = AssetDto(
-        id, name, categoryId, currency.name, description, institution, acquisitionDate, quantity, notes, imagePath, createdAtMs, updatedAtMs,
+        id, name, categoryId, currency.name, description, institution, acquisitionDate, quantity, notes, imagePath, createdAtMs, updatedAtMs, ticker,
     )
     private fun AssetDto.toEntity() = AssetEntity(
-        id, name, categoryId, enumOf(currency), description, institution, acquisitionDate, decimal(quantity), notes, imagePath, createdAtMs, updatedAtMs,
+        id, name, categoryId, enumOf(currency), description, institution, acquisitionDate, decimal(quantity), notes, imagePath, createdAtMs, updatedAtMs, ticker(ticker),
     )
 
     private fun AssetFlowEntity.toDto() = AssetFlowDto(id, assetId, kind.name, date, amount, quantityDelta, note, createdAtMs, occurrenceId)
@@ -143,6 +144,12 @@ object SnapshotMapper {
     /** Unknown values (e.g. a newer app's enum) reject the backup instead of storing rows the app can't read. */
     private inline fun <reified E : Enum<E>> enumOf(name: String): E =
         enumValues<E>().firstOrNull { it.name == name } ?: throw BackupError.Corrupted("unknown ${E::class.simpleName}")
+
+    /** A tracked symbol must be one the app can track, already in its normalized form. */
+    private fun ticker(text: String?): String? {
+        if (text != null && Ticker.normalize(text) != text) throw BackupError.Corrupted("invalid ticker")
+        return text
+    }
 
     /** Quantities are parsed as BigDecimal when shown; reject anything that isn't a plain decimal. */
     private fun decimal(text: String?): String? {

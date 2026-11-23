@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 import io.github.luannamorim.myfinance.domain.model.AssetGroup
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.FlowKind
+import io.github.luannamorim.myfinance.domain.model.PriceSource
 import io.github.luannamorim.myfinance.domain.model.RateSource
 
 @Entity(
@@ -45,6 +46,8 @@ data class AssetEntity(
     val imagePath: String? = null,
     val createdAtMs: Long,
     val updatedAtMs: Long,
+    /** Symbol of a tracked stock, ETF or crypto (USD only); null for every other asset. Never changes after creation. */
+    val ticker: String?,
 )
 
 /**
