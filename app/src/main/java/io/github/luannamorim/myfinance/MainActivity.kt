@@ -21,6 +21,7 @@ import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.luannamorim.myfinance.core.format.Formats
 import io.github.luannamorim.myfinance.data.repository.ExchangeRateRepository
+import io.github.luannamorim.myfinance.data.repository.PriceRepository
 import io.github.luannamorim.myfinance.di.ApplicationScope
 import io.github.luannamorim.myfinance.domain.model.AppSettings
 import io.github.luannamorim.myfinance.domain.model.ThemeMode
@@ -36,18 +37,21 @@ import javax.inject.Inject
 class MainActivity : ComponentActivity() {
 
     @Inject lateinit var rates: Lazy<ExchangeRateRepository>
+    @Inject lateinit var prices: Lazy<PriceRepository>
     @Inject @ApplicationScope lateinit var appScope: CoroutineScope
 
     /** Incremented whenever an intent asks to show the backup screen (backup failure notification). */
     private val openBackupRequest = mutableIntStateOf(0)
 
     /**
-     * Each time the app comes to the foreground, fetch exchange rates: at most every 6 hours and only when
-     * automatic fetching is on (the repository decides). There is no background job.
+     * Each time the app comes to the foreground, fetch exchange rates (at most every 6 hours) and stock quotes (at
+     * most every 15 minutes, and only when some asset has a ticker), each only when its automatic fetching is on.
+     * The repositories decide. There is no background job.
      */
     override fun onStart() {
         super.onStart()
         appScope.launch { rates.get().refresh() }
+        appScope.launch { prices.get().refresh() }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
