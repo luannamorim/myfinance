@@ -67,6 +67,8 @@ object QuantityInput {
 data class AssetEditorUiState(
     val loading: Boolean = true,
     val isNew: Boolean = true,
+    /** Editing an asset that follows a quote: its shares come from buys and sells, so there is no quantity field. */
+    val editingTracked: Boolean = false,
     val name: String = "",
     val categoryId: Long? = null,
     val categories: List<AssetCategory> = emptyList(),
@@ -174,7 +176,7 @@ class AssetEditorViewModel @Inject constructor(
                 originalImage = asset.imagePath
                 form.update {
                     it.copy(
-                        loading = false, name = asset.name, categoryId = asset.categoryId, currency = asset.currency,
+                        loading = false, editingTracked = asset.ticker != null, name = asset.name, categoryId = asset.categoryId, currency = asset.currency,
                         institution = asset.institution.orEmpty(), description = asset.description.orEmpty(), notes = asset.notes.orEmpty(),
                         acquisitionDate = asset.acquisitionDate, quantity = QuantityInput.format(asset.quantity), imagePath = asset.imagePath,
                     )

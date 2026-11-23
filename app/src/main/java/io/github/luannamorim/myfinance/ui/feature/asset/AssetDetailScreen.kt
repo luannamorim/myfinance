@@ -264,6 +264,7 @@ fun AssetDetailContent(state: AssetDetailUiState, actions: AssetDetailActions) {
                 onDismiss = { actions.onOpenSheet(null) },
                 rates = state.rates,
                 heldOn = state::heldOn,
+                splits = state.splits,
             )
         } else when (state.sheet) {
             AssetSheet.VALUATION -> ValuationSheet(asset.currency, state.today, minDate, state.valuationDates, actions.onAddValuation) { actions.onOpenSheet(null) }

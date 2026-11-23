@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.CallSplit
 import androidx.compose.material.icons.rounded.AddAPhoto
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -46,6 +45,7 @@ import io.github.luannamorim.myfinance.ui.common.AssetCategoryPicker
 import io.github.luannamorim.myfinance.ui.common.CashLinkFields
 import io.github.luannamorim.myfinance.ui.common.CategoryIcons
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
+import io.github.luannamorim.myfinance.ui.common.SplitNote
 import io.github.luannamorim.myfinance.ui.common.StoredImage
 import io.github.luannamorim.myfinance.ui.common.icon
 import io.github.luannamorim.myfinance.ui.common.label
@@ -146,14 +146,16 @@ private fun ColumnScope.ManualFields(state: AssetEditorUiState, actions: AssetEd
     }
     DateSelector(stringResource(R.string.asset_acquired), state.acquisitionDate, { d -> actions.onEdit { it.copy(acquisitionDate = d) } }, maxDate = state.today)
     InstitutionField(state, actions)
-    FinanceTextField(
-        value = state.quantity,
-        onValueChange = { v -> actions.onEdit { it.copy(quantity = v) } },
-        label = stringResource(R.string.asset_quantity),
-        keyboardType = KeyboardType.Decimal,
-        isError = state.quantityError,
-        supportingText = if (state.quantityError) stringResource(R.string.asset_quantity_invalid) else null,
-    )
+    if (!state.editingTracked) {
+        FinanceTextField(
+            value = state.quantity,
+            onValueChange = { v -> actions.onEdit { it.copy(quantity = v) } },
+            label = stringResource(R.string.asset_quantity),
+            keyboardType = KeyboardType.Decimal,
+            isError = state.quantityError,
+            supportingText = if (state.quantityError) stringResource(R.string.asset_quantity_invalid) else null,
+        )
+    }
     DescriptionField(state, actions)
     NotesAndPhoto(state, actions)
 }
@@ -297,12 +299,7 @@ private fun TodayBlock(state: AssetEditorUiState, symbol: String) {
             style = FinanceTheme.type.bodyStrong,
             color = c.textPrimary,
         )
-        preview.splitsSince.firstOrNull()?.let { split ->
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                Icon(Icons.AutoMirrored.Rounded.CallSplit, contentDescription = null, tint = c.warning, modifier = Modifier.size(16.dp))
-                Text(stringResource(R.string.asset_split_note, split.ratio, formats.dates.date(split.date)), style = FinanceTheme.type.caption, color = c.warning)
-            }
-        }
+        preview.splitsSince.firstOrNull()?.let { SplitNote(it) }
     }
 }
 

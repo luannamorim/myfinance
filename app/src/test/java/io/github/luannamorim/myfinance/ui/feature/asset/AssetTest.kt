@@ -290,6 +290,46 @@ class AssetTest {
     }
 
     @Test
+    fun tracked_buyBeforeSplit_showsSplitNote() {
+        val id = tracked("NVDA", date = "2026-11-02")
+        price("NVDA", "2026-11-10", "121.79")
+        runBlocking {
+            db.marketDao().insertSplits(
+                listOf(io.github.luannamorim.myfinance.data.db.entity.AssetSplitEntity(symbol = "NVDA", date = d("2026-11-10").toEpochDay(), numerator = "10", denominator = "1")),
+            )
+        }
+        val vm = detail(id)
+        showDetail(vm)
+        compose.waitUntil(5_000) { vm.state.value.splits.isNotEmpty() }
+        compose.onNodeWithText("Buy").performClick()
+        // Today (11-12) is after the split: no note.
+        compose.onNodeWithText("Includes a 10:1 split", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("Date: ", substring = true).performClick()
+        compose.onNodeWithText("Thursday, November 5, 2026", substring = true).performClick()
+        compose.onAllNodesWithText("Save").onLast().performClick()
+        compose.onNodeWithText("Includes a 10:1 split on ", substring = true).assertExists()
+    }
+
+    @Test
+    fun editTracked_hidesQuantityField() {
+        val id = tracked()
+        val vm = editor(AssetEditorRoute(id))
+        compose.setContent { FinanceTheme { AssetEditorScreen(onClose = {}, viewModel = vm) } }
+        compose.waitUntil(5_000) { !vm.state.value.loading }
+        compose.onNodeWithText("Name").assertExists()
+        compose.onNodeWithText("Quantity (optional)").assertDoesNotExist()
+    }
+
+    @Test
+    fun editManual_keepsQuantityField() {
+        val id = runBlocking { portfolio.createAsset(AssetDraft("Gold", category("asset.stocks"), Currency.BRL, acquisitionDate = d("2026-11-02")), brl("100.00"), null) }
+        val vm = editor(AssetEditorRoute(id))
+        compose.setContent { FinanceTheme { AssetEditorScreen(onClose = {}, viewModel = vm) } }
+        compose.waitUntil(5_000) { !vm.state.value.loading }
+        compose.onNodeWithText("Quantity (optional)").assertExists()
+    }
+
+    @Test
     fun tracked_sellTooMany_blocksSave() {
         val id = tracked()
         price("AAPL", "2026-11-10", "347.19")

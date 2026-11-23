@@ -25,6 +25,7 @@ import io.github.luannamorim.myfinance.R
 import io.github.luannamorim.myfinance.core.format.AmountInput
 import io.github.luannamorim.myfinance.core.format.DecimalInput
 import io.github.luannamorim.myfinance.domain.fx.ExchangeRates
+import io.github.luannamorim.myfinance.domain.market.Split
 import io.github.luannamorim.myfinance.domain.market.Ticker
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.FlowKind
@@ -32,6 +33,7 @@ import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.domain.portfolio.Holdings
 import io.github.luannamorim.myfinance.ui.common.CashLinkFields
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
+import io.github.luannamorim.myfinance.ui.common.SplitNote
 import io.github.luannamorim.myfinance.ui.common.cashLinkAmount
 import io.github.luannamorim.myfinance.ui.common.unitsLabel
 import io.github.luannamorim.myfinance.ui.components.ChoiceRow
@@ -173,7 +175,8 @@ fun FlowSheet(
 /**
  * Buy or sell shares or coins of a tracked asset: quantity × price per unit, in USD. Selling more than [held] on
  * the chosen date ([heldOn]) is blocked here; a back-dated sale that leaves a later one short is refused by the
- * repository. Selling everything passes a null quantity: the repository counts what is held.
+ * repository. Selling everything passes a null quantity: the repository counts what is held. A buy dated before one
+ * of [splits] shows the same split note as the editor: its quantity and price are as of that date.
  */
 @Composable
 fun TradeSheet(
@@ -186,6 +189,7 @@ fun TradeSheet(
     onDismiss: () -> Unit,
     rates: ExchangeRates,
     heldOn: (LocalDate) -> BigDecimal = { held },
+    splits: List<Split> = emptyList(),
 ) {
     val c = FinanceTheme.colors
     val money = LocalFormats.current.money
@@ -256,6 +260,7 @@ fun TradeSheet(
             val caption = listOfNotNull(held, totalText).joinToString(" · ")
             if (caption.isNotEmpty()) Text(caption, style = FinanceTheme.type.caption, color = c.textSecondary)
         }
+        if (!sell) splits.sortedBy { it.date }.firstOrNull { it.date.isAfter(date) }?.let { SplitNote(it) }
         DateSelector(stringResource(R.string.flow_date), date, { date = it }, maxDate = today, minDate = minDate)
         CashLinkFields(
             linked = linked,
