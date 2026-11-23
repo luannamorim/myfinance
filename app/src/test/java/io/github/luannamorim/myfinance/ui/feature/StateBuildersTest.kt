@@ -3,6 +3,9 @@ package io.github.luannamorim.myfinance.ui.feature
 import io.github.luannamorim.myfinance.domain.cash.CashLedger
 import io.github.luannamorim.myfinance.domain.fx.Converter
 import io.github.luannamorim.myfinance.domain.fx.ExchangeRates
+import io.github.luannamorim.myfinance.domain.market.MarketData
+import io.github.luannamorim.myfinance.domain.market.PricePoint
+import io.github.luannamorim.myfinance.domain.market.SymbolHistory
 import io.github.luannamorim.myfinance.domain.model.Asset
 import io.github.luannamorim.myfinance.domain.model.AssetCategory
 import io.github.luannamorim.myfinance.domain.model.AssetFlow
@@ -21,6 +24,7 @@ import io.github.luannamorim.myfinance.testutil.rate
 import io.github.luannamorim.myfinance.testutil.transfer
 import io.github.luannamorim.myfinance.testutil.usd
 import io.github.luannamorim.myfinance.ui.common.OccurrenceRow
+import io.github.luannamorim.myfinance.ui.feature.asset.assetDetailState
 import io.github.luannamorim.myfinance.ui.feature.cashflow.ChartSpan
 import io.github.luannamorim.myfinance.ui.feature.cashflow.cashFlowCharts
 import io.github.luannamorim.myfinance.ui.feature.cashflow.cashFlowState
@@ -150,5 +154,17 @@ class StateBuildersTest {
         assertEquals(brl("6450.00"), s.result!!.money)
         // Received − paid: 9.000 − 50 = 8.950
         assertEquals(brl("8950.00"), s.resultSoFar!!.money)
+    }
+
+    @Test
+    fun assetDetail_seriesUsesQuote() {
+        val aapl = Asset(5, "Apple", 1, Currency.USD, null, null, d("2026-11-02"), null, null, null, "AAPL")
+        val data = portfolio.copy(
+            assets = listOf(aapl),
+            flows = mapOf(5L to listOf(AssetFlow(7, 5, FlowKind.INITIAL, d("2026-11-02"), usd("1000.00"), BigDecimal("2.5"), null))),
+            market = MarketData(mapOf("AAPL" to SymbolHistory(listOf(PricePoint(d("2026-11-10"), BigDecimal("347.19"))), emptyList()))),
+        )
+        val state = assetDetailState(data, 5, ExchangeRates.EMPTY, Currency.USD, today) { null }
+        assertEquals(usd("867.98"), state.series.last().value.money)
     }
 }

@@ -3,6 +3,10 @@ package io.github.luannamorim.myfinance.domain.portfolio
 import io.github.luannamorim.myfinance.domain.fx.Converter
 import io.github.luannamorim.myfinance.domain.fx.ExchangeRates
 import io.github.luannamorim.myfinance.domain.fx.Total
+import io.github.luannamorim.myfinance.domain.market.MarketData
+import io.github.luannamorim.myfinance.domain.market.PricePoint
+import io.github.luannamorim.myfinance.domain.market.Split
+import io.github.luannamorim.myfinance.domain.market.SymbolHistory
 import io.github.luannamorim.myfinance.domain.model.Asset
 import io.github.luannamorim.myfinance.domain.model.AssetCategory
 import io.github.luannamorim.myfinance.domain.model.AssetFlow
@@ -13,7 +17,9 @@ import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.domain.model.Valuation
 import io.github.luannamorim.myfinance.testutil.brl
 import io.github.luannamorim.myfinance.testutil.d
+import io.github.luannamorim.myfinance.testutil.periodGain
 import io.github.luannamorim.myfinance.testutil.rate
+import io.github.luannamorim.myfinance.testutil.snapshot
 import io.github.luannamorim.myfinance.testutil.usd
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -207,5 +213,88 @@ class PortfolioCalculatorTest {
         assertEquals(brl("0.00"), last.value.money)
         assertEquals(brl("350.00"), last.gain.money)
         assertEquals(brl("5120.00"), points.first { it.date == d("2026-03-31") }.value.money)
+    }
+
+    // --- Tracked assets (ticker != null): value = quantity × quote ---
+
+    private fun tracked(ticker: String = "AAPL") =
+        Asset(ids++, "Tracked", 1, Currency.USD, null, null, d("2026-11-02"), null, null, null, ticker)
+    private fun shares(a: Asset, kind: FlowKind, amount: Money, on: String, quantity: String) =
+        AssetFlow(ids++, a.id, kind, d(on), amount, BigDecimal(quantity), null)
+    private fun market(symbol: String, prices: List<Pair<String, String>>, splits: List<Split> = emptyList()) =
+        MarketData(mapOf(symbol to SymbolHistory(prices.map { (on, p) -> PricePoint(d(on), BigDecimal(p)) }, splits)))
+
+    private val aapl = tracked()
+    private val aaplFlows = listOf(shares(aapl, FlowKind.INITIAL, usd("1000.00"), "2026-11-02", "2.5"))
+    private val aaplMarket = market("AAPL", listOf("2026-11-20" to "347.19"))
+
+    @Test
+    fun tracked_valueIsQuantityTimesPrice() {
+        val s = PortfolioCalculator.snapshot(aapl, aaplFlows, emptyList(), aaplMarket, d("2026-11-23"))!!
+        assertEquals(usd("867.98"), s.value) // 2,5 × 347,19 = 867,975
+        assertEquals(usd("-132.02"), s.gain)
+        assertEquals(BigDecimal("2.5"), s.quantity)
+        assertEquals(d("2026-11-20"), s.price!!.date)
+        assertEquals(d("2026-11-20"), s.lastValuationDate)
+        assertFalse(s.carriedForward)
+    }
+
+    @Test
+    fun tracked_splitMidSeries() {
+        val nvda = tracked("NVDA")
+        val f = listOf(shares(nvda, FlowKind.INITIAL, usd("2321.60"), "2024-06-03", "2"))
+        val m = market(
+            "NVDA", listOf("2024-06-07" to "1208.88", "2024-06-10" to "121.79"),
+            listOf(Split(d("2024-06-10"), BigDecimal(10), BigDecimal.ONE)),
+        )
+        assertEquals(usd("2417.76"), PortfolioCalculator.valueAt(nvda, f, emptyList(), m, d("2024-06-07")))
+        assertEquals(usd("2435.80"), PortfolioCalculator.valueAt(nvda, f, emptyList(), m, d("2024-06-10")))
+    }
+
+    @Test
+    fun tracked_crypto_tinyPrice() {
+        val shib = tracked("SHIB-USD")
+        val f = listOf(shares(shib, FlowKind.INITIAL, usd("200.00"), "2026-11-02", "50000000"))
+        val m = market("SHIB-USD", listOf("2026-11-20" to "0.00000379"))
+        assertEquals(usd("189.50"), PortfolioCalculator.valueAt(shib, f, emptyList(), m, d("2026-11-23")))
+    }
+
+    @Test
+    fun tracked_withoutPrice_isNetInvested() {
+        val s = PortfolioCalculator.snapshot(aapl, aaplFlows, emptyList(), MarketData.EMPTY, d("2026-11-23"))!!
+        assertEquals(usd("1000.00"), s.value)
+        assertNull(s.price)
+    }
+
+    @Test
+    fun tracked_closed_isZero() {
+        val f = aaplFlows + shares(aapl, FlowKind.FULL_DISPOSAL, usd("900.00"), "2026-11-10", "2.5")
+        val s = PortfolioCalculator.snapshot(aapl, f, emptyList(), aaplMarket, d("2026-11-23"))!!
+        assertTrue(s.closed)
+        assertEquals(usd("0.00"), s.value)
+    }
+
+    private fun trackedData(vararg extra: Pair<Asset, List<AssetFlow>>, valuations: Map<Long, List<Valuation>> = emptyMap()) = PortfolioData(
+        assets = listOf(aapl) + extra.map { it.first },
+        flows = mapOf(aapl.id to aaplFlows) + extra.associate { it.first.id to it.second },
+        valuations = valuations,
+    )
+
+    @Test
+    fun totals_trackedWithoutPrice_usesInvested() {
+        val t = PortfolioCalculator.totals(trackedData(), d("2026-11-23"), Currency.USD, Converter(ExchangeRates.EMPTY))
+        assertEquals(usd("1000.00"), t.value.money)
+        assertFalse(t.value.incomplete)
+    }
+
+    @Test
+    fun totals_lastValuationDate_ignoresTracked() {
+        val manual = Asset(ids++, "Manual", 1, Currency.USD, null, null, d("2026-10-01"), null, null, null)
+        val data = trackedData(
+            manual to listOf(flow(manual, FlowKind.INITIAL, usd("500.00"), "2026-10-01")),
+            valuations = mapOf(manual.id to listOf(valuation(manual, usd("520.00"), "2026-10-31"))),
+        ).copy(market = aaplMarket)
+        val t = PortfolioCalculator.totals(data, d("2026-11-23"), Currency.USD, Converter(ExchangeRates.EMPTY))
+        assertEquals(d("2026-10-31"), t.lastValuationDate)
     }
 }

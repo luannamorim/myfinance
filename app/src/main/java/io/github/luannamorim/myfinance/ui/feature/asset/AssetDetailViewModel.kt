@@ -73,8 +73,8 @@ fun assetDetailState(data: PortfolioData, assetId: Long, rates: ExchangeRates, d
     val flows = data.flowsOf(asset)
     val valuations = data.valuationsOf(asset)
     val converter = Converter(rates)
-    val snapshot = PortfolioCalculator.snapshot(asset, flows, valuations, today)
-    val single = PortfolioData(listOf(asset), mapOf(asset.id to flows), mapOf(asset.id to valuations), data.categories)
+    val snapshot = PortfolioCalculator.snapshot(data, asset, today)
+    val single = data.only(asset)
     return AssetDetailUiState(
         loading = false,
         asset = asset,

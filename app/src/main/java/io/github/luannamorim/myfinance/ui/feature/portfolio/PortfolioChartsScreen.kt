@@ -74,7 +74,7 @@ data class PortfolioChartsUiState(
 private fun gainAt(data: PortfolioData, date: LocalDate, to: Currency, converter: Converter): Total =
     data.assets.fold(Total.zero(to)) { acc, asset ->
         val flows = data.flowsOf(asset)
-        val s = PortfolioCalculator.snapshot(asset, flows, data.valuationsOf(asset), date) ?: return@fold acc
+        val s = PortfolioCalculator.snapshot(data, asset, date) ?: return@fold acc
         acc + PortfolioCalculator.convertedSnapshot(s, flows, date, to, converter).gain
     }
 

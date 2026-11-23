@@ -16,6 +16,7 @@ import io.github.luannamorim.myfinance.domain.portfolio.PortfolioCalculator
 import io.github.luannamorim.myfinance.testutil.brl
 import io.github.luannamorim.myfinance.testutil.d
 import io.github.luannamorim.myfinance.testutil.inMemoryDb
+import io.github.luannamorim.myfinance.testutil.snapshot
 import io.github.luannamorim.myfinance.testutil.usd
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first

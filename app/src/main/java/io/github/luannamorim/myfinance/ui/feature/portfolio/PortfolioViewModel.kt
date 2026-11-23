@@ -68,7 +68,7 @@ fun portfolioState(
     val categories = data.categories.associateBy { it.id }
     val rows = data.assets.filter { group == null || data.groupOf(it) == group }.mapNotNull { asset ->
         val flows = data.flowsOf(asset)
-        val s = PortfolioCalculator.snapshot(asset, flows, data.valuationsOf(asset), today) ?: return@mapNotNull null
+        val s = PortfolioCalculator.snapshot(data, asset, today) ?: return@mapNotNull null
         AssetRow(s, categories[asset.categoryId], if (asset.currency != display) converter.sum(listOf(s.value to today), display) else null)
     }
     val slices = Allocation.of(data, today, display, converter, group)

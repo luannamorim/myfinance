@@ -46,7 +46,7 @@ object Series {
             var gain = Total.zero(to)
             assets.forEach { asset ->
                 val flows = data.flowsOf(asset)
-                val s = PortfolioCalculator.snapshot(asset, flows, data.valuationsOf(asset), date) ?: return@forEach
+                val s = PortfolioCalculator.snapshot(data, asset, date) ?: return@forEach
                 val converted = PortfolioCalculator.convertedSnapshot(s, flows, date, to, converter)
                 gain += converted.gain
                 if (!s.closed) {

@@ -2,6 +2,8 @@ package io.github.luannamorim.myfinance.domain.portfolio
 
 import io.github.luannamorim.myfinance.domain.fx.Converter
 import io.github.luannamorim.myfinance.domain.fx.Total
+import io.github.luannamorim.myfinance.domain.market.MarketData
+import io.github.luannamorim.myfinance.domain.market.PricePoint
 import io.github.luannamorim.myfinance.domain.model.Asset
 import io.github.luannamorim.myfinance.domain.model.AssetCategory
 import io.github.luannamorim.myfinance.domain.model.AssetFlow
@@ -20,7 +22,13 @@ data class PortfolioData(
     val flows: Map<Long, List<AssetFlow>> = emptyMap(),
     val valuations: Map<Long, List<Valuation>> = emptyMap(),
     val categories: List<AssetCategory> = emptyList(),
+    /** Quotes and splits of the tracked assets. */
+    val market: MarketData = MarketData.EMPTY,
 ) {
+    /** Just [asset]'s flows and valuations, with the same categories and market. */
+    fun only(asset: Asset): PortfolioData =
+        copy(assets = listOf(asset), flows = mapOf(asset.id to flowsOf(asset)), valuations = mapOf(asset.id to valuationsOf(asset)))
+
     fun flowsOf(asset: Asset): List<AssetFlow> = flows[asset.id].orEmpty()
     fun valuationsOf(asset: Asset): List<Valuation> = valuations[asset.id].orEmpty()
     fun groupOf(asset: Asset): AssetGroup? = categories.firstOrNull { it.id == asset.categoryId }?.group
@@ -42,6 +50,10 @@ data class AssetSnapshot(
     /** The value is the last valuation plus flows recorded after it. */
     val carriedForward: Boolean,
     val closed: Boolean,
+    /** Shares held at the date; tracked assets only, null when unknown. */
+    val quantity: BigDecimal? = null,
+    /** The quote the value of a tracked asset comes from; null for manual assets and when there is none. */
+    val price: PricePoint? = null,
 )
 
 /** One valuation of the history, with what had been invested at that date. */
@@ -90,7 +102,7 @@ object PortfolioCalculator {
     private fun signed(flow: AssetFlow): Long = if (flow.kind.inflow) flow.amount.minor else -flow.amount.minor
 
     /** The asset at the end of [at]; null when it had no record yet. */
-    fun snapshot(asset: Asset, flows: List<AssetFlow>, valuations: List<Valuation>, at: LocalDate): AssetSnapshot? {
+    fun snapshot(asset: Asset, flows: List<AssetFlow>, valuations: List<Valuation>, market: MarketData, at: LocalDate): AssetSnapshot? {
         val first = firstRecordDate(flows, valuations) ?: return null
         if (at.isBefore(first)) return null
         val c = asset.currency
@@ -99,6 +111,27 @@ object PortfolioCalculator {
         val withdrawn = upTo.filterNot { it.kind.inflow }.sumOf { it.amount.minor }
         val net = contributed - withdrawn
         val closed = isClosed(flows, at)
+        val ticker = asset.ticker
+        if (ticker != null) {
+            val quantity = Holdings.quantityAt(flows, market.splitsOf(ticker), at)
+            val price = market.priceOn(ticker, at)
+            val quoted = if (closed || quantity == null || price == null) null else Money.of(quantity.multiply(price.price), c)
+            val tracked = if (closed) 0L else quoted?.minor ?: net
+            return AssetSnapshot(
+                asset = asset,
+                contributed = Money(contributed, c),
+                withdrawn = Money(withdrawn, c),
+                netInvested = Money(net, c),
+                value = Money(tracked.coerceAtLeast(0), c),
+                gain = Money(tracked.coerceAtLeast(0) - net, c),
+                simpleReturn = ratio(tracked.coerceAtLeast(0) - net, contributed),
+                lastValuationDate = if (quoted != null) price?.date else null,
+                carriedForward = false,
+                closed = closed,
+                quantity = quantity,
+                price = if (quoted != null) price else null,
+            )
+        }
         val last = valuations.filter { !it.date.isAfter(at) }.maxByOrNull { it.date }
         val after = if (last == null) emptyList() else upTo.filter { it.date.isAfter(last.date) }
         val rawValue = when {
@@ -122,22 +155,26 @@ object PortfolioCalculator {
         )
     }
 
-    fun valueAt(asset: Asset, flows: List<AssetFlow>, valuations: List<Valuation>, at: LocalDate): Money? =
-        snapshot(asset, flows, valuations, at)?.value
+    /** The asset at the end of [at], quotes from [data]; null when it had no record yet. */
+    fun snapshot(data: PortfolioData, asset: Asset, at: LocalDate): AssetSnapshot? =
+        snapshot(asset, data.flowsOf(asset), data.valuationsOf(asset), data.market, at)
+
+    fun valueAt(asset: Asset, flows: List<AssetFlow>, valuations: List<Valuation>, market: MarketData, at: LocalDate): Money? =
+        snapshot(asset, flows, valuations, market, at)?.value
 
     /** Valuation history, oldest first, each row with what had been invested at that date. */
     fun valuationRows(asset: Asset, flows: List<AssetFlow>, valuations: List<Valuation>): List<ValuationRow> =
         valuations.sortedBy { it.date }.map { v ->
-            val s = checkNotNull(snapshot(asset, flows, valuations, v.date))
+            val s = checkNotNull(snapshot(asset, flows, valuations, MarketData.EMPTY, v.date))
             ValuationRow(v, s.netInvested, v.value - s.netInvested, ratio(v.value.minor - s.netInvested.minor, s.contributed.minor))
         }
 
     /** (value(end) − value(start)) − net flows in (start, end]. value(start) is 0 before the first record. */
-    fun periodGain(asset: Asset, flows: List<AssetFlow>, valuations: List<Valuation>, start: LocalDate, end: LocalDate): Money? {
+    fun periodGain(asset: Asset, flows: List<AssetFlow>, valuations: List<Valuation>, market: MarketData, start: LocalDate, end: LocalDate): Money? {
         val first = firstRecordDate(flows, valuations) ?: return null
         if (first.isAfter(end)) return null
-        val endValue = valueAt(asset, flows, valuations, end)?.minor ?: 0
-        val startValue = valueAt(asset, flows, valuations, start)?.minor ?: 0
+        val endValue = valueAt(asset, flows, valuations, market, end)?.minor ?: 0
+        val startValue = valueAt(asset, flows, valuations, market, start)?.minor ?: 0
         val netFlows = flows.filter { it.date.isAfter(start) && !it.date.isAfter(end) }.sumOf(::signed)
         return Money(endValue - startValue - netFlows, asset.currency)
     }
@@ -172,7 +209,7 @@ object PortfolioCalculator {
         var closed = 0
         data.assets.filter { group == null || data.groupOf(it) == group }.forEach { asset ->
             val flows = data.flowsOf(asset)
-            val s = snapshot(asset, flows, data.valuationsOf(asset), at) ?: return@forEach
+            val s = snapshot(data, asset, at) ?: return@forEach
             val converted = convertedSnapshot(s, flows, at, to, converter)
             if (s.closed) {
                 closed++
@@ -185,7 +222,7 @@ object PortfolioCalculator {
                     contributed += converted.contributed
                     gainWithContributions += converted.gain
                 }
-                s.lastValuationDate?.let { d -> if (lastValuation == null || d.isAfter(lastValuation)) lastValuation = d }
+                if (asset.ticker == null) s.lastValuationDate?.let { d -> if (lastValuation == null || d.isAfter(lastValuation)) lastValuation = d }
             }
         }
         val gain = value - invested

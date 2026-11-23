@@ -21,7 +21,7 @@ object Allocation {
     fun of(data: PortfolioData, at: LocalDate, to: Currency, converter: Converter, group: AssetGroup? = null): List<Slice> {
         val byCategory = linkedMapOf<Long, Pair<BigDecimal, Boolean>>()
         data.assets.filter { group == null || data.groupOf(it) == group }.forEach { asset ->
-            val s = PortfolioCalculator.snapshot(asset, data.flowsOf(asset), data.valuationsOf(asset), at) ?: return@forEach
+            val s = PortfolioCalculator.snapshot(data, asset, at) ?: return@forEach
             if (s.closed) return@forEach
             val converted = converter.exact(s.value, to, at)
             val (sum, incomplete) = byCategory[asset.categoryId] ?: (BigDecimal.ZERO to false)

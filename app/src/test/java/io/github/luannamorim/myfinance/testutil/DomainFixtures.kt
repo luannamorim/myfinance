@@ -1,6 +1,9 @@
 package io.github.luannamorim.myfinance.testutil
 
+import io.github.luannamorim.myfinance.domain.market.MarketData
 import io.github.luannamorim.myfinance.domain.model.AdjustmentKind
+import io.github.luannamorim.myfinance.domain.model.Asset
+import io.github.luannamorim.myfinance.domain.model.AssetFlow
 import io.github.luannamorim.myfinance.domain.model.CashAdjustment
 import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.EntryKind
@@ -9,6 +12,8 @@ import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.domain.model.Occurrence
 import io.github.luannamorim.myfinance.domain.model.OccurrenceState
 import io.github.luannamorim.myfinance.domain.model.RateSource
+import io.github.luannamorim.myfinance.domain.model.Valuation
+import io.github.luannamorim.myfinance.domain.portfolio.PortfolioCalculator
 import java.math.BigDecimal
 import java.time.LocalDate
 
@@ -42,3 +47,13 @@ fun opening(amount: Money, on: String) = CashAdjustment(nextId++, AdjustmentKind
 fun adjustment(amount: Money, on: String) = CashAdjustment(nextId++, AdjustmentKind.ADJUSTMENT, d(on), amount, null)
 
 fun rate(on: String, value: String, source: RateSource = RateSource.BCB) = ExchangeRate(d(on), BigDecimal(value), source)
+
+/** Manual-asset shorthand for the calculator: no quotes. */
+fun PortfolioCalculator.snapshot(asset: Asset, flows: List<AssetFlow>, valuations: List<Valuation>, at: LocalDate) =
+    snapshot(asset, flows, valuations, MarketData.EMPTY, at)
+
+fun PortfolioCalculator.valueAt(asset: Asset, flows: List<AssetFlow>, valuations: List<Valuation>, at: LocalDate) =
+    valueAt(asset, flows, valuations, MarketData.EMPTY, at)
+
+fun PortfolioCalculator.periodGain(asset: Asset, flows: List<AssetFlow>, valuations: List<Valuation>, start: LocalDate, end: LocalDate) =
+    periodGain(asset, flows, valuations, MarketData.EMPTY, start, end)
