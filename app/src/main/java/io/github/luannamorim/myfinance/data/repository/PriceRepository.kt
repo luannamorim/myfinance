@@ -89,7 +89,10 @@ class PriceRepository @Inject constructor(
             val lastPrice = dao.lastPriceDate(symbol)?.let(LocalDate::ofEpochDay)
             if (tracked.allClosed && lastPrice != null && tracked.lastDisposal != null && lastPrice >= tracked.lastDisposal) continue
             val fullFrom = tracked.earliest.minusDays(MARGIN_DAYS)
-            val from = lastPrice?.minusDays(MARGIN_DAYS) ?: fullFrom
+            val firstPrice = dao.firstPriceDate(symbol)?.let(LocalDate::ofEpochDay)
+            // From the last close, unless a flow (e.g. an older buy added later) predates the stored prices. The flow
+            // date, not fullFrom, is compared: fullFrom often falls on a day without a close.
+            val from = if (lastPrice == null || firstPrice == null || tracked.earliest < firstPrice) fullFrom else lastPrice.minusDays(MARGIN_DAYS)
             try {
                 var result = fetch(symbol, from, now)
                 if (result == null) {
@@ -97,7 +100,7 @@ class PriceRepository @Inject constructor(
                     continue
                 }
                 val storedSplits = dao.splitsOf(symbol).map { it.date }.toSet()
-                if (from != fullFrom && result.splits.any { it.date.toEpochDay() !in storedSplits }) {
+                if (from > fullFrom && result.splits.any { it.date.toEpochDay() !in storedSplits }) {
                     result = fetch(symbol, fullFrom, now)
                     if (result == null) {
                         firstError = firstError ?: PriceError.NOT_FOUND
@@ -138,10 +141,21 @@ class PriceRepository @Inject constructor(
     }
 
     private suspend fun fetch(symbol: String, from: LocalDate, nowMs: Long): ChartResult? =
-        when (val response = YahooChartParser.parse(client.chart(symbol, from, nowMs / 1000))) {
+        when (val response = parse(client.chart(symbol, from, nowMs / 1000))) {
             is ChartResponse.Found -> response.result
             ChartResponse.NotFound -> null
         }
+
+    /** Any unexpected parser failure (e.g. a `DateTimeException` from an absurd timestamp) is a bad response. */
+    private fun parse(json: String): ChartResponse = try {
+        YahooChartParser.parse(json)
+    } catch (e: QuoteFormatException) {
+        throw e
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: RuntimeException) {
+        throw QuoteFormatException(e.javaClass.simpleName)
+    }
 
     /** Stores [result] for [symbol]; returns the new rows (price days not stored before plus splits inserted). */
     private suspend fun save(symbol: String, result: ChartResult, nowMs: Long): Int = db.withTransaction {

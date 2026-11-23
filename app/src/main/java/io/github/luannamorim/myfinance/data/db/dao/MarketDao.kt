@@ -27,6 +27,9 @@ interface MarketDao {
     @Query("SELECT date FROM asset_price WHERE symbol = :symbol ORDER BY date")
     suspend fun priceDates(symbol: String): List<Long>
 
+    @Query("SELECT MIN(date) FROM asset_price WHERE symbol = :symbol")
+    suspend fun firstPriceDate(symbol: String): Long?
+
     @Query("SELECT MAX(date) FROM asset_price WHERE symbol = :symbol")
     suspend fun lastPriceDate(symbol: String): Long?
 

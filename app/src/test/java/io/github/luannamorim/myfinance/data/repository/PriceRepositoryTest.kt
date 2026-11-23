@@ -85,6 +85,7 @@ class PriceRepositoryTest {
     @Test
     fun nextFetch_startsAWeekBeforeLastPrice() = runBlocking {
         track("AAPL")
+        storePrice("AAPL", "2026-01-26", "200")
         storePrice("AAPL", "2026-11-12", "230.1")
         time.set("2026-11-13", "11:00")
         client.chart = { s, _ -> chartJson(s, "2026-11-12" to "230.10", "2026-11-13" to "231.00") }
@@ -130,13 +131,16 @@ class PriceRepositoryTest {
     @Test
     fun newSplit_triggersFullRefetch() = runBlocking {
         track("NVDA", bought = "2024-06-03")
+        storePrice("NVDA", "2024-05-28", "1100")
         storePrice("NVDA", "2024-06-07", "1208.88")
         client.chart = { s, _ ->
             chartJson(s, "2024-06-07" to "120.88800048828125", "2024-06-10" to "121.79000091552734", splits = listOf("2024-06-10" to "10:1"))
         }
-        repo.refresh()
+        // New rows: the 06-10 close and the split.
+        assertEquals(PriceRefreshResult.Updated(2), repo.refresh())
         assertEquals(listOf("NVDA" to d("2024-05-31"), "NVDA" to d("2024-05-27")), client.chartRequests)
         assertEquals(1, market.splitsOf("NVDA").size)
+        assertEquals("1208.88", prices("NVDA")["2024-06-07"])
 
         // The split is stored now: the next run doesn't refetch.
         client.chartRequests.clear()
@@ -163,6 +167,38 @@ class PriceRepositoryTest {
         client.chart = { _, _ -> "<html>" }
         assertEquals(PriceRefreshResult.Failed(PriceError.FORMAT), repo.refresh())
         assertNull(repo.state.first().lastFetchMs)
+    }
+
+    @Test
+    fun olderBuyOnSameTicker_fetchesFromItsDate() = runBlocking {
+        track("AAPL", bought = "2026-11-01")
+        storePrice("AAPL", "2026-11-01", "220")
+        storePrice("AAPL", "2026-11-11", "230.1")
+        track("AAPL", bought = "2026-06-02")
+        client.chart = { s, _ -> chartJson(s, "2026-06-02" to "190.00", "2026-11-11" to "230.10") }
+        assertEquals(PriceRefreshResult.Updated(1), repo.refresh())
+        assertEquals(listOf("AAPL" to d("2026-05-26")), client.chartRequests)
+    }
+
+    @Test
+    fun pricesCoverEarliestBuy_fetchesFromLastPrice() = runBlocking {
+        // Bought on a Monday: the first fetch's window starts on a Monday too, but its first close may be later.
+        track("AAPL", bought = "2026-11-02")
+        storePrice("AAPL", "2026-10-27", "215")
+        storePrice("AAPL", "2026-11-11", "230.1")
+        client.chart = { s, _ -> chartJson(s, "2026-11-11" to "230.10") }
+        repo.refresh()
+        assertEquals(listOf("AAPL" to d("2026-11-04")), client.chartRequests)
+    }
+
+    @Test
+    fun absurdTimestamp_isFormatError() = runBlocking {
+        track("AAPL")
+        client.chart = { s, _ ->
+            """{"chart":{"result":[{"meta":{"currency":"USD","symbol":"$s","exchangeTimezoneName":"America/New_York"},""" +
+                """"timestamp":[99999999999999999],"indicators":{"quote":[{"close":[1.0]}]}}],"error":null}}"""
+        }
+        assertEquals(PriceRefreshResult.Failed(PriceError.FORMAT), repo.refresh())
     }
 
     @Test
