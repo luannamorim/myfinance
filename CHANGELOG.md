@@ -2,17 +2,17 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.5.0] - 2026-11-23
 
 ### Added
-- Portfolio: add a US stock, ETF or crypto by its ticker (e.g. NVDA, VOO, BTC-USD), with the quantity and the price per unit. Its value follows the daily closing quote from Yahoo Finance, converted at the PTAX like any US$ asset, and the detail shows the quote with its date. Buy and Sell record the shares (with or without cash) and Sell all closes the position.
+- Portfolio: add a US stock, ETF or crypto by its ticker (e.g. NVDA, VOO, BTC-USD), with the quantity and the price per unit. Its value follows the latest quote from Yahoo Finance (with a daily history), converted at the PTAX like any US$ asset, and the detail shows the quote with its date. Buy and Sell record the shares (with or without cash) and Sell all closes the position.
 - Quantities follow the splits: a purchase made before a split shows today's number of shares, and the form tells you so before you save.
 - Settings → Currency and exchange rate → Stocks and crypto: *Fetch stock and crypto quotes* turns automatic fetching off, *Update now* fetches on demand, and the last fetch and any error are shown. Quotes are fetched when you open the app, at most every 15 minutes; there is no background job.
 - Backups and the CSV export include the quotes and splits (`asset_prices.csv`, `asset_splits.csv`).
 
 ### Changed
 - Backups that hold tracked assets or quotes use backup format 2 and are refused by older versions of the app; backups without them stay readable by those versions.
-- The privacy text and the security notes name the second destination, Yahoo Finance, and what is sent to it: the tickers you hold, or the text you type in the ticker search.
+- The privacy text and the security notes name the second destination, Yahoo Finance, and what is sent to it: the tickers you hold, or the text you type in the ticker search, and a date range.
 
 ## [1.4.1] - 2026-11-18
 
