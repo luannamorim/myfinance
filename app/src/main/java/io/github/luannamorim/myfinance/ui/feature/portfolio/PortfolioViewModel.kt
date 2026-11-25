@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.luannamorim.myfinance.core.time.TimeSource
 import io.github.luannamorim.myfinance.core.time.today
+import io.github.luannamorim.myfinance.data.images.ImageStore
 import io.github.luannamorim.myfinance.data.prefs.SettingsRepository
 import io.github.luannamorim.myfinance.data.repository.CashRepository
 import io.github.luannamorim.myfinance.data.repository.ExchangeRateRepository
@@ -30,13 +31,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import java.io.File
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDate
 import javax.inject.Inject
 
-/** An asset line: its own figures, and its value in the display currency when different. */
-data class AssetRow(val snapshot: AssetSnapshot, val category: AssetCategory?, val displayValue: Total?)
+/** An asset line: its own figures, its value in the display currency when different, and its logo. */
+data class AssetRow(val snapshot: AssetSnapshot, val category: AssetCategory?, val displayValue: Total?, val logo: File? = null)
 
 data class PortfolioUiState(
     val loading: Boolean = true,
@@ -63,13 +65,17 @@ fun portfolioState(
     selected: Long?,
     today: LocalDate,
     cash: CashLedger? = null,
+    logoFile: (String) -> File? = { null },
 ): PortfolioUiState {
     val converter = Converter(rates)
     val categories = data.categories.associateBy { it.id }
     val rows = data.assets.filter { group == null || data.groupOf(it) == group }.mapNotNull { asset ->
         val flows = data.flowsOf(asset)
         val s = PortfolioCalculator.snapshot(data, asset, today) ?: return@mapNotNull null
-        AssetRow(s, categories[asset.categoryId], if (asset.currency != display) converter.sum(listOf(s.value to today), display) else null)
+        AssetRow(
+            s, categories[asset.categoryId], if (asset.currency != display) converter.sum(listOf(s.value to today), display) else null,
+            asset.imagePath?.let(logoFile),
+        )
     }
     val slices = Allocation.of(data, today, display, converter, group)
     val totals = PortfolioCalculator.totals(data, today, display, converter, group)
@@ -102,13 +108,14 @@ class PortfolioViewModel @Inject constructor(
     cash: CashRepository,
     rates: ExchangeRateRepository,
     settings: SettingsRepository,
+    private val images: ImageStore,
     private val time: TimeSource,
 ) : ViewModel() {
 
     private val filter = MutableStateFlow<Pair<AssetGroup?, Long?>>(null to null)
 
     val state: StateFlow<PortfolioUiState> = combine(portfolio.data, cash.ledger, rates.rates, settings.settings, filter) { data, ledger, r, s, f ->
-        portfolioState(data, r, s.displayCurrency, f.first, f.second, time.today(), ledger)
+        portfolioState(data, r, s.displayCurrency, f.first, f.second, time.today(), ledger, images::file)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PortfolioUiState())
 
     fun setGroup(group: AssetGroup?) {

@@ -1,5 +1,7 @@
 package io.github.luannamorim.myfinance.ui.components
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -17,6 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import io.github.luannamorim.myfinance.R
 import io.github.luannamorim.myfinance.ui.theme.FinanceShapes
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
+import io.github.luannamorim.myfinance.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +61,8 @@ fun ConfirmDialog(
     destructive: Boolean = false,
     /** Null hides the dismiss button (an information dialog with a single "OK"). */
     dismissText: String? = stringResource(R.string.action_cancel),
+    /** Shown under the message, e.g. an option for what the action also does. */
+    extra: (@Composable () -> Unit)? = null,
 ) {
     val c = FinanceTheme.colors
     AlertDialog(
@@ -65,7 +70,12 @@ fun ConfirmDialog(
         shape = FinanceShapes.large,
         containerColor = c.surfaceRaised,
         title = { Text(title, style = FinanceTheme.type.title, color = c.textPrimary) },
-        text = { Text(message, style = FinanceTheme.type.body, color = c.textSecondary) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                Text(message, style = FinanceTheme.type.body, color = c.textSecondary)
+                extra?.invoke()
+            }
+        },
         confirmButton = {
             TextAction(confirmText, onClick = onConfirm, color = if (destructive) c.danger else c.accent)
         },

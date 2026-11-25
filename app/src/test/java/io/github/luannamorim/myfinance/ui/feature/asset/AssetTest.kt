@@ -1,6 +1,11 @@
 package io.github.luannamorim.myfinance.ui.feature.asset
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -9,6 +14,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -21,6 +27,7 @@ import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.luannamorim.myfinance.core.format.Formats
 import io.github.luannamorim.myfinance.core.time.FakeTimeSource
 import io.github.luannamorim.myfinance.data.db.entity.AssetPriceEntity
+import io.github.luannamorim.myfinance.data.images.ImageKind
 import io.github.luannamorim.myfinance.data.images.ImageStore
 import io.github.luannamorim.myfinance.data.prefs.RateStateStore
 import io.github.luannamorim.myfinance.data.rates.RateClient
@@ -35,6 +42,7 @@ import io.github.luannamorim.myfinance.domain.model.FlowKind
 import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.domain.model.NumberFormatStyle
 import io.github.luannamorim.myfinance.domain.model.PriceSource
+import io.github.luannamorim.myfinance.domain.model.ThemeMode
 import io.github.luannamorim.myfinance.testutil.FakeQuoteClient
 import io.github.luannamorim.myfinance.testutil.MainDispatcherRule
 import io.github.luannamorim.myfinance.testutil.PHONE_TALL
@@ -58,6 +66,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -204,6 +213,92 @@ class AssetTest {
         rates.setManual(d("2026-11-12"), BigDecimal("5.6143"))
         val state = detail(id).state.awaitUntil { it.converted != null && !it.converted!!.value.incomplete }
         assertEquals(brl("1175.73"), state.converted!!.gain.money)
+    }
+
+    private fun fromCash(name: String = "CDB") = runBlocking {
+        portfolio.createAsset(AssetDraft(name, category("asset.fixed_income"), Currency.BRL, acquisitionDate = d("2026-11-05")), brl("3000.00"), null, fromCash = brl("3000.00"))
+    }
+
+    private fun openDeleteDialog(vm: AssetDetailViewModel) {
+        compose.setContent { FinanceTheme { DotFormat { AssetDetailScreen(onBack = {}, onEdit = {}, viewModel = vm) } } }
+        compose.waitUntil(5_000) { vm.state.value.snapshot != null && vm.state.value.cashMoved.isNotEmpty() }
+        compose.onNodeWithContentDescription("Delete").performClick()
+    }
+
+    @Test
+    fun deleteAsset_undoesItsTransfers_byDefault() {
+        val vm = detail(fromCash())
+        openDeleteDialog(vm)
+        compose.onNodeWithText("R$ 3,000.00 back to cash").assertExists()
+        compose.onAllNodesWithText("Delete").onLast().performClick()
+        compose.waitUntil(5_000) { vm.state.value.gone }
+        assertTrue(runBlocking { db.cashDao().getAllOccurrences() }.isEmpty())
+    }
+
+    @Test
+    fun deleteAsset_canKeepItsTransfers() {
+        val vm = detail(fromCash())
+        openDeleteDialog(vm)
+        compose.onNodeWithText("Undo in cash too").performClick()
+        compose.onNodeWithText("The transfers stay in the cash history").assertExists()
+        compose.onAllNodesWithText("Delete").onLast().performClick()
+        compose.waitUntil(5_000) { vm.state.value.gone }
+        assertEquals(1, runBlocking { db.cashDao().getAllOccurrences() }.size)
+    }
+
+    @Test
+    fun deleteAsset_withoutTransfers_hasNoCashSwitch() {
+        val id = runBlocking { portfolio.createAsset(AssetDraft("Tesouro", category("asset.fixed_income"), Currency.BRL, acquisitionDate = d("2026-01-10")), brl("5000.00"), null) }
+        val vm = detail(id)
+        compose.setContent { FinanceTheme { AssetDetailScreen(onBack = {}, onEdit = {}, viewModel = vm) } }
+        compose.waitUntil(5_000) { vm.state.value.snapshot != null }
+        compose.onNodeWithContentDescription("Delete").performClick()
+        compose.onNodeWithText("Delete asset?").assertExists()
+        compose.onNodeWithText("Undo in cash too").assertDoesNotExist()
+    }
+
+    /** A dark logo on a transparent background: the case the white circle is for. */
+    private fun logo(): String = runBlocking {
+        val file = File(context.cacheDir, "logo.png")
+        val bitmap = Bitmap.createBitmap(240, 120, Bitmap.Config.ARGB_8888)
+        Canvas(bitmap).apply {
+            drawCircle(60f, 60f, 44f, Paint().apply { color = Color.rgb(240, 138, 36); isAntiAlias = true })
+            drawRect(120f, 36f, 228f, 84f, Paint().apply { color = Color.rgb(27, 42, 74) })
+        }
+        file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        images.import(Uri.fromFile(file), ImageKind.ASSET)
+    }
+
+    @Test
+    fun screenshots_logoAndDelete() {
+        val path = logo()
+        val id = runBlocking {
+            portfolio.createAsset(
+                AssetDraft("CDB Aurora", category("asset.fixed_income"), Currency.BRL, institution = "Banco Aurora", acquisitionDate = d("2026-11-05"), imagePath = path),
+                brl("3000.00"), null, fromCash = brl("3000.00"),
+            )
+        }
+        val vm = detail(id)
+        compose.setContent { FinanceTheme(ThemeMode.DARK) { AssetDetailScreen(onBack = {}, onEdit = {}, viewModel = vm) } }
+        compose.waitUntil(5_000) { vm.state.value.snapshot != null && vm.state.value.cashMoved.isNotEmpty() }
+        compose.waitForIdle()
+        captureScreenRoboImage("$SCREENSHOT_DIR/asset_detail_logo.png")
+        compose.onNodeWithContentDescription("Delete").performClick()
+        compose.onNodeWithText("Undo in cash too").assertExists()
+        compose.waitForIdle()
+        captureScreenRoboImage("$SCREENSHOT_DIR/asset_delete_undo_cash.png")
+    }
+
+    @Test
+    fun screenshot_editorLogo() {
+        val path = logo()
+        val state = runBlocking { editor().state.awaitUntil { it.categories.isNotEmpty() && !it.loading } }
+        compose.snapBothThemes("asset_editor_logo") {
+            AssetEditorContent(
+                state.copy(name = "CDB Aurora", categoryId = category("asset.fixed_income"), investedDigits = "300000", imagePath = path, imageFile = images.file(path)),
+                AssetEditorActions(),
+            )
+        }
     }
 
     @Test

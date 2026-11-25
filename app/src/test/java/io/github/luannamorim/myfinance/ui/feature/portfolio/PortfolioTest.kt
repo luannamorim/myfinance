@@ -94,6 +94,14 @@ class PortfolioTest {
     }
 
     @Test
+    fun rows_carryTheLogo() {
+        val withLogo = data.copy(assets = data.assets.map { if (it.id == car.id) it.copy(imagePath = "images/assets/car.png") else it })
+        val s = portfolioState(withLogo, rates, Currency.BRL, null, null, today, logoFile = { java.io.File("/x", it) })
+        assertEquals(java.io.File("/x/images/assets/car.png"), s.assets.single { it.snapshot.asset.id == car.id }.logo)
+        assertNull(s.assets.single { it.snapshot.asset.id == tesouro.id }.logo)
+    }
+
+    @Test
     fun groupAndCategoryFilters() {
         val investments = portfolioState(data, rates, Currency.BRL, AssetGroup.INVESTMENT, null, today)
         assertEquals(listOf("VOO", "Tesouro Selic"), investments.assets.map { it.snapshot.asset.name })
@@ -108,6 +116,16 @@ class PortfolioTest {
         // With Cash Flow in use, "All" shows cash for reference (a slice and a card).
         val cash = io.github.luannamorim.myfinance.domain.cash.CashLedger(adjustments = listOf(io.github.luannamorim.myfinance.testutil.opening(brl("18944.75"), "2026-11-01")))
         compose.snapBothThemes("portfolio") { PortfolioContent(portfolioState(data, rates, Currency.BRL, null, null, today, cash), PortfolioActions()) }
+    }
+
+    @Test
+    fun screenshot_logo() {
+        val file = java.io.File(androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>().cacheDir, "logo.png")
+        val bitmap = android.graphics.Bitmap.createBitmap(120, 120, android.graphics.Bitmap.Config.ARGB_8888)
+        android.graphics.Canvas(bitmap).drawCircle(60f, 60f, 50f, android.graphics.Paint().apply { color = android.graphics.Color.rgb(27, 42, 74) })
+        file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        val withLogo = data.copy(assets = data.assets.map { if (it.id == tesouro.id) it.copy(imagePath = "logo") else it })
+        compose.snapBothThemes("portfolio_logo") { PortfolioContent(portfolioState(withLogo, rates, Currency.BRL, null, null, today, logoFile = { file }), PortfolioActions()) }
     }
 
     @Test

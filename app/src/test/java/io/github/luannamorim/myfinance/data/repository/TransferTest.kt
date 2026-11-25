@@ -178,7 +178,7 @@ class TransferTest {
         cash.confirm(nov.id, brl("1000.00"), d("2026-11-12"), null)
         val oneOff = cash.create(toTesouro(date = "2026-12-01"))
 
-        portfolio.deleteAsset(tesouro)
+        portfolio.deleteAsset(tesouro, undoTransfers = false)
 
         assertNull(cash.template(template))
         assertNull(cash.occurrence(oneOff))
@@ -188,6 +188,37 @@ class TransferTest {
         assertEquals(1, cash.snapshot().occurrences.size)
         // The money did leave cash.
         assertEquals(brl("9000.00"), balance())
+    }
+
+    @Test
+    fun deletingTheAsset_undoingTransfers_putsCashBack() = runBlocking {
+        val fixedIncome = db.categoryDao().getAllAssetCategories().first { it.seedKey == "asset.fixed_income" }.id
+        val cdb = portfolio.createAsset(AssetDraft("CDB", fixedIncome, Currency.BRL, acquisitionDate = d("2026-11-05")), brl("3000.00"), null, fromCash = brl("3000.00"))
+        val template = cash.create(toTesouro(rule = RecurrenceRule.MONTHLY).copy(assetId = cdb))
+        cash.confirm(cash.snapshot().occurrences.first { it.templateId == template }.id, brl("1000.00"), d("2026-11-12"), null)
+        portfolio.addFlow(cdb, FlowKind.WITHDRAWAL, d("2026-11-12"), brl("500.00"), cash = brl("500.00"))
+        val other = cash.create(toTesouro(settled = true))
+        assertEquals(brl("5500.00"), balance())
+
+        portfolio.deleteAsset(cdb, undoTransfers = true)
+
+        assertNull(cash.template(template))
+        assertTrue(cash.snapshot().occurrences.none { it.assetId == cdb })
+        // Only the other asset's transfer is left.
+        assertEquals(listOf(other), cash.snapshot().occurrences.map { it.id })
+        assertEquals(brl("9000.00"), balance())
+    }
+
+    @Test
+    fun cashMovedBy_netsTheDoneTransfers_perCurrency() = runBlocking {
+        assertEquals(emptyList<Any>(), portfolio.cashMovedBy(voo).first())
+        portfolio.addFlow(voo, FlowKind.CONTRIBUTION, d("2026-11-10"), usd("200.00"), cash = brl("1100.00"))
+        portfolio.addFlow(voo, FlowKind.CONTRIBUTION, d("2026-11-11"), usd("50.00"), cash = usd("50.00"))
+        portfolio.addFlow(voo, FlowKind.WITHDRAWAL, d("2026-11-12"), usd("80.00"), cash = brl("440.00"))
+        // Pending transfers haven't moved anything yet.
+        cash.create(TransactionDraft("", null, EntryKind.TRANSFER_OUT, brl("999.00"), d("2026-11-20"), null, assetId = voo, assetAmount = usd("180.00")))
+
+        assertEquals(setOf(brl("-660.00"), usd("-50.00")), portfolio.cashMovedBy(voo).first().toSet())
     }
 
     @Test

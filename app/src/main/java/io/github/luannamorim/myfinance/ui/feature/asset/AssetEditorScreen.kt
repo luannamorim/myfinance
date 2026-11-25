@@ -4,18 +4,20 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AddAPhoto
+import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,11 +44,11 @@ import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.ui.common.ActionErrorDialog
 import io.github.luannamorim.myfinance.ui.common.AssetCategoryPicker
+import io.github.luannamorim.myfinance.ui.common.AssetIcon
 import io.github.luannamorim.myfinance.ui.common.CashLinkFields
 import io.github.luannamorim.myfinance.ui.common.CategoryIcons
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
 import io.github.luannamorim.myfinance.ui.common.SplitNote
-import io.github.luannamorim.myfinance.ui.common.StoredImage
 import io.github.luannamorim.myfinance.ui.common.icon
 import io.github.luannamorim.myfinance.ui.common.label
 import io.github.luannamorim.myfinance.ui.common.ratio
@@ -67,8 +69,8 @@ import io.github.luannamorim.myfinance.ui.theme.Spacing
 data class AssetEditorActions(
     val onBack: () -> Unit = {},
     val onEdit: ((AssetEditorUiState) -> AssetEditorUiState) -> Unit = {},
-    val onPickPhoto: () -> Unit = {},
-    val onRemovePhoto: () -> Unit = {},
+    val onPickLogo: () -> Unit = {},
+    val onRemoveLogo: () -> Unit = {},
     val onSave: () -> Unit = {},
     val onDismissError: () -> Unit = {},
     val onQuery: (String) -> Unit = {},
@@ -81,14 +83,14 @@ fun AssetEditorScreen(onClose: () -> Unit, viewModel: AssetEditorViewModel = hil
     val state by viewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(state.done) { if (state.done) onClose() }
     // System photo picker: no storage permission needed.
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(viewModel::setPhoto) }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(viewModel::setLogo) }
     AssetEditorContent(
         state,
         AssetEditorActions(
             onBack = onClose,
             onEdit = viewModel::edit,
-            onPickPhoto = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-            onRemovePhoto = viewModel::removePhoto,
+            onPickLogo = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+            onRemoveLogo = viewModel::removeLogo,
             onSave = { viewModel.save() },
             onDismissError = viewModel::dismissError,
             onQuery = viewModel::onQuery,
@@ -157,7 +159,7 @@ private fun ColumnScope.ManualFields(state: AssetEditorUiState, actions: AssetEd
         )
     }
     DescriptionField(state, actions)
-    NotesAndPhoto(state, actions)
+    NotesAndLogo(state, actions)
 }
 
 /** "From quote": ticker search, then quantity, date and price per unit in USD; today's value from the last close. */
@@ -210,7 +212,7 @@ private fun ColumnScope.TrackedFields(state: AssetEditorUiState, actions: AssetE
     CategoryField(state, actions)
     InstitutionField(state, actions)
     DescriptionField(state, actions)
-    NotesAndPhoto(state, actions)
+    NotesAndLogo(state, actions)
 }
 
 @Composable
@@ -360,15 +362,31 @@ private fun DescriptionField(state: AssetEditorUiState, actions: AssetEditorActi
     FinanceTextField(value = state.description, onValueChange = { v -> actions.onEdit { it.copy(description = v) } }, label = stringResource(R.string.asset_description))
 
 @Composable
-private fun NotesAndPhoto(state: AssetEditorUiState, actions: AssetEditorActions) {
+private fun NotesAndLogo(state: AssetEditorUiState, actions: AssetEditorActions) {
     val c = FinanceTheme.colors
     FinanceTextField(value = state.notes, onValueChange = { v -> actions.onEdit { it.copy(notes = v) } }, label = stringResource(R.string.asset_notes), singleLine = false, minLines = 2)
-    Text(stringResource(R.string.asset_photo), style = FinanceTheme.type.caption, color = c.textSecondary)
-    state.imageFile?.let { file ->
-        StoredImage(file, stringResource(R.string.asset_photo), Modifier.fillMaxWidth().height(180.dp).clip(FinanceShapes.medium))
-    }
-    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-        SecondaryButton(stringResource(R.string.asset_photo_add), onClick = actions.onPickPhoto, icon = Icons.Rounded.AddAPhoto)
-        if (state.imagePath != null) TextAction(stringResource(R.string.asset_photo_remove), onClick = actions.onRemovePhoto, color = c.textSecondary)
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        Text(stringResource(R.string.asset_logo), style = FinanceTheme.type.caption, color = c.textSecondary)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.l)) {
+            val categoryIcon = state.categories.firstOrNull { it.id == state.categoryId }?.icon
+            if (state.imageFile != null) {
+                AssetIcon(state.imageFile, categoryIcon, size = LogoSize)
+            } else {
+                Box(Modifier.size(LogoSize).border(1.5.dp, c.outlineStrong, CircleShape), contentAlignment = Alignment.Center) {
+                    Icon(CategoryIcons.of(categoryIcon ?: "category"), contentDescription = null, tint = c.textTertiary)
+                }
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs), horizontalAlignment = Alignment.Start) {
+                SecondaryButton(
+                    stringResource(if (state.imagePath != null) R.string.asset_logo_change else R.string.asset_logo_choose),
+                    onClick = actions.onPickLogo,
+                    icon = Icons.Rounded.AddPhotoAlternate,
+                )
+                if (state.imagePath != null) TextAction(stringResource(R.string.asset_logo_remove), onClick = actions.onRemoveLogo, color = c.textSecondary)
+            }
+        }
+        Text(stringResource(R.string.asset_logo_hint), style = FinanceTheme.type.caption, color = c.textTertiary)
     }
 }
+
+private val LogoSize = 64.dp

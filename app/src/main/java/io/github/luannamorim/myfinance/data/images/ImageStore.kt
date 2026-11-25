@@ -20,14 +20,15 @@ import kotlin.math.min
 
 /** Where each kind of image goes and how much it is reduced (longest side in px, JPEG quality). */
 enum class ImageKind(val dir: String, val maxSide: Int = ImageStore.MAX_SIDE, val quality: Int = 85) {
-    /** Optional photo of an asset (car, property…). */
-    ASSET("assets"),
+    /** Optional logo of an asset, shown in place of its category's icon (older versions stored a photo here). */
+    ASSET("assets", maxSide = 512),
 }
 
 /**
  * Stores user images inside app-private storage. Images are decoded downscaled (longest side
- * ≤ [MAX_SIDE]), EXIF orientation is applied, and they are re-encoded as JPEG (which also drops
- * GPS/EXIF metadata). The database keeps only the returned relative path.
+ * ≤ [ImageKind.maxSide]), EXIF orientation is applied, and they are re-encoded (which also drops
+ * GPS/EXIF metadata): as PNG when they have transparency (a logo on a clear background), else as JPEG.
+ * The database keeps only the returned relative path.
  */
 @Singleton
 class ImageStore @Inject constructor(
@@ -36,16 +37,18 @@ class ImageStore @Inject constructor(
 ) {
     private val root: File get() = context.filesDir
 
-    /** Copies the picked image right away (picker grants are temporary). Returns e.g. "images/body/<uuid>.jpg". */
+    /** Copies the picked image right away (picker grants are temporary). Returns e.g. "images/assets/<uuid>.png". */
     suspend fun import(uri: Uri, kind: ImageKind): String = withContext(io) {
         val bitmap = decode(uri, kind.maxSide)
-        val relative = "$IMAGES_DIR/${kind.dir}/${UUID.randomUUID()}.jpg"
+        val png = bitmap.hasAlpha()
+        val relative = "$IMAGES_DIR/${kind.dir}/${UUID.randomUUID()}.${if (png) "png" else "jpg"}"
         val target = File(root, relative)
         target.parentFile?.mkdirs()
         val tmp = File(target.parentFile, "${target.name}.tmp")
         try {
             tmp.outputStream().use { out ->
-                check(bitmap.compress(Bitmap.CompressFormat.JPEG, kind.quality, out)) { "JPEG encode failed" }
+                val format = if (png) Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG
+                check(bitmap.compress(format, kind.quality, out)) { "$format encode failed" }
             }
             if (!tmp.renameTo(target)) throw IOException("rename failed: $tmp")
         } finally {

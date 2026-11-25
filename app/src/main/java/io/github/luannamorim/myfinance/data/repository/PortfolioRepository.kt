@@ -329,14 +329,26 @@ class PortfolioRepository @Inject constructor(
     }
 
     /**
-     * Deletes the asset with its flows, valuations and photo, and its planned transfers (recurring ones and
-     * pending ones). Transfers already done stay in the cash history, without the asset. Quotes of a ticker no
-     * other asset tracks go with it.
+     * What the done transfers of [assetId] changed in cash, netted per currency (negative: money left cash; zero
+     * when as much came back), or empty when it has none. Deleting the asset with `undoTransfers` reverses it.
      */
-    suspend fun deleteAsset(id: Long) {
+    fun cashMovedBy(assetId: Long): Flow<List<Money>> = cashDao.observeDoneForAsset(assetId).map { done ->
+        done.groupBy { it.actualCurrency ?: it.currency }.map { (currency, rows) -> Money(rows.sumOf { it.cashDelta() }, currency) }
+    }
+
+    private fun OccurrenceEntity.cashDelta(): Long = checkNotNull(actualAmount).let { if (kind.cashInflow) it else -it }
+
+    /**
+     * Deletes the asset with its flows, valuations and photo, and its planned transfers (recurring ones and
+     * pending ones). Transfers already done are undone with [undoTransfers] (cash gets back what they moved, see
+     * [cashMovedBy]); otherwise they stay in the cash history, without the asset. Quotes of a ticker no other
+     * asset tracks go with it.
+     */
+    suspend fun deleteAsset(id: Long, undoTransfers: Boolean) {
         val asset = dao.getAsset(id) ?: return
         db.withTransaction {
             stopRecurringTransfers(id, time.today(), delete = true)
+            if (undoTransfers) cashDao.deleteAllForAsset(id)
             dao.deleteAsset(id)
             db.marketDao().pruneUnused()
         }

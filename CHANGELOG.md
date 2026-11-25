@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- Assets can have a logo: pick an image in the asset's editor and it replaces the category icon in the Portfolio and on the asset's screen, whole on a white circle. Logos with a transparent background keep it. An asset without a logo keeps the category icon.
+
+### Changed
+- The asset photo is now its logo: the large photo at the top of the asset's screen is gone, and a photo added before shows as the logo.
+
+### Fixed
+- Deleting an asset that had transfers with cash (such as one created with "Take it from cash") left them in the cash history, so the money never came back. The delete dialog now offers *Undo in cash too*, on by default, with the amount that goes back to cash; turned off, the transfers stay in the history as before.
+
 ## [1.5.0] - 2026-11-23
 
 ### Added

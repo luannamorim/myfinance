@@ -122,7 +122,7 @@ class PortfolioRepositoryTest {
     fun deleteAsset_removesEverything_includingThePhoto() = runBlocking {
         val photo = File(context.filesDir, "images/assets/a.jpg").apply { parentFile!!.mkdirs(); writeText("x") }
         val id = repo.createAsset(draft().copy(imagePath = "images/assets/a.jpg"), brl("5000.00"), brl("5100.00"))
-        repo.deleteAsset(id)
+        repo.deleteAsset(id, undoTransfers = true)
         assertNull(repo.asset(id))
         assertTrue(db.portfolioDao().getAllFlows().isEmpty())
         assertTrue(db.portfolioDao().getAllValuations().isEmpty())
@@ -270,9 +270,9 @@ class PortfolioRepositoryTest {
         val first = tracked()
         val second = tracked()
         db.marketDao().upsertPrices(listOf(AssetPriceEntity(symbol = "AAPL", date = d("2026-11-10").toEpochDay(), price = "270.5", source = PriceSource.YAHOO, fetchedAtMs = 0)))
-        repo.deleteAsset(first)
+        repo.deleteAsset(first, undoTransfers = true)
         assertEquals(1, db.marketDao().listPrices().size)
-        repo.deleteAsset(second)
+        repo.deleteAsset(second, undoTransfers = true)
         assertTrue(db.marketDao().listPrices().isEmpty())
     }
 }

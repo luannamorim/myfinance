@@ -31,7 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.luannamorim.myfinance.R
 import io.github.luannamorim.myfinance.domain.fx.Total
 import io.github.luannamorim.myfinance.domain.model.AssetGroup
-import io.github.luannamorim.myfinance.ui.common.CategoryIcons
+import io.github.luannamorim.myfinance.ui.common.AssetIcon
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
 import io.github.luannamorim.myfinance.ui.common.displayName
 import io.github.luannamorim.myfinance.ui.components.AdaptiveRow
@@ -199,7 +199,7 @@ private fun AssetCard(row: AssetRow, onOpen: (Long) -> Unit) {
     val s = row.snapshot
     FinanceCard(onClick = { onOpen(s.asset.id) }, modifier = Modifier.fillMaxWidth(), contentPadding = Spacing.m) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            CategoryBadge(CategoryIcons.of(row.category?.icon ?: "category"), dimmed = s.closed)
+            AssetIcon(row.logo, row.category?.icon, dimmed = s.closed)
             Spacer(Modifier.width(Spacing.m))
             AdaptiveRow(
                 main = {

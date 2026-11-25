@@ -86,6 +86,14 @@ interface CashDao {
     @Query("DELETE FROM transaction_occurrence WHERE assetId = :assetId AND state = 'PENDING'")
     suspend fun deletePendingForAsset(assetId: Long): Int
 
+    /** Every transfer to or from an asset, done ones included: deleting the asset undid them. */
+    @Query("DELETE FROM transaction_occurrence WHERE assetId = :assetId")
+    suspend fun deleteAllForAsset(assetId: Long): Int
+
+    /** Transfers to or from an asset that happened (they moved cash). */
+    @Query("SELECT * FROM transaction_occurrence WHERE assetId = :assetId AND state = 'CONFIRMED'")
+    fun observeDoneForAsset(assetId: Long): Flow<List<OccurrenceEntity>>
+
     // Adjustments
 
     @Query("SELECT * FROM cash_adjustment ORDER BY date, id")

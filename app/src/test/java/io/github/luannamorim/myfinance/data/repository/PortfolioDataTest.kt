@@ -59,7 +59,7 @@ class PortfolioDataTest {
         try {
             withTimeout(5_000) { latest.first { it?.assets?.size == 8 } }
             ids.forEach { id ->
-                portfolio.deleteAsset(id)
+                portfolio.deleteAsset(id, undoTransfers = true)
                 withTimeout(5_000) {
                     combine(latest, failed) { data, f -> f || data?.assets?.none { it.id == id } == true }.first { it }
                 }

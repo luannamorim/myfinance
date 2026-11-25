@@ -293,8 +293,8 @@ class AssetEditorViewModel @Inject constructor(
         }
     }
 
-    /** Imports the picked photo right away (picker grants are temporary); a replaced unsaved photo is deleted. */
-    fun setPhoto(uri: Uri) {
+    /** Imports the picked logo right away (picker grants are temporary); a replaced unsaved logo is deleted. */
+    fun setLogo(uri: Uri) {
         viewModelScope.launch {
             val path = runCatching { images.import(uri, ImageKind.ASSET) }.getOrNull() ?: return@launch
             val previous = form.value.imagePath
@@ -303,7 +303,7 @@ class AssetEditorViewModel @Inject constructor(
         }
     }
 
-    fun removePhoto() {
+    fun removeLogo() {
         val previous = form.value.imagePath
         if (previous != null && previous != originalImage) viewModelScope.launch { images.delete(previous) }
         form.update { it.copy(imagePath = null) }
@@ -382,7 +382,7 @@ class AssetEditorViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        // A photo picked but never saved would be orphaned.
+        // A logo picked but never saved would be orphaned.
         val path = form.value.imagePath
         if (!saved && path != null && path != originalImage) images.file(path).delete()
     }

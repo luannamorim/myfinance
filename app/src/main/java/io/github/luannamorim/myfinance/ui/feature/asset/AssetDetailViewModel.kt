@@ -75,6 +75,8 @@ data class AssetDetailUiState(
     val splits: List<Split> = emptyList(),
     /** The device zone, for the time of today's quote. */
     val zone: ZoneId = ZoneId.systemDefault(),
+    /** What the asset's done transfers changed in cash, per currency (negative: it left cash); empty without any. */
+    val cashMoved: List<Money> = emptyList(),
 ) {
     val closed: Boolean get() = snapshot?.closed == true
     val valuationDates: Set<LocalDate> get() = valuations.map { it.valuation.date }.toSet()
@@ -132,8 +134,10 @@ class AssetDetailViewModel @Inject constructor(
     private val sheet = MutableStateFlow<AssetSheet?>(null)
     private val error = MutableStateFlow<ActionError?>(null)
 
-    val state: StateFlow<AssetDetailUiState> = combine(portfolio.data, rates.rates, settings.settings, sheet, error) { data, r, s, open, e ->
-        assetDetailState(data, id, r, s.displayCurrency, time.today(), time.zone(), images::file).copy(sheet = open, error = e)
+    private val portfolioAndCash = combine(portfolio.data, portfolio.cashMovedBy(id)) { data, moved -> data to moved }
+
+    val state: StateFlow<AssetDetailUiState> = combine(portfolioAndCash, rates.rates, settings.settings, sheet, error) { (data, moved), r, s, open, e ->
+        assetDetailState(data, id, r, s.displayCurrency, time.today(), time.zone(), images::file).copy(sheet = open, error = e, cashMoved = moved)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AssetDetailUiState())
 
     fun open(value: AssetSheet?) {
@@ -156,7 +160,8 @@ class AssetDetailViewModel @Inject constructor(
 
     fun deleteFlow(flowId: Long) = perform { portfolio.deleteFlow(flowId) }
     fun deleteValuation(valuationId: Long) = perform { portfolio.deleteValuation(valuationId) }
-    fun deleteAsset() = perform { portfolio.deleteAsset(id) }
+    /** [undoTransfers]: the asset's done transfers go too, and cash gets back what they moved. */
+    fun deleteAsset(undoTransfers: Boolean) = perform { portfolio.deleteAsset(id, undoTransfers) }
     fun dismissError() = error.update { null }
 
     /** Runs a write; a refusal becomes a dialog instead of a crash. */

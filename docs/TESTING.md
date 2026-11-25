@@ -68,7 +68,7 @@ Development is done without a device. The items below validate what only the dev
 - [ ] Create "Tesouro Selic" (Fixed Income, BRL) with R$ 5.000,00 invested; then update its value to R$ 5.120,00: gain R$ 120,00, return 2,40%.
 - [ ] Create "VOO" (ETFs, USD) with US$ 1.000,00 and a later valuation of US$ 1.100,00: detail shows the gain in US$ and in R$ (including the currency effect).
 - [ ] Add a contribution and a partial disposal; valuation history keeps earlier rows unchanged.
-- [ ] Add a car (Vehicles, personal asset) with a photo; it appears under Personal assets.
+- [ ] Add a car (Vehicles, personal asset) with a logo (a PNG with a transparent background): it appears under Personal assets with the logo, whole on a white circle, in place of the category icon, also on the asset's screen and in the dark theme. Remove the logo: the category icon is back.
 - [ ] The donut shows the total in the centre; tapping a category filters the list. Period chips change the charts; no line starts before the first record.
 
 ### 5b. Transfers (1.1.0)
@@ -77,6 +77,7 @@ Development is done without a device. The items below validate what only the dev
 - [ ] A transfer in R$ to a US$ asset asks for the amount the asset received (prefilled at the PTAX); the asset gets that amount in US$.
 - [ ] On the asset: Withdraw with "Put it in cash": cash goes up; delete that withdrawal: the transfer disappears too (after a confirmation).
 - [ ] New asset with "Take it from cash": cash goes down by the initial investment.
+- [ ] Delete that asset: the dialog offers "Undo in cash too" (on) with the amount that goes back; deleting puts it back in cash and the transfer leaves History. With the switch off, the transfer stays in History and cash doesn't change. An asset without transfers shows no switch.
 - [ ] Close a position that has a monthly transfer: the transfer stops; a new transfer to it is refused with a message.
 - [ ] Cash Flow → Transfers shows the amount on its title line and "to investment" underneath; History lists the transfer in its month; the CSV export has it with the asset name.
 - [ ] Portfolio → All shows "Cash" (slice and card); tapping the card opens Cash Flow; Value/Invested/Gain don't include it.

@@ -23,9 +23,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.luannamorim.myfinance.R
@@ -35,9 +33,8 @@ import io.github.luannamorim.myfinance.domain.model.FlowKind
 import io.github.luannamorim.myfinance.domain.model.Money
 import io.github.luannamorim.myfinance.domain.portfolio.AssetSnapshot
 import io.github.luannamorim.myfinance.ui.common.ActionErrorDialog
-import io.github.luannamorim.myfinance.ui.common.CategoryIcons
+import io.github.luannamorim.myfinance.ui.common.AssetIcon
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
-import io.github.luannamorim.myfinance.ui.common.StoredImage
 import io.github.luannamorim.myfinance.ui.common.displayName
 import io.github.luannamorim.myfinance.ui.common.unitsLabel
 import io.github.luannamorim.myfinance.ui.components.AdaptiveRow
@@ -52,8 +49,7 @@ import io.github.luannamorim.myfinance.ui.components.LineSeries
 import io.github.luannamorim.myfinance.ui.components.PrimaryButton
 import io.github.luannamorim.myfinance.ui.components.SecondaryButton
 import io.github.luannamorim.myfinance.ui.components.SectionHeader
-import io.github.luannamorim.myfinance.ui.feature.settings.CategoryBadge
-import io.github.luannamorim.myfinance.ui.theme.FinanceShapes
+import io.github.luannamorim.myfinance.ui.components.SwitchRow
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import io.github.luannamorim.myfinance.ui.theme.Spacing
 import java.math.BigDecimal
@@ -72,7 +68,8 @@ data class AssetDetailActions(
     val onDismissError: () -> Unit = {},
     val onDeleteFlow: (Long) -> Unit = {},
     val onDeleteValuation: (Long) -> Unit = {},
-    val onDeleteAsset: () -> Unit = {},
+    /** The flag: also undo the asset's done transfers in cash. */
+    val onDeleteAsset: (Boolean) -> Unit = {},
 )
 
 @Composable
@@ -90,7 +87,7 @@ fun AssetDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, viewModel: Ass
             onDismissError = viewModel::dismissError,
             onDeleteFlow = { viewModel.deleteFlow(it) },
             onDeleteValuation = { viewModel.deleteValuation(it) },
-            onDeleteAsset = { viewModel.deleteAsset() },
+            onDeleteAsset = viewModel::deleteAsset,
         ),
     )
 }
@@ -133,9 +130,8 @@ fun AssetDetailContent(state: AssetDetailUiState, actions: AssetDetailActions) {
     ) {
         val s = state.snapshot
         if (asset == null || s == null) return@DetailScaffold
-        state.imageFile?.let { StoredImage(it, asset.name, Modifier.fillMaxWidth().height(180.dp).clip(FinanceShapes.medium)) }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            CategoryBadge(CategoryIcons.of(state.category?.icon ?: "category"))
+            AssetIcon(state.imageFile, state.category?.icon)
             Spacer(Modifier.width(Spacing.m))
             Text(
                 listOfNotNull(state.category?.displayName(), asset.institution).joinToString(" · "),
@@ -274,16 +270,43 @@ fun AssetDetailContent(state: AssetDetailUiState, actions: AssetDetailActions) {
         }
     }
     ActionErrorDialog(state.error, actions.onDismissError)
-    if (deleting) {
-        ConfirmDialog(
-            title = stringResource(R.string.asset_delete_title),
-            message = stringResource(R.string.asset_delete_message),
-            confirmText = stringResource(R.string.action_delete),
-            onConfirm = { deleting = false; actions.onDeleteAsset() },
-            onDismiss = { deleting = false },
-            destructive = true,
-        )
-    }
+    if (deleting) DeleteAssetDialog(state.cashMoved, onDelete = { undo -> deleting = false; actions.onDeleteAsset(undo) }, onDismiss = { deleting = false })
+}
+
+/**
+ * Confirms deleting the asset. With done transfers ([cashMoved] not empty) it offers to undo them in cash too
+ * (on by default: deleting usually removes something entered by mistake) and says what that gives back.
+ */
+@Composable
+private fun DeleteAssetDialog(cashMoved: List<Money>, onDelete: (undoTransfers: Boolean) -> Unit, onDismiss: () -> Unit) {
+    val formats = LocalFormats.current
+    var undo by rememberSaveable { mutableStateOf(true) }
+    ConfirmDialog(
+        title = stringResource(R.string.asset_delete_title),
+        message = stringResource(R.string.asset_delete_message),
+        confirmText = stringResource(R.string.action_delete),
+        onConfirm = { onDelete(undo) },
+        onDismiss = onDismiss,
+        destructive = true,
+        extra = if (cashMoved.isEmpty()) null else {
+            {
+                val effect = cashMoved.filterNot { it.isZero }.map { moved ->
+                    if (moved.isNegative) stringResource(R.string.asset_delete_cash_back, formats.money.format(-moved))
+                    else stringResource(R.string.asset_delete_cash_out, formats.money.format(moved))
+                }
+                SwitchRow(
+                    title = stringResource(R.string.asset_delete_undo_cash),
+                    hint = when {
+                        !undo -> stringResource(R.string.asset_delete_cash_keep)
+                        effect.isEmpty() -> stringResource(R.string.asset_delete_cash_even)
+                        else -> effect.joinToString("\n")
+                    },
+                    checked = undo,
+                    onChange = { undo = it },
+                )
+            }
+        },
+    )
 }
 
 /** "120 shares × US$ 182.40 · today's quote, 12:05", "… · close of 21/11/2026", or waiting for the first quote. */
