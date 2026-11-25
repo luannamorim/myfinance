@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.6.0] - 2026-11-25
 
 ### Added
 - Assets can have a logo: pick an image in the asset's editor and it replaces the category icon in the Portfolio and on the asset's screen, whole on a white circle. Logos with a transparent background keep it. An asset without a logo keeps the category icon.
