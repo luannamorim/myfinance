@@ -35,6 +35,7 @@ import io.github.luannamorim.myfinance.domain.portfolio.AssetSnapshot
 import io.github.luannamorim.myfinance.ui.common.ActionErrorDialog
 import io.github.luannamorim.myfinance.ui.common.AssetIcon
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
+import io.github.luannamorim.myfinance.ui.common.PartRow
 import io.github.luannamorim.myfinance.ui.common.displayName
 import io.github.luannamorim.myfinance.ui.common.unitsLabel
 import io.github.luannamorim.myfinance.ui.components.AdaptiveRow
@@ -172,6 +173,21 @@ fun AssetDetailContent(state: AssetDetailUiState, actions: AssetDetailActions) {
                 TotalLine(stringResource(R.string.asset_value), conv.value)
                 TotalLine(stringResource(R.string.asset_contributed), conv.contributed)
                 TotalLine(stringResource(R.string.asset_gain), conv.gain, AmountTone.AUTO)
+                // With every rate known, the gain splits into the asset's own move and the exchange rate's.
+                if (!conv.gain.incomplete) {
+                    PartRow(stringResource(if (state.tracked) R.string.asset_from_price else R.string.asset_from_investment), conv.assetGain)
+                    PartRow(stringResource(R.string.asset_exchange_effect), conv.exchangeEffect)
+                    val average = conv.averageRate
+                    val now = conv.currentRate
+                    if (average != null && now != null) {
+                        Text(
+                            stringResource(R.string.asset_rates, formats.money.formatRate(average), formats.money.formatRate(now)),
+                            style = FinanceTheme.type.caption,
+                            color = c.textTertiary,
+                            modifier = Modifier.padding(start = Spacing.m, top = Spacing.xs),
+                        )
+                    }
+                }
             }
         }
         Text(stringResource(R.string.asset_method), style = FinanceTheme.type.caption, color = c.textTertiary)

@@ -149,6 +149,108 @@ class PortfolioCalculatorTest {
         assertEquals(Total(brl("1175.73")), brl.gain)
     }
 
+    private val etfRates = Converter(ExchangeRates(listOf(rate("2026-02-02", "5.0000"), rate("2026-11-12", "5.6143"))))
+
+    @Test
+    fun usdAsset_gainSplitsIntoAssetAndExchange() {
+        // US$ 100 of gain at today's 5,6143 = 561,43; the rest of the 1.175,73 is the dollar going from 5,00 to
+        // 5,6143 on the US$ 1.000 invested: 1.000 × 0,6143 = 614,30.
+        val etf = asset(Currency.USD)
+        val f = listOf(flow(etf, FlowKind.INITIAL, usd("1000.00"), "2026-02-02"))
+        val s = PortfolioCalculator.snapshot(etf, f, listOf(valuation(etf, usd("1100.00"), "2026-11-12")), d("2026-11-12"))!!
+        val brl = PortfolioCalculator.convertedSnapshot(s, f, d("2026-11-12"), Currency.BRL, etfRates)
+        assertEquals(Total(brl("561.43")), brl.assetGain)
+        assertEquals(Total(brl("614.30")), brl.exchangeEffect)
+        assertEquals(BigDecimal("5.0000"), brl.averageRate)
+        assertEquals(BigDecimal("5.6143"), brl.currentRate)
+    }
+
+    @Test
+    fun usdAsset_dollarFell_exchangeTakesMoreThanThePriceMoved() {
+        // US$ 121,03 at 5,8825 = R$ 711,96 (711,958975); now US$ 118,68 at 5,7446 = R$ 681,77 (681,769128).
+        // Gain −30,19 = asset −2,35 × 5,7446 (−13,4998 → −13,50) + exchange −16,69.
+        val stock = asset(Currency.USD)
+        val f = listOf(flow(stock, FlowKind.INITIAL, usd("121.03"), "2026-10-01"))
+        val s = PortfolioCalculator.snapshot(stock, f, listOf(valuation(stock, usd("118.68"), "2026-11-26")), d("2026-11-26"))!!
+        val converter = Converter(ExchangeRates(listOf(rate("2026-10-01", "5.8825"), rate("2026-11-26", "5.7446"))))
+        val brl = PortfolioCalculator.convertedSnapshot(s, f, d("2026-11-26"), Currency.BRL, converter)
+        assertEquals(Total(brl("-30.19")), brl.gain)
+        assertEquals(Total(brl("-13.50")), brl.assetGain)
+        assertEquals(Total(brl("-16.69")), brl.exchangeEffect)
+    }
+
+    @Test
+    fun averageRate_weighsContributions_andExchangeCountsWithdrawals() {
+        // US$ 1.000 at 5,00 and US$ 3.000 at 6,00: (5.000 + 18.000) ÷ 4.000 = 5,75; the sale at 7,00 doesn't move it.
+        // Worth US$ 3.600 at 5,50 = 19.800. Gain in R$ = 19.800 + 3.500 − 23.000 = 300;
+        // asset (3.600 − 3.500) × 5,5 = 550; exchange 300 − 550 = −250 (= 3.500 × 5,5 − (23.000 − 3.500)).
+        val etf = asset(Currency.USD)
+        val f = listOf(
+            flow(etf, FlowKind.INITIAL, usd("1000.00"), "2026-02-02"),
+            flow(etf, FlowKind.CONTRIBUTION, usd("3000.00"), "2026-06-01"),
+            flow(etf, FlowKind.WITHDRAWAL, usd("500.00"), "2026-09-01"),
+        )
+        val converter = Converter(ExchangeRates(listOf(rate("2026-02-02", "5.0000"), rate("2026-06-01", "6.0000"), rate("2026-09-01", "7.0000"), rate("2026-11-12", "5.5000"))))
+        val s = PortfolioCalculator.snapshot(etf, f, listOf(valuation(etf, usd("3600.00"), "2026-11-12")), d("2026-11-12"))!!
+        val brl = PortfolioCalculator.convertedSnapshot(s, f, d("2026-11-12"), Currency.BRL, converter)
+        assertEquals(Total(brl("300.00")), brl.gain)
+        assertEquals(Total(brl("550.00")), brl.assetGain)
+        assertEquals(Total(brl("-250.00")), brl.exchangeEffect)
+        assertEquals(BigDecimal("5.7500"), brl.averageRate)
+    }
+
+    @Test
+    fun brlAsset_inUsd_exchangeGoesTheOtherWay() {
+        // R$ 5.000 at 5,00 = US$ 1.000; worth R$ 5.500 at 5,50 = US$ 1.000: nothing gained in dollars.
+        // Asset R$ 500 ÷ 5,5 = US$ 90,91; exchange −90,91. Rates stay US$ 1 = R$ x.
+        val cdb = asset(Currency.BRL)
+        val f = listOf(flow(cdb, FlowKind.INITIAL, brl("5000.00"), "2026-02-02"))
+        val s = PortfolioCalculator.snapshot(cdb, f, listOf(valuation(cdb, brl("5500.00"), "2026-11-12")), d("2026-11-12"))!!
+        val converter = Converter(ExchangeRates(listOf(rate("2026-02-02", "5.0000"), rate("2026-11-12", "5.5000"))))
+        val inUsd = PortfolioCalculator.convertedSnapshot(s, f, d("2026-11-12"), Currency.USD, converter)
+        assertEquals(Total(usd("0.00")), inUsd.gain)
+        assertEquals(Total(usd("90.91")), inUsd.assetGain)
+        assertEquals(Total(usd("-90.91")), inUsd.exchangeEffect)
+        assertEquals(BigDecimal("5.0000"), inUsd.averageRate)
+        assertEquals(BigDecimal("5.5000"), inUsd.currentRate)
+    }
+
+    @Test
+    fun sameCurrency_hasNoExchangeEffect() {
+        val s = at("2026-06-30")
+        val same = PortfolioCalculator.convertedSnapshot(s, flows, d("2026-06-30"), Currency.BRL, Converter(ExchangeRates.EMPTY))
+        assertEquals(Total(s.gain), same.assetGain)
+        assertEquals(Total(brl("0.00")), same.exchangeEffect)
+        assertNull(same.averageRate)
+        assertNull(same.currentRate)
+    }
+
+    @Test
+    fun missingRate_leavesTheSplitIncomplete() {
+        // No rate on or before the contribution: the R$ figures are partial, so is the split, and there is no average.
+        val etf = asset(Currency.USD)
+        val f = listOf(flow(etf, FlowKind.INITIAL, usd("1000.00"), "2026-01-15"))
+        val s = PortfolioCalculator.snapshot(etf, f, listOf(valuation(etf, usd("1100.00"), "2026-11-12")), d("2026-11-12"))!!
+        val brl = PortfolioCalculator.convertedSnapshot(s, f, d("2026-11-12"), Currency.BRL, etfRates)
+        assertTrue(brl.exchangeEffect.incomplete)
+        assertNull(brl.averageRate)
+    }
+
+    @Test
+    fun totals_exchangeEffectOfOpenAssets() {
+        // The closed Tesouro (BRL) adds nothing; the open ETF adds its 614,30.
+        val etf = asset(Currency.USD)
+        val data = PortfolioData(
+            assets = listOf(tesouro, etf),
+            flows = mapOf(tesouro.id to flows, etf.id to listOf(flow(etf, FlowKind.INITIAL, usd("1000.00"), "2026-02-02"))),
+            valuations = mapOf(tesouro.id to valuations, etf.id to listOf(valuation(etf, usd("1100.00"), "2026-11-12"))),
+        )
+        val t = PortfolioCalculator.totals(data, d("2026-11-12"), Currency.BRL, etfRates)
+        assertEquals(Total(brl("614.30")), t.exchangeEffect)
+        val brlOnly = PortfolioCalculator.totals(data.copy(assets = listOf(tesouro)), d("2026-11-12"), Currency.BRL, etfRates)
+        assertEquals(Total(brl("0.00")), brlOnly.exchangeEffect)
+    }
+
     @Test
     fun totals_openAssetsAndRealizedClosed() {
         val open = asset()

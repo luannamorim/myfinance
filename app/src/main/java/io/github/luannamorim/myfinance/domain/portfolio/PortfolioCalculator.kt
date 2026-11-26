@@ -71,6 +71,14 @@ data class ConvertedSnapshot(
     val value: Total,
     val gain: Total,
     val simpleReturn: BigDecimal?,
+    /** The gain in the asset's own currency, converted at the snapshot date's rate. */
+    val assetGain: Total,
+    /** gain − assetGain: what the exchange rate added or took since the money went in. Zero in the same currency. */
+    val exchangeEffect: Total,
+    /** USD→BRL rate averaged over the contributions (R$ ÷ US$); null in the same currency, without contributions or with a missing rate. */
+    val averageRate: BigDecimal?,
+    /** USD→BRL rate of the snapshot date; null in the same currency or without a rate. */
+    val currentRate: BigDecimal?,
 )
 
 /** Dashboard totals over open assets, plus the realized gain of closed ones. */
@@ -83,6 +91,8 @@ data class PortfolioTotals(
     val realizedClosed: Total,
     val openCount: Int,
     val closedCount: Int,
+    /** The part of [gain] that came from the exchange rate (assets in another currency). */
+    val exchangeEffect: Total = Total.zero(value.money.currency),
 )
 
 /**
@@ -205,13 +215,26 @@ object PortfolioCalculator {
         val value = converter.sum(listOf(snapshot.value to at), to)
         val gain = value + withdrawn - contributed
         val incomplete = gain.incomplete
+        val assetGain = converter.sum(listOf(snapshot.gain to at), to)
+        val foreign = snapshot.asset.currency != to
         return ConvertedSnapshot(
             contributed = contributed,
             withdrawn = withdrawn,
             value = value,
             gain = gain,
             simpleReturn = if (incomplete) null else ratio(gain.money.minor, contributed.money.minor),
+            assetGain = assetGain,
+            exchangeEffect = gain - assetGain,
+            averageRate = if (!foreign || contributed.incomplete) null else averageRate(snapshot.contributed, contributed.money),
+            currentRate = if (foreign) converter.rates.rateOn(at)?.rate else null,
         )
+    }
+
+    /** R$ ÷ US$ of the same contributions, one side in each currency; null when either is zero. */
+    private fun averageRate(own: Money, converted: Money): BigDecimal? {
+        val (reais, dollars) = if (own.currency == Currency.BRL) own to converted else converted to own
+        if (reais.isZero || dollars.isZero) return null
+        return reais.toBigDecimal().divide(dollars.toBigDecimal(), 4, RoundingMode.HALF_EVEN)
     }
 
     fun totals(data: PortfolioData, at: LocalDate, to: Currency, converter: Converter, group: AssetGroup? = null): PortfolioTotals {
@@ -222,6 +245,7 @@ object PortfolioCalculator {
         // gain but no return, and would otherwise inflate the percentage.
         var gainWithContributions = Total.zero(to)
         var realized = Total.zero(to)
+        var exchange = Total.zero(to)
         var lastValuation: LocalDate? = null
         var open = 0
         var closed = 0
@@ -236,6 +260,7 @@ object PortfolioCalculator {
                 open++
                 value += converted.value
                 invested += converted.contributed - converted.withdrawn
+                exchange += converted.exchangeEffect
                 if (s.contributed.minor > 0) {
                     contributed += converted.contributed
                     gainWithContributions += converted.gain
@@ -253,6 +278,7 @@ object PortfolioCalculator {
             realizedClosed = realized,
             openCount = open,
             closedCount = closed,
+            exchangeEffect = exchange,
         )
     }
 

@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- Portfolio: under Gain/loss, *From the exchange rate* shows how much of the result came from the dollar moving since you invested.
+- Asset screen: the "In R$" card splits the gain into *From the price* (*From the investment* for assets without a quote) and *From the exchange rate*, with the average dollar of your contributions and today's.
+
+### Changed
+- Portfolio: an asset in the other currency (a US stock with the display in reais) shows its gain and return in the display currency, exchange rate included, so the lines add up to the gain at the top. Before, the line showed the gain in the asset's own currency and the exchange rate appeared only in the total.
+
 ## [1.6.0] - 2026-11-25
 
 ### Added

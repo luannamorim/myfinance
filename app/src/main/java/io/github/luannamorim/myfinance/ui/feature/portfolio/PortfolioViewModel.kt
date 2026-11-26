@@ -21,6 +21,7 @@ import io.github.luannamorim.myfinance.domain.model.Currency
 import io.github.luannamorim.myfinance.domain.model.OccurrenceState
 import io.github.luannamorim.myfinance.domain.portfolio.Allocation
 import io.github.luannamorim.myfinance.domain.portfolio.AssetSnapshot
+import io.github.luannamorim.myfinance.domain.portfolio.ConvertedSnapshot
 import io.github.luannamorim.myfinance.domain.portfolio.PortfolioCalculator
 import io.github.luannamorim.myfinance.domain.portfolio.PortfolioData
 import io.github.luannamorim.myfinance.domain.portfolio.PortfolioTotals
@@ -37,8 +38,10 @@ import java.math.RoundingMode
 import java.time.LocalDate
 import javax.inject.Inject
 
-/** An asset line: its own figures, its value in the display currency when different, and its logo. */
-data class AssetRow(val snapshot: AssetSnapshot, val category: AssetCategory?, val displayValue: Total?, val logo: File? = null)
+/** An asset line: its own figures, its figures in the display currency when different, and its logo. */
+data class AssetRow(val snapshot: AssetSnapshot, val category: AssetCategory?, val converted: ConvertedSnapshot?, val logo: File? = null) {
+    val displayValue: Total? get() = converted?.value
+}
 
 data class PortfolioUiState(
     val loading: Boolean = true,
@@ -73,7 +76,7 @@ fun portfolioState(
         val flows = data.flowsOf(asset)
         val s = PortfolioCalculator.snapshot(data, asset, today) ?: return@mapNotNull null
         AssetRow(
-            s, categories[asset.categoryId], if (asset.currency != display) converter.sum(listOf(s.value to today), display) else null,
+            s, categories[asset.categoryId], if (asset.currency != display) PortfolioCalculator.convertedSnapshot(s, flows, today, display, converter) else null,
             asset.imagePath?.let(logoFile),
         )
     }

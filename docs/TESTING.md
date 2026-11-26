@@ -67,6 +67,7 @@ Development is done without a device. The items below validate what only the dev
 ### 5. Portfolio
 - [ ] Create "Tesouro Selic" (Fixed Income, BRL) with R$ 5.000,00 invested; then update its value to R$ 5.120,00: gain R$ 120,00, return 2,40%.
 - [ ] Create "VOO" (ETFs, USD) with US$ 1.000,00 and a later valuation of US$ 1.100,00: detail shows the gain in US$ and in R$ (including the currency effect).
+- [ ] With the R$ flag, VOO's line in the Portfolio shows its gain in R$ (exchange included), the asset lines add up to *Gain/loss* at the top, and *From the exchange rate* under it matches the detail's *From the exchange rate* (with the dollar of the contribution and today's below it). A Portfolio with only R$ assets has no *From the exchange rate* line.
 - [ ] Add a contribution and a partial disposal; valuation history keeps earlier rows unchanged.
 - [ ] Add a car (Vehicles, personal asset) with a logo (a PNG with a transparent background): it appears under Personal assets with the logo, whole on a white circle, in place of the category icon, also on the asset's screen and in the dark theme. Remove the logo: the category icon is back.
 - [ ] The donut shows the total in the centre; tapping a category filters the list. Period chips change the charts; no line starts before the first record.

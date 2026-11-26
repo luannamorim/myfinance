@@ -2,6 +2,7 @@ package io.github.luannamorim.myfinance.ui.feature.portfolio
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.luannamorim.myfinance.domain.fx.ExchangeRates
 import io.github.luannamorim.myfinance.domain.model.Asset
@@ -21,6 +22,7 @@ import io.github.luannamorim.myfinance.testutil.snapBothThemes
 import io.github.luannamorim.myfinance.testutil.usd
 import io.github.luannamorim.myfinance.ui.components.DonutSlice
 import io.github.luannamorim.myfinance.ui.components.hitSlice
+import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -99,6 +101,30 @@ class PortfolioTest {
         val s = portfolioState(withLogo, rates, Currency.BRL, null, null, today, logoFile = { java.io.File("/x", it) })
         assertEquals(java.io.File("/x/images/assets/car.png"), s.assets.single { it.snapshot.asset.id == car.id }.logo)
         assertNull(s.assets.single { it.snapshot.asset.id == tesouro.id }.logo)
+    }
+
+    @Test
+    fun foreignRow_showsGainInDisplayCurrency_andTotalsShowTheExchange() {
+        val state = portfolioState(data, rates, Currency.BRL, null, null, today)
+        val row = state.assets.single { it.snapshot.asset.id == voo.id }
+        // VOO: US$ 1.000 at 5,00 is now US$ 1.100 at 5,6143: R$ 1.175,73 (÷ 5.000 = +23,51%), R$ 614,30 of it from the dollar.
+        assertEquals(brl("1175.73"), row.converted!!.gain.money)
+        assertNull(state.assets.single { it.snapshot.asset.id == tesouro.id }.converted)
+        assertEquals(brl("614.30"), state.totals!!.exchangeEffect.money)
+        compose.setContent { FinanceTheme { PortfolioContent(state, PortfolioActions()) } }
+        compose.onNodeWithText("+R$ 1.175,73").assertExists()
+        compose.onNodeWithText(" · +23,51%").assertExists()
+        compose.onNodeWithText("+US$ 100,00").assertDoesNotExist()
+        compose.onNodeWithText("From the exchange rate").assertExists()
+        compose.onNodeWithText("+R$ 614,30").assertExists()
+    }
+
+    @Test
+    fun sameCurrencyOnly_hasNoExchangeLine() {
+        val state = portfolioState(data.copy(assets = listOf(tesouro, car)), rates, Currency.BRL, null, null, today)
+        compose.setContent { FinanceTheme { PortfolioContent(state, PortfolioActions()) } }
+        compose.onNodeWithText("+R$ 120,00").assertExists()
+        compose.onNodeWithText("From the exchange rate").assertDoesNotExist()
     }
 
     @Test

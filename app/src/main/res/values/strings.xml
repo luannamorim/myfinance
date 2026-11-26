@@ -382,6 +382,10 @@
     <string name="asset_carried">Includes contributions and withdrawals recorded after the last valuation.</string>
     <string name="asset_method">Simple return = gain ÷ total contributed. Gain = value − (contributed − withdrawn), so withdrawals count as capital returned first. Not a time-weighted return.</string>
     <string name="asset_in_display">In %1$s (with the currency effect)</string>
+    <string name="asset_from_price">From the price</string>
+    <string name="asset_from_investment">From the investment</string>
+    <string name="asset_exchange_effect">From the exchange rate</string>
+    <string name="asset_rates">US$ 1 = R$ %1$s on average when invested, R$ %2$s now</string>
     <string name="asset_closed">Position closed</string>
     <string name="asset_closed_hint">Delete the closing to record more values or flows.</string>
     <string name="asset_valuations">Valuation history</string>
@@ -446,6 +450,7 @@
     <string name="portfolio_value">Value</string>
     <string name="portfolio_invested">Invested</string>
     <string name="portfolio_gain">Gain/loss</string>
+    <string name="portfolio_exchange_effect">From the exchange rate</string>
     <string name="portfolio_return">Simple return</string>
     <string name="portfolio_last_valuation">Last valuation %1$s</string>
     <string name="portfolio_realized">Realized from closed positions</string>

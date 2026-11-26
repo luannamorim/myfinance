@@ -33,6 +33,7 @@ import io.github.luannamorim.myfinance.domain.fx.Total
 import io.github.luannamorim.myfinance.domain.model.AssetGroup
 import io.github.luannamorim.myfinance.ui.common.AssetIcon
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
+import io.github.luannamorim.myfinance.ui.common.PartRow
 import io.github.luannamorim.myfinance.ui.common.displayName
 import io.github.luannamorim.myfinance.ui.components.AdaptiveRow
 import io.github.luannamorim.myfinance.ui.components.AmountDisplay
@@ -153,6 +154,7 @@ fun PortfolioContent(state: PortfolioUiState, actions: PortfolioActions, modifie
                 TotalRow(stringResource(R.string.portfolio_value), t.value)
                 TotalRow(stringResource(R.string.portfolio_invested), t.invested)
                 TotalRow(stringResource(R.string.portfolio_gain), t.gain, AmountTone.AUTO)
+                if (!t.exchangeEffect.money.isZero) PartRow(stringResource(R.string.portfolio_exchange_effect), t.exchangeEffect)
                 t.simpleReturn?.let { r ->
                     AdaptiveRow(
                         main = { Text(stringResource(R.string.portfolio_return), style = FinanceTheme.type.body, color = c.textSecondary) },
@@ -205,9 +207,19 @@ private fun AssetCard(row: AssetRow, onOpen: (Long) -> Unit) {
                 main = {
                     Column {
                         Text(s.asset.name, style = FinanceTheme.type.bodyStrong, color = if (s.closed) c.textTertiary else c.textPrimary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        // In another currency: the gain in the display currency, exchange included, so the lines add up to the total.
+                        val converted = row.converted
+                        val gain = converted?.gain?.money ?: s.gain
+                        val simpleReturn = if (converted != null) converted.simpleReturn else s.simpleReturn
                         FlowRow(itemVerticalAlignment = Alignment.CenterVertically) {
-                            AmountDisplay(s.gain, style = FinanceTheme.type.caption.copy(fontFeatureSettings = "tnum"), signed = true, tone = AmountTone.AUTO)
-                            s.simpleReturn?.let { Text(" · " + formats.money.formatPercent(it, signed = true), style = FinanceTheme.type.caption, color = c.textSecondary, maxLines = 1) }
+                            AmountDisplay(
+                                gain,
+                                style = FinanceTheme.type.caption.copy(fontFeatureSettings = "tnum"),
+                                signed = true,
+                                tone = AmountTone.AUTO,
+                                approximate = converted?.gain?.incomplete == true,
+                            )
+                            simpleReturn?.let { Text(" · " + formats.money.formatPercent(it, signed = true), style = FinanceTheme.type.caption, color = c.textSecondary, maxLines = 1) }
                         }
                     }
                 },

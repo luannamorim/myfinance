@@ -215,6 +215,33 @@ class AssetTest {
         assertEquals(brl("1175.73"), state.converted!!.gain.money)
     }
 
+    @Test
+    fun usdAsset_detailSplitsTheGain() {
+        val id = runBlocking {
+            val id = portfolio.createAsset(AssetDraft("VOO", category("asset.etfs"), Currency.USD, acquisitionDate = d("2026-02-02")), usd("1000.00"), usd("1100.00"))
+            rates.setManual(d("2026-02-02"), BigDecimal("5.0000"))
+            rates.setManual(d("2026-11-12"), BigDecimal("5.6143"))
+            id
+        }
+        val vm = detail(id)
+        showDetail(vm)
+        compose.waitUntil(5_000) { vm.state.value.converted?.gain?.incomplete == false }
+        // US$ 100 of gain at 5.6143 = 561.43; the dollar going from 5.00 to 5.6143 on US$ 1,000 = 614.30.
+        compose.onNodeWithText("From the investment").assertExists()
+        compose.onNodeWithText("+R$ 561.43").assertExists()
+        compose.onNodeWithText("From the exchange rate").assertExists()
+        compose.onNodeWithText("+R$ 614.30").assertExists()
+        compose.onNodeWithText("US$ 1 = R$ 5.0000 on average when invested, R$ 5.6143 now").assertExists()
+    }
+
+    @Test
+    fun brlAsset_detailHasNoSplit() {
+        val id = runBlocking { portfolio.createAsset(AssetDraft("Tesouro", category("asset.fixed_income"), Currency.BRL, acquisitionDate = d("2026-01-10")), brl("5000.00"), brl("5120.00")) }
+        val vm = detail(id)
+        showDetail(vm)
+        compose.onNodeWithText("From the exchange rate").assertDoesNotExist()
+    }
+
     private fun fromCash(name: String = "CDB") = runBlocking {
         portfolio.createAsset(AssetDraft(name, category("asset.fixed_income"), Currency.BRL, acquisitionDate = d("2026-11-05")), brl("3000.00"), null, fromCash = brl("3000.00"))
     }
@@ -352,6 +379,21 @@ class AssetTest {
         compose.onNodeWithText("2.5 shares × US$\u00a0347.19 · close of ", substring = true).assertExists()
         assertEquals(BigDecimal("2.5"), vm.state.value.held?.stripTrailingZeros())
         assertEquals(true, vm.state.value.tracked)
+    }
+
+    @Test
+    fun tracked_detailSplitsTheGain_byPrice() {
+        val id = tracked()
+        price("AAPL", "2026-11-10", "347.19")
+        runBlocking { rates.setManual(d("2026-11-02"), BigDecimal("5.5000")); rates.setManual(d("2026-11-10"), BigDecimal("5.4000")) }
+        val vm = detail(id)
+        showDetail(vm)
+        compose.waitUntil(5_000) { vm.state.value.snapshot?.price != null && vm.state.value.converted?.gain?.incomplete == false }
+        // 2.5 × 347.19 = US$ 867.98, US$ 67.98 over the 800 paid: × 5.40 = 367.09. In R$: 4,687.09 − 4,400.00 = 287.09,
+        // so the dollar (5.50 → 5.40 on US$ 800) took 80.00.
+        compose.onNodeWithText("From the price").assertExists()
+        compose.onNodeWithText("+R$ 367.09").assertExists()
+        compose.onNodeWithText("−R$ 80.00").assertExists()
     }
 
     @Test

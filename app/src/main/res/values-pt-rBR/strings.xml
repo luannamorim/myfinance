@@ -386,6 +386,10 @@
     <string name="asset_carried">Inclui aportes e resgates registrados depois da última avaliação.</string>
     <string name="asset_method">Retorno simples = ganho ÷ total aportado. Ganho = valor − (aportado − resgatado), então resgates contam primeiro como devolução de capital. Não é um retorno ponderado pelo tempo.</string>
     <string name="asset_in_display">Em %1$s (com o efeito do câmbio)</string>
+    <string name="asset_from_price">Do preço</string>
+    <string name="asset_from_investment">Do investimento</string>
+    <string name="asset_exchange_effect">Do câmbio</string>
+    <string name="asset_rates">US$ 1 = R$ %1$s em média ao investir, R$ %2$s agora</string>
     <string name="asset_closed">Posição encerrada</string>
     <string name="asset_closed_hint">Exclua o encerramento para registrar mais valores ou movimentações.</string>
     <string name="asset_valuations">Histórico de avaliações</string>
@@ -450,6 +454,7 @@
     <string name="portfolio_value">Valor</string>
     <string name="portfolio_invested">Investido</string>
     <string name="portfolio_gain">Ganho/perda</string>
+    <string name="portfolio_exchange_effect">Do câmbio</string>
     <string name="portfolio_return">Retorno simples</string>
     <string name="portfolio_last_valuation">Última avaliação %1$s</string>
     <string name="portfolio_realized">Realizado em posições encerradas</string>
