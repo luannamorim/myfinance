@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.8.0] - 2026-11-27
 
 ### Changed
 - Simple return is now the gain ÷ what is still invested (contributed − withdrawn), so on the Portfolio it is *Gain/loss* ÷ *Invested*, the two lines above it. Before, it divided by everything ever contributed, a number the Portfolio didn't show: after a withdrawal or a partial sale the percentage didn't match. The same goes for each asset's line, its screen and its valuation history. Once withdrawals reach what was contributed there is no return; a closed position keeps its return over everything contributed.
