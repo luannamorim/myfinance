@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- Simple return is now the gain ÷ what is still invested (contributed − withdrawn), so on the Portfolio it is *Gain/loss* ÷ *Invested*, the two lines above it. Before, it divided by everything ever contributed, a number the Portfolio didn't show: after a withdrawal or a partial sale the percentage didn't match. The same goes for each asset's line, its screen and its valuation history. Once withdrawals reach what was contributed there is no return; a closed position keeps its return over everything contributed.
+- An inherited or granted asset (nothing contributed) now counts in the Portfolio's return, as it already did in *Gain/loss* and *Invested*.
+
+### Removed
+- Portfolio: the *From the exchange rate* line under *Gain/loss*. The split between price and exchange rate stays on each asset's screen.
+
 ## [1.7.0] - 2026-11-26
 
 ### Added

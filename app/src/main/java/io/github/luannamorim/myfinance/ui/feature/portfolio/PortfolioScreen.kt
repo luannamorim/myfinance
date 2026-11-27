@@ -33,7 +33,6 @@ import io.github.luannamorim.myfinance.domain.fx.Total
 import io.github.luannamorim.myfinance.domain.model.AssetGroup
 import io.github.luannamorim.myfinance.ui.common.AssetIcon
 import io.github.luannamorim.myfinance.ui.common.LocalFormats
-import io.github.luannamorim.myfinance.ui.common.PartRow
 import io.github.luannamorim.myfinance.ui.common.displayName
 import io.github.luannamorim.myfinance.ui.components.AdaptiveRow
 import io.github.luannamorim.myfinance.ui.components.AmountDisplay
@@ -154,7 +153,6 @@ fun PortfolioContent(state: PortfolioUiState, actions: PortfolioActions, modifie
                 TotalRow(stringResource(R.string.portfolio_value), t.value)
                 TotalRow(stringResource(R.string.portfolio_invested), t.invested)
                 TotalRow(stringResource(R.string.portfolio_gain), t.gain, AmountTone.AUTO)
-                if (!t.exchangeEffect.money.isZero) PartRow(stringResource(R.string.portfolio_exchange_effect), t.exchangeEffect)
                 t.simpleReturn?.let { r ->
                     AdaptiveRow(
                         main = { Text(stringResource(R.string.portfolio_return), style = FinanceTheme.type.body, color = c.textSecondary) },

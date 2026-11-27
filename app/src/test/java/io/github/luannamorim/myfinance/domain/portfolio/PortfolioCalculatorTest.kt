@@ -69,22 +69,45 @@ class PortfolioCalculatorTest {
     }
 
     @Test
-    fun partialDisposal_returnOnTotalContributed() {
+    fun partialDisposal_returnOnWhatIsStillInvested() {
         val s = at("2026-05-01")
         assertEquals(brl("4120.00"), s.value) // 6.120 − 2.000
         assertEquals(brl("4000.00"), s.netInvested) // 6.000 − 2.000
         assertEquals(brl("120.00"), s.gain)
-        assertEquals(pct("0.02"), s.simpleReturn) // 120 / 6.000
+        assertEquals(pct("0.03"), s.simpleReturn) // 120 / 4.000
     }
 
     @Test
     fun laterValuation_andFullDisposal() {
         assertEquals(brl("300.00"), at("2026-06-30").gain) // 4.300 − 4.000
+        assertEquals(pct("0.075"), at("2026-06-30").simpleReturn) // 300 / 4.000
         val closed = at("2026-07-10")
         assertTrue(closed.closed)
         assertEquals(brl("0.00"), closed.value)
         assertEquals(brl("-350.00"), closed.netInvested) // 6.000 − (2.000 + 4.350)
         assertEquals(brl("350.00"), closed.gain)
+        // Closed, nothing is left invested: the return is over everything contributed, 350 / 6.000.
+        assertEquals(BigDecimal("0.0583333333"), closed.simpleReturn)
+    }
+
+    @Test
+    fun closedAtALoss_returnOverContributed() {
+        // Bought for 1.000, sold for 800: −20%, not −200 ÷ 200 still "invested" = −100%.
+        val a = asset()
+        val f = listOf(flow(a, FlowKind.INITIAL, brl("1000.00"), "2026-01-10"), flow(a, FlowKind.FULL_DISPOSAL, brl("800.00"), "2026-03-01"))
+        val s = PortfolioCalculator.snapshot(a, f, emptyList(), d("2026-03-01"))!!
+        assertEquals(brl("-200.00"), s.gain)
+        assertEquals(pct("-0.2"), s.simpleReturn)
+    }
+
+    @Test
+    fun openWithEverythingWithdrawn_hasNoReturn() {
+        // 1.000 in, 1.000 out, still worth 300: gain 300 over nothing invested.
+        val a = asset()
+        val f = listOf(flow(a, FlowKind.INITIAL, brl("1000.00"), "2026-01-10"), flow(a, FlowKind.WITHDRAWAL, brl("1000.00"), "2026-03-01"))
+        val s = PortfolioCalculator.snapshot(a, f, listOf(valuation(a, brl("300.00"), "2026-03-31")), d("2026-03-31"))!!
+        assertEquals(brl("300.00"), s.gain)
+        assertNull(s.simpleReturn)
     }
 
     @Test
@@ -124,6 +147,7 @@ class PortfolioCalculatorTest {
         assertEquals(listOf(brl("120.00"), brl("300.00")), rows.map { it.gain })
         assertEquals(brl("5000.00"), rows[0].netInvested)
         assertEquals(brl("4000.00"), rows[1].netInvested)
+        assertEquals(listOf(pct("0.024"), pct("0.075")), rows.map { it.simpleReturn }) // 120 / 5.000, 300 / 4.000
     }
 
     @Test
@@ -197,6 +221,7 @@ class PortfolioCalculatorTest {
         assertEquals(Total(brl("550.00")), brl.assetGain)
         assertEquals(Total(brl("-250.00")), brl.exchangeEffect)
         assertEquals(BigDecimal("5.7500"), brl.averageRate)
+        assertEquals(BigDecimal("0.0153846154"), brl.simpleReturn) // 300 ÷ (23.000 − 3.500)
     }
 
     @Test
@@ -237,18 +262,21 @@ class PortfolioCalculatorTest {
     }
 
     @Test
-    fun totals_exchangeEffectOfOpenAssets() {
-        // The closed Tesouro (BRL) adds nothing; the open ETF adds its 614,30.
-        val etf = asset(Currency.USD)
-        val data = PortfolioData(
-            assets = listOf(tesouro, etf),
-            flows = mapOf(tesouro.id to flows, etf.id to listOf(flow(etf, FlowKind.INITIAL, usd("1000.00"), "2026-02-02"))),
-            valuations = mapOf(tesouro.id to valuations, etf.id to listOf(valuation(etf, usd("1100.00"), "2026-11-12"))),
+    fun totals_returnIsGainOverInvested() {
+        // On 30/06 the Tesouro is worth 4.300 with 4.000 still invested (6.000 − 2.000): 300 ÷ 4.000 = 7,50%.
+        val data = PortfolioData(assets = listOf(tesouro), flows = mapOf(tesouro.id to flows), valuations = mapOf(tesouro.id to valuations))
+        val t = PortfolioCalculator.totals(data, d("2026-06-30"), Currency.BRL, Converter(ExchangeRates.EMPTY))
+        assertEquals(Total(brl("4000.00")), t.invested)
+        assertEquals(Total(brl("300.00")), t.gain)
+        assertEquals(pct("0.075"), t.simpleReturn)
+        // Only an inherited car: nothing invested, no return.
+        val car = asset()
+        val onlyCar = PortfolioData(
+            assets = listOf(car),
+            flows = mapOf(car.id to listOf(flow(car, FlowKind.INITIAL, brl("0.00"), "2026-01-10"))),
+            valuations = mapOf(car.id to listOf(valuation(car, brl("40000.00"), "2026-01-10"))),
         )
-        val t = PortfolioCalculator.totals(data, d("2026-11-12"), Currency.BRL, etfRates)
-        assertEquals(Total(brl("614.30")), t.exchangeEffect)
-        val brlOnly = PortfolioCalculator.totals(data.copy(assets = listOf(tesouro)), d("2026-11-12"), Currency.BRL, etfRates)
-        assertEquals(Total(brl("0.00")), brlOnly.exchangeEffect)
+        assertNull(PortfolioCalculator.totals(onlyCar, d("2026-11-12"), Currency.BRL, Converter(ExchangeRates.EMPTY)).simpleReturn)
     }
 
     @Test

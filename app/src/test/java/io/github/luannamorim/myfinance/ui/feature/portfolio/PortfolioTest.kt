@@ -88,8 +88,8 @@ class PortfolioTest {
         // 5.120 + 1.100 × 5,6143 (6.175,73) + 40.000 = 51.295,73
         assertEquals(brl("51295.73"), s.totals!!.value.money)
         assertEquals(brl("80.00"), s.totals!!.realizedClosed.money)
-        // Return ignores the car (nothing contributed): (120 + 1.175,73) / (5.000 + 5.000) = 12,9573%
-        assertEquals(java.math.BigDecimal("0.1295730000"), s.totals!!.simpleReturn)
+        // Gain ÷ invested, the car included: (120 + 1.175,73 + 40.000) / (5.000 + 5.000 + 0) = 412,9573%
+        assertEquals(java.math.BigDecimal("4.1295730000"), s.totals!!.simpleReturn)
         assertEquals(listOf(3L, 2L, 1L), s.slices.map { it.first.categoryId })
         assertEquals(listOf("Car", "VOO", "Tesouro Selic"), s.assets.map { it.snapshot.asset.name })
         assertEquals(listOf("Old CDB"), s.closed.map { it.snapshot.asset.name })
@@ -104,27 +104,18 @@ class PortfolioTest {
     }
 
     @Test
-    fun foreignRow_showsGainInDisplayCurrency_andTotalsShowTheExchange() {
+    fun foreignRow_showsGainInDisplayCurrency_andTotalsHaveNoExchangeLine() {
         val state = portfolioState(data, rates, Currency.BRL, null, null, today)
         val row = state.assets.single { it.snapshot.asset.id == voo.id }
         // VOO: US$ 1.000 at 5,00 is now US$ 1.100 at 5,6143: R$ 1.175,73 (÷ 5.000 = +23,51%), R$ 614,30 of it from the dollar.
         assertEquals(brl("1175.73"), row.converted!!.gain.money)
         assertNull(state.assets.single { it.snapshot.asset.id == tesouro.id }.converted)
-        assertEquals(brl("614.30"), state.totals!!.exchangeEffect.money)
         compose.setContent { FinanceTheme { PortfolioContent(state, PortfolioActions()) } }
         compose.onNodeWithText("+R$ 1.175,73").assertExists()
         compose.onNodeWithText(" · +23,51%").assertExists()
         compose.onNodeWithText("+US$ 100,00").assertDoesNotExist()
-        compose.onNodeWithText("From the exchange rate").assertExists()
-        compose.onNodeWithText("+R$ 614,30").assertExists()
-    }
-
-    @Test
-    fun sameCurrencyOnly_hasNoExchangeLine() {
-        val state = portfolioState(data.copy(assets = listOf(tesouro, car)), rates, Currency.BRL, null, null, today)
-        compose.setContent { FinanceTheme { PortfolioContent(state, PortfolioActions()) } }
-        compose.onNodeWithText("+R$ 120,00").assertExists()
         compose.onNodeWithText("From the exchange rate").assertDoesNotExist()
+        compose.onNodeWithText("+R$ 614,30").assertDoesNotExist()
     }
 
     @Test
@@ -141,7 +132,10 @@ class PortfolioTest {
     fun screenshots() {
         // With Cash Flow in use, "All" shows cash for reference (a slice and a card).
         val cash = io.github.luannamorim.myfinance.domain.cash.CashLedger(adjustments = listOf(io.github.luannamorim.myfinance.testutil.opening(brl("18944.75"), "2026-11-01")))
-        compose.snapBothThemes("portfolio") { PortfolioContent(portfolioState(data, rates, Currency.BRL, null, null, today, cash), PortfolioActions()) }
+        // The car bought for 45.000 (the README shows this one): an inherited car would add its 40.000 to the gain
+        // with nothing invested. (120 + 1.175,73 − 5.000) ÷ 55.000 = −6,74%.
+        val bought = data.copy(flows = data.flows + (car.id to listOf(flow(car, brl("45000.00"), "2026-01-10"))))
+        compose.snapBothThemes("portfolio") { PortfolioContent(portfolioState(bought, rates, Currency.BRL, null, null, today, cash), PortfolioActions()) }
     }
 
     @Test

@@ -44,7 +44,7 @@ data class AssetSnapshot(
     val value: Money,
     /** value − net invested (= value + withdrawn − contributed). */
     val gain: Money,
-    /** gain ÷ contributed; null when nothing was contributed. */
+    /** gain ÷ net invested; null when nothing is left invested. A closed position: gain ÷ contributed. */
     val simpleReturn: BigDecimal?,
     val lastValuationDate: LocalDate?,
     /** The value is the last valuation plus flows recorded after it. */
@@ -91,13 +91,12 @@ data class PortfolioTotals(
     val realizedClosed: Total,
     val openCount: Int,
     val closedCount: Int,
-    /** The part of [gain] that came from the exchange rate (assets in another currency). */
-    val exchangeEffect: Total = Total.zero(value.money.currency),
 )
 
 /**
- * Portfolio calculations (docs/ARCHITECTURE.md, "Portfolio"). Simple return on a capital-recovery basis; values
- * between valuations carry the last valuation forward with the flows recorded since. Never interpolated.
+ * Portfolio calculations (docs/ARCHITECTURE.md, "Portfolio"). Gain on a capital-recovery basis, simple return over
+ * what is still invested; values between valuations carry the last valuation forward with the flows recorded since.
+ * Never interpolated.
  */
 object PortfolioCalculator {
 
@@ -134,7 +133,7 @@ object PortfolioCalculator {
                 netInvested = Money(net, c),
                 value = Money(tracked.coerceAtLeast(0), c),
                 gain = Money(tracked.coerceAtLeast(0) - net, c),
-                simpleReturn = ratio(tracked.coerceAtLeast(0) - net, contributed),
+                simpleReturn = returnOf(tracked.coerceAtLeast(0) - net, net, contributed, closed),
                 lastValuationDate = if (quoted != null) price?.date else null,
                 carriedForward = false,
                 closed = closed,
@@ -158,7 +157,7 @@ object PortfolioCalculator {
             netInvested = Money(net, c),
             value = Money(value, c),
             gain = Money(gain, c),
-            simpleReturn = ratio(gain, contributed),
+            simpleReturn = returnOf(gain, net, contributed, closed),
             lastValuationDate = last?.date,
             carriedForward = !closed && after.isNotEmpty(),
             closed = closed,
@@ -194,7 +193,8 @@ object PortfolioCalculator {
     fun valuationRows(asset: Asset, flows: List<AssetFlow>, valuations: List<Valuation>): List<ValuationRow> =
         valuations.sortedBy { it.date }.map { v ->
             val s = checkNotNull(snapshot(asset, flows, valuations, MarketData.EMPTY, v.date))
-            ValuationRow(v, s.netInvested, v.value - s.netInvested, ratio(v.value.minor - s.netInvested.minor, s.contributed.minor))
+            val gain = v.value - s.netInvested
+            ValuationRow(v, s.netInvested, gain, returnOf(gain.minor, s.netInvested.minor, s.contributed.minor, s.closed))
         }
 
     /** (value(end) − value(start)) − net flows in (start, end]. value(start) is 0 before the first record. */
@@ -222,7 +222,7 @@ object PortfolioCalculator {
             withdrawn = withdrawn,
             value = value,
             gain = gain,
-            simpleReturn = if (incomplete) null else ratio(gain.money.minor, contributed.money.minor),
+            simpleReturn = if (incomplete) null else returnOf(gain.money.minor, (contributed - withdrawn).money.minor, contributed.money.minor, snapshot.closed),
             assetGain = assetGain,
             exchangeEffect = gain - assetGain,
             averageRate = if (!foreign || contributed.incomplete) null else averageRate(snapshot.contributed, contributed.money),
@@ -240,12 +240,7 @@ object PortfolioCalculator {
     fun totals(data: PortfolioData, at: LocalDate, to: Currency, converter: Converter, group: AssetGroup? = null): PortfolioTotals {
         var value = Total.zero(to)
         var invested = Total.zero(to)
-        var contributed = Total.zero(to)
-        // Return only over assets that received money: a granted or inherited asset (nothing contributed) has a
-        // gain but no return, and would otherwise inflate the percentage.
-        var gainWithContributions = Total.zero(to)
         var realized = Total.zero(to)
-        var exchange = Total.zero(to)
         var lastValuation: LocalDate? = null
         var open = 0
         var closed = 0
@@ -260,11 +255,6 @@ object PortfolioCalculator {
                 open++
                 value += converted.value
                 invested += converted.contributed - converted.withdrawn
-                exchange += converted.exchangeEffect
-                if (s.contributed.minor > 0) {
-                    contributed += converted.contributed
-                    gainWithContributions += converted.gain
-                }
                 if (asset.ticker == null) s.lastValuationDate?.let { d -> if (lastValuation == null || d.isAfter(lastValuation)) lastValuation = d }
             }
         }
@@ -273,14 +263,21 @@ object PortfolioCalculator {
             value = value,
             invested = invested,
             gain = gain,
-            simpleReturn = if (gainWithContributions.incomplete) null else ratio(gainWithContributions.money.minor, contributed.money.minor),
+            // The two lines above it on the dashboard: Gain/loss ÷ Invested.
+            simpleReturn = if (gain.incomplete) null else ratio(gain.money.minor, invested.money.minor),
             lastValuationDate = lastValuation,
             realizedClosed = realized,
             openCount = open,
             closedCount = closed,
-            exchangeEffect = exchange,
         )
     }
+
+    /**
+     * gain ÷ what is still invested; null once withdrawals reach the contributions. A closed position has nothing
+     * invested, so its return is over everything contributed (selling 1.000 for 800 is −20%, not −200 ÷ 200).
+     */
+    private fun returnOf(gain: Long, netInvested: Long, contributed: Long, closed: Boolean): BigDecimal? =
+        ratio(gain, if (closed) contributed else netInvested)
 
     /** a ÷ b at scale 10, or null when b is not positive. */
     fun ratio(a: Long, b: Long): BigDecimal? =

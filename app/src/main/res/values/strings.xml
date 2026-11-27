@@ -380,7 +380,7 @@
     <string name="asset_last_valuation">Last valuation %1$s</string>
     <string name="asset_no_valuation">No valuation yet: value equals the net invested amount.</string>
     <string name="asset_carried">Includes contributions and withdrawals recorded after the last valuation.</string>
-    <string name="asset_method">Simple return = gain ÷ total contributed. Gain = value − (contributed − withdrawn), so withdrawals count as capital returned first. Not a time-weighted return.</string>
+    <string name="asset_method">Simple return = gain ÷ invested, where invested = contributed − withdrawn and gain = value − invested. Not shown once withdrawals reach what was contributed; a closed position shows gain ÷ total contributed. Not a time-weighted return.</string>
     <string name="asset_in_display">In %1$s (with the currency effect)</string>
     <string name="asset_from_price">From the price</string>
     <string name="asset_from_investment">From the investment</string>
@@ -450,7 +450,6 @@
     <string name="portfolio_value">Value</string>
     <string name="portfolio_invested">Invested</string>
     <string name="portfolio_gain">Gain/loss</string>
-    <string name="portfolio_exchange_effect">From the exchange rate</string>
     <string name="portfolio_return">Simple return</string>
     <string name="portfolio_last_valuation">Last valuation %1$s</string>
     <string name="portfolio_realized">Realized from closed positions</string>
