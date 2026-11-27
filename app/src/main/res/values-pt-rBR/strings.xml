@@ -449,6 +449,7 @@
 
     <!-- Portfolio dashboard -->
     <string name="portfolio_add">Novo ativo</string>
+    <string name="portfolio_refresh">Atualizar dólar e cotações</string>
     <string name="portfolio_all">Tudo</string>
     <string name="portfolio_total">Total</string>
     <string name="portfolio_value">Valor</string>

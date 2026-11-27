@@ -1,8 +1,17 @@
 package io.github.luannamorim.myfinance.ui.feature.portfolio
 
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import io.github.luannamorim.myfinance.data.prefs.PriceError
+import io.github.luannamorim.myfinance.data.prefs.RateError
+import io.github.luannamorim.myfinance.data.repository.PriceRefreshResult
+import io.github.luannamorim.myfinance.data.repository.RefreshResult
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.luannamorim.myfinance.domain.fx.ExchangeRates
 import io.github.luannamorim.myfinance.domain.model.Asset
@@ -116,6 +125,30 @@ class PortfolioTest {
         compose.onNodeWithText("+US$ 100,00").assertDoesNotExist()
         compose.onNodeWithText("From the exchange rate").assertDoesNotExist()
         compose.onNodeWithText("+R$ 614,30").assertDoesNotExist()
+    }
+
+    @Test
+    fun refreshOutcome_firstFailureThenAnyUpdate() {
+        val ratesDown = RefreshResult.Failed(RateError.NETWORK)
+        val pricesDown = PriceRefreshResult.Failed(PriceError.NOT_FOUND)
+        assertEquals(PortfolioRefresh.RatesFailed(RateError.NETWORK), portfolioRefresh(ratesDown, pricesDown))
+        assertEquals(PortfolioRefresh.PricesFailed(PriceError.NOT_FOUND), portfolioRefresh(RefreshResult.Updated(2), pricesDown))
+        assertEquals(PortfolioRefresh.Updated, portfolioRefresh(RefreshResult.UpToDate, PriceRefreshResult.Updated(3)))
+        assertEquals(PortfolioRefresh.Updated, portfolioRefresh(RefreshResult.Updated(1), PriceRefreshResult.NothingTracked))
+        assertEquals(PortfolioRefresh.UpToDate, portfolioRefresh(RefreshResult.UpToDate, PriceRefreshResult.NothingTracked))
+    }
+
+    @Test
+    fun refreshButton_callsBack_andWaitsWhileRefreshing() {
+        var taps = 0
+        val state = mutableStateOf(portfolioState(data, rates, Currency.BRL, null, null, today))
+        compose.setContent { FinanceTheme { PortfolioContent(state.value, PortfolioActions(onRefresh = { taps++ })) } }
+        compose.onNodeWithContentDescription("Update rates and quotes").assertIsEnabled().performClick()
+        assertEquals(1, taps)
+        state.value = state.value.copy(refreshing = true)
+        compose.onNodeWithContentDescription("Update rates and quotes").assertIsNotEnabled()
+        state.value = portfolioState(PortfolioData(categories = categories), rates, Currency.BRL, null, null, today)
+        compose.onNodeWithContentDescription("Update rates and quotes").assertDoesNotExist()
     }
 
     @Test

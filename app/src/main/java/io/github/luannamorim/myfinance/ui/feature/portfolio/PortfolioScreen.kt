@@ -1,5 +1,11 @@
 package io.github.luannamorim.myfinance.ui.feature.portfolio
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,19 +22,28 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.luannamorim.myfinance.R
+import io.github.luannamorim.myfinance.data.prefs.RateError
 import io.github.luannamorim.myfinance.domain.fx.Total
 import io.github.luannamorim.myfinance.domain.model.AssetGroup
 import io.github.luannamorim.myfinance.ui.common.AssetIcon
@@ -50,6 +65,7 @@ import io.github.luannamorim.myfinance.ui.components.SectionHeader
 import io.github.luannamorim.myfinance.ui.components.TabScreen
 import io.github.luannamorim.myfinance.ui.components.TextAction
 import io.github.luannamorim.myfinance.ui.feature.settings.CategoryBadge
+import io.github.luannamorim.myfinance.ui.feature.settings.messageRes
 import io.github.luannamorim.myfinance.ui.theme.FinanceTheme
 import io.github.luannamorim.myfinance.ui.theme.Spacing
 import java.math.BigDecimal
@@ -61,12 +77,51 @@ data class PortfolioActions(
     val onOpen: (Long) -> Unit = {},
     val onCharts: () -> Unit = {},
     val onOpenCash: () -> Unit = {},
+    val onRefresh: () -> Unit = {},
 )
 
 @Composable
 fun PortfolioScreen(actions: PortfolioActions, viewModel: PortfolioViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    PortfolioContent(state, actions.copy(onGroup = viewModel::setGroup, onSelect = viewModel::select))
+    val result by viewModel.refreshResult.collectAsStateWithLifecycle()
+    val snackbar = remember { SnackbarHostState() }
+    val resources = LocalResources.current
+    LaunchedEffect(result) {
+        val r = result ?: return@LaunchedEffect
+        viewModel.refreshShown()
+        snackbar.currentSnackbarData?.dismiss()
+        snackbar.showSnackbar(resources.getString(r.messageRes()))
+    }
+    val c = FinanceTheme.colors
+    Box {
+        PortfolioContent(state, actions.copy(onGroup = viewModel::setGroup, onSelect = viewModel::select, onRefresh = viewModel::refresh))
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(Spacing.m)) {
+            Snackbar(it, containerColor = c.surfaceRaised, contentColor = c.textPrimary)
+        }
+    }
+}
+
+private fun PortfolioRefresh.messageRes(): Int = when (this) {
+    PortfolioRefresh.Updated -> R.string.currency_updated
+    PortfolioRefresh.UpToDate -> R.string.currency_up_to_date
+    is PortfolioRefresh.RatesFailed -> if (reason == RateError.NETWORK) R.string.currency_error_network else R.string.currency_error_format
+    is PortfolioRefresh.PricesFailed -> reason.messageRes()
+}
+
+/** The refresh icon; it turns while an update runs and can't be tapped again until it ends. */
+@Composable
+private fun RefreshButton(refreshing: Boolean, onClick: () -> Unit) {
+    val c = FinanceTheme.colors
+    val angle = if (refreshing) {
+        rememberInfiniteTransition(label = "refresh").animateFloat(
+            0f, 360f, infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Restart), label = "angle",
+        ).value
+    } else {
+        0f
+    }
+    IconButton(onClick = onClick, enabled = !refreshing) {
+        Icon(Icons.Rounded.Refresh, stringResource(R.string.portfolio_refresh), tint = c.textPrimary, modifier = Modifier.rotate(angle))
+    }
 }
 
 @Composable
@@ -76,7 +131,10 @@ fun PortfolioContent(state: PortfolioUiState, actions: PortfolioActions, modifie
     TabScreen(
         title = stringResource(R.string.nav_portfolio),
         modifier = modifier,
-        actions = { IconButton(onClick = actions.onAdd) { Icon(Icons.Rounded.Add, stringResource(R.string.portfolio_add), tint = c.textPrimary) } },
+        actions = {
+            if (!state.loading && !state.empty) RefreshButton(state.refreshing, actions.onRefresh)
+            IconButton(onClick = actions.onAdd) { Icon(Icons.Rounded.Add, stringResource(R.string.portfolio_add), tint = c.textPrimary) }
+        },
     ) {
         if (state.loading) return@TabScreen
         if (state.empty) {

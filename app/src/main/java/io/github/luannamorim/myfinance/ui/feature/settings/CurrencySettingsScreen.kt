@@ -269,7 +269,7 @@ fun CurrencySettingsContent(state: CurrencyUiState, actions: CurrencyActions) {
     }
 }
 
-private fun PriceError.messageRes(): Int = when (this) {
+internal fun PriceError.messageRes(): Int = when (this) {
     PriceError.NETWORK -> R.string.stocks_error_network
     PriceError.FORMAT -> R.string.stocks_error_format
     PriceError.NOT_FOUND -> R.string.stocks_error_not_found

@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- Portfolio: a refresh button at the top fetches exchange rates and stock quotes right away, like *Update* in Settings. The icon turns while it runs (taps are ignored until it ends) and a short message says whether anything changed or what failed.
+
 ## [1.8.0] - 2026-11-27
 
 ### Changed
