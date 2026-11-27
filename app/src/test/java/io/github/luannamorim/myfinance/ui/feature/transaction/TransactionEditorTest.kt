@@ -228,7 +228,8 @@ class TransactionEditorTest {
         vm.setAsset(voo)
         vm.setDigits("50000")
         // R$ 500,00 at 5,0000 = US$ 100,00, until typed over.
-        assertEquals("10000", vm.state.awaitUntil { it.needsAssetAmount }.assetAmountDigits)
+        // Waits for the typed amount too: the state is derived asynchronously, so an earlier emission can have the asset but no amount yet.
+        assertEquals("10000", vm.state.awaitUntil { it.needsAssetAmount && it.digits == "50000" }.assetAmountDigits)
         assertTrue(vm.save())
         vm.state.awaitUntil { it.done }
         assertEquals(10000L, db.portfolioDao().getFlows(voo).single { it.kind == FlowKind.CONTRIBUTION }.amount)
